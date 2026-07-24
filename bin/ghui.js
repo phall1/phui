@@ -27,11 +27,25 @@ const help = `ghui ${packageJson.version}
 Terminal UI for GitHub pull requests.
 
 Usage:
-  ghui              Start the TUI
-  ghui upgrade      Upgrade ghui to the latest npm release
+  ghui [target] [--view <view>]
+  ghui upgrade
   ghui -v, --version
-                    Print the installed version
-  ghui -h, --help   Show this help message
+  ghui -h, --help
+
+Targets:
+  owner/repo                         Open a repository
+  owner/repo#123                     Open a pull request
+  https://github.com/owner/repo      Open a GitHub repository URL
+  https://github.com/owner/repo/pull/123
+                                     Open a GitHub pull request URL
+
+Options:
+  --view details|diff|comments|runs  Open a pull request view (default: details)
+
+Commands:
+  upgrade                            Upgrade ghui to the latest npm release
+  -v, --version                      Print the installed version
+  -h, --help                         Show this help message
 `
 
 const run = (target, args = process.argv.slice(2)) => {

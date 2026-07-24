@@ -8,7 +8,7 @@ import { itemQueryCacheKeyHasRepository, type ItemListInput, searchQualifier } f
 import { resolveItemLoad, trimItemLoadCache } from "../../item/load.js"
 import { loadItemQueue } from "../../item/queue.js"
 import { retryItemQueueFirstPage } from "../../item/retry.js"
-import { freshPullRequestLoad, mergePullRequestDetail } from "../../pullRequestCache.js"
+import { freshPullRequestLoad, installTargetedPullRequest, mergePullRequestDetail, pullRequestLoadForPersistence, pullRequestQueueItemCount } from "../../pullRequestCache.js"
 export { nextLoadAfterPage } from "../../pullRequestCache.js"
 import type { PullRequestLoad } from "../../pullRequestLoad.js"
 import { activePullRequestViews, initialPullRequestView, type PullRequestView, viewCacheKey, viewRepository, viewToListInput } from "../../pullRequestViews.js"
@@ -68,7 +68,7 @@ export const pullRequestsAtom = githubRuntime.atom(
 			keyOfView: viewCacheKey,
 			getAuthenticatedUser: github.getAuthenticatedUser(),
 			readCached: (viewer, queueView) => cacheService.readQueue(viewer, queueView),
-			writeCached: (viewer, queueLoad) => cacheService.writeQueue(viewer, queueLoad),
+			writeCached: (viewer, queueLoad) => cacheService.writeQueue(viewer, pullRequestLoadForPersistence(queueLoad)),
 			fetchFirstPage: (queueView) =>
 				Effect.gen(function* () {
 					const listInput = viewToListInput(queueView, null, Math.min(pullRequestPageSize, config.prFetchLimit))
@@ -91,6 +91,23 @@ export const pullRequestsAtom = githubRuntime.atom(
 export const usernameAtom = githubRuntime.atom(GitHubService.use((github) => github.getAuthenticatedUser())).pipe(Atom.keepAlive)
 
 export const listOpenPullRequestPageAtom = githubRuntime.fn<ItemListInput<"pullRequest">>()((input) => GitHubService.use((github) => github.listPullRequestPage(input)))
+
+export const hydrateTargetedPullRequestAtom = githubRuntime.fn<{ readonly repository: string; readonly number: number }>()((input) =>
+	Effect.gen(function* () {
+		const fetched = yield* GitHubService.use((github) => github.getPullRequestDetails(input.repository, input.number))
+		const detail = fetched.repository === input.repository ? fetched : { ...fetched, repository: input.repository }
+		const view = { _tag: "Repository", repository: input.repository } as const
+		const cacheKey = viewCacheKey(view)
+		yield* Atom.update(queueLoadCacheAtom, (current) => {
+			const next = { ...current }
+			delete next[cacheKey]
+			next[cacheKey] = installTargetedPullRequest(current[cacheKey], detail)
+			return trimQueueLoadCache(next)
+		})
+		yield* CacheService.use((cache) => cache.upsertPullRequest(detail)).pipe(Effect.catch(() => Effect.void))
+		return detail
+	}),
+)
 
 // Family of one atom per repository. The empty string is a sentinel "no
 // selection" — the atom resolves to null without hitting the service, so the
@@ -191,7 +208,7 @@ export const pullRequestDetailsForRevision = Atom.family((revisionKey: string) =
 )
 
 export const writeQueueCacheAtom = githubRuntime.fn<{ readonly viewer: string; readonly load: PullRequestLoad }>()(({ viewer, load }) =>
-	CacheService.use((cache) => cache.writeQueue(viewer, load)),
+	CacheService.use((cache) => cache.writeQueue(viewer, pullRequestLoadForPersistence(load))),
 )
 export const pruneCacheAtom = githubRuntime.fn<void>()(() => CacheService.use((cache) => cache.prune()))
 
@@ -249,7 +266,7 @@ export const activeViewsAtom = Atom.make((get) => activePullRequestViews(get(act
 export const loadedPullRequestCountAtom = Atom.make((get) => cachedPullRequestLoad(get)?.data.length ?? 0)
 export const hasMorePullRequestsAtom = Atom.make((get) => {
 	const load = cachedPullRequestLoad(get)
-	return Boolean(load?.hasNextPage && load.data.length < config.prFetchLimit)
+	return Boolean(load?.hasNextPage && pullRequestQueueItemCount(load) < config.prFetchLimit)
 })
 
 // Queue cache key currently being load-more'd, or null if no fetch is in

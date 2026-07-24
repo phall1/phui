@@ -6,12 +6,23 @@ import { Effect } from "effect"
 import { appendFile } from "node:fs/promises"
 import { useEffect, useState } from "react"
 import { errorMessage } from "./errors.js"
+import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent } from "./launchIntent.js"
 import { createSystemThemeReloader, type SystemThemeReloadEvent } from "./systemThemeReload.js"
 import { setTuiSuspender } from "./tuiSuspension.js"
 import { loadStoredSystemThemeAutoReload } from "./themeStore.js"
 import { colors, setSystemThemeColors } from "./ui/colors.js"
 import { LoadingLogoPane } from "./ui/LoadingLogo.js"
 import { SPINNER_INTERVAL_MS } from "./ui/spinner.js"
+
+const launchIntent = (() => {
+	try {
+		return parseLaunchIntent(process.argv.slice(2))
+	} catch (error) {
+		if (!(error instanceof LaunchIntentError)) throw error
+		process.stderr.write(`${formatLaunchIntentError(error)}\n`)
+		process.exit(1)
+	}
+})()
 
 process.env.OTUI_USE_ALTERNATE_SCREEN = "true"
 
@@ -154,7 +165,7 @@ const Bootstrap = () => {
 		const { RegistryProvider, App } = appBundle
 		return (
 			<RegistryProvider>
-				<App systemThemeGeneration={systemThemeGeneration} />
+				<App systemThemeGeneration={systemThemeGeneration} launchIntent={launchIntent} />
 			</RegistryProvider>
 		)
 	}

@@ -3,6 +3,7 @@ import { useCallback, useContext } from "react"
 import {
 	addPullRequestLabelAtom,
 	closePullRequestAtom,
+	hydrateTargetedPullRequestAtom,
 	prewarmRepositoryDetailsAtom,
 	pruneCacheAtom,
 	removePullRequestLabelAtom,
@@ -25,6 +26,7 @@ export const useGitHubActions = () => {
 	const addIssueLabel = useAtomSet(addIssueLabelAtom, { mode: "promise" })
 	const removeIssueLabel = useAtomSet(removeIssueLabelAtom, { mode: "promise" })
 	const toggleDraftStatus = useAtomSet(toggleDraftAtom, { mode: "promise" })
+	const hydrateTargetedPullRequest = useAtomSet(hydrateTargetedPullRequestAtom, { mode: "promise" })
 	const listPullRequestComments = useAtomSet(listPullRequestCommentsAtom, { mode: "promise" })
 	const listIssueComments = useAtomSet(listIssueCommentsAtom, { mode: "promise" })
 	const readWorkspacePreferences = useAtomSet(readWorkspacePreferencesAtom, { mode: "promise" })
@@ -44,6 +46,7 @@ export const useGitHubActions = () => {
 		addIssueLabel,
 		removeIssueLabel,
 		toggleDraftStatus,
+		hydrateTargetedPullRequest,
 		listPullRequestComments,
 		listIssueComments,
 		readWorkspacePreferences,

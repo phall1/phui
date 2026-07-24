@@ -40,6 +40,52 @@ Run it from anywhere:
 ghui
 ```
 
+## Target a repository or pull request
+
+Ordinary `ghui` startup still needs only the authenticated `gh` CLI. You can
+also open an exact repository or pull request at startup:
+
+```bash
+ghui owner/repo
+ghui owner/repo#123 --view diff
+ghui https://github.com/owner/repo/pull/123 --view comments
+```
+
+For pull requests, `--view` accepts `details`, `diff`, `comments`, or `runs`
+and defaults to `details`. GitHub repository URLs are also accepted.
+
+## Optional phux handoff
+
+[`phux`](https://github.com/phall1/phux) is optional. With phux 0.3.0 or
+newer, an agent can open ghui beside its pane without installing a plugin:
+
+```bash
+phux spawn --target @7 --split vertical -c /path/to/repo -- \
+  ghui owner/repo#123 --view diff
+phux ask @7 --id owner-repo-123-review \
+  "owner/repo#123 is ready for review"
+```
+
+`phux ask` is the advisory human checkpoint. Agents should read and update
+semantic review state through `gh` or the GitHub API, not by scraping or
+keyboard-driving the ghui screen.
+
+This repository also ships a small, optional launch template for people who
+prefer `phux launch`. Linking and enabling it is a manual setup step from a
+ghui checkout:
+
+```bash
+phux plugin link ./phux-plugin/phux-plugin.toml
+phux plugin enable ghui
+phux launch ghui --target @7 --split vertical -c /path/to/repo -- \
+  owner/repo#123 --view diff
+```
+
+The template runs `ghui` in the directory where `phux launch` is invoked
+(`working_directory = "workspace"`); `-c` overrides that workspace for the
+example above. Homebrew installs the ghui binary, not this optional phux
+plugin.
+
 ## Local Development
 
 Clone, install, and link:

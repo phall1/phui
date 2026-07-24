@@ -3,7 +3,9 @@ import { useRenderer, useTerminalDimensions } from "@opentui/react"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
 import { useContext, useEffect, useRef, useState } from "react"
 import type { AppCommand } from "../commands.js"
-import { parseRepositoryInput } from "../pullRequestViews.js"
+import type { GhuiLaunchIntent, GhuiLaunchView } from "../launchIntent.js"
+import { applyLaunchIntent, findLaunchPullRequestIndex, pullRequestLaunchViewState } from "../launchBootstrap.js"
+import { parseRepositoryInput, viewCacheKey } from "../pullRequestViews.js"
 
 import { colors } from "../ui/colors.js"
 import { workspaceSurfaceAtom } from "../workspace/atoms.js"
@@ -21,9 +23,10 @@ import { useIssueSurface } from "../surfaces/issue/useIssueSurface.js"
 import { filterDraftAtom, filterModeAtom, filterQueryAtom } from "../ui/filter/atoms.js"
 import { selectedIndexAtom } from "../ui/listSelection/atoms.js"
 import { noticeAtom } from "../ui/notice/atoms.js"
+import { expireNotice, NOTICE_TIMEOUT_MS, visibleNoticeAfterInitialLoading } from "../ui/notice/lifecycle.js"
 import { useFlashNotice } from "../ui/notice/useFlashNotice.js"
 import { useCommentMutations } from "../ui/comments/useCommentMutations.js"
-import { pullRequestDetailKey, queueSelectionAtom, usernameAtom } from "../ui/pullRequests/atoms.js"
+import { pullRequestDetailKey, queueSelectionAtom, usernameAtom, visiblePullRequestsAtom } from "../ui/pullRequests/atoms.js"
 
 import { useGitHubActions } from "./useGitHubActions.js"
 import { useImperativeActions } from "./useImperativeActions.js"
@@ -47,6 +50,7 @@ import { useWorkspaceNavigation } from "./useWorkspaceNavigation.js"
 import { useDiffSelectionSync } from "./useDiffSelectionSync.js"
 import { useDiffViewState } from "./useDiffViewState.js"
 import { useViewModeState } from "./useViewModeState.js"
+import { useTerminalTitle } from "./useTerminalTitle.js"
 import { useFilterModal } from "../ui/filter/useFilterModal.js"
 import { DIFF_FILE_PANEL_AUTO_THRESHOLD, diffFilePanelOverrideAtom, selectedDiffKeyAtom, selectedDiffStateAtom } from "../ui/diff/atoms.js"
 import { diffCommentThreadMapKey } from "../ui/diff/comments.js"
@@ -67,9 +71,10 @@ import { detectedRepository, mockRepositoryCatalog, mockWorkspacePreferencesPath
 
 export interface UseAppShellInput {
 	readonly systemThemeGeneration: number
+	readonly launchIntent: GhuiLaunchIntent
 }
 
-export const useAppShell = ({ systemThemeGeneration }: UseAppShellInput) => {
+export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShellInput) => {
 	const renderer = useRenderer()
 	const { width, height } = useTerminalDimensions()
 	const registry = useContext(RegistryContext)
@@ -77,14 +82,6 @@ export const useAppShell = ({ systemThemeGeneration }: UseAppShellInput) => {
 	const setQueueSelection = useAtomSet(queueSelectionAtom)
 	const [selectedIndex, setSelectedIndex] = useAtom(selectedIndexAtom)
 	const [notice, setNotice] = useAtom(noticeAtom)
-	// Every notice auto-expires, regardless of who set it — command-side writers
-	// (`Atom.set(noticeAtom, …)`) don't go through `useFlashNotice`'s timer, so
-	// without this they'd linger until the next overwrite. ~2.5s matches the hook.
-	useEffect(() => {
-		if (notice === null) return
-		const handle = globalThis.setTimeout(() => setNotice((current) => (current === notice ? null : current)), 2500)
-		return () => globalThis.clearTimeout(handle)
-	}, [notice, setNotice])
 	const [filterQuery, setFilterQuery] = useAtom(filterQueryAtom)
 	const [filterDraft, setFilterDraft] = useAtom(filterDraftAtom)
 	const [filterMode, setFilterMode] = useAtom(filterModeAtom)
@@ -168,6 +165,12 @@ export const useAppShell = ({ systemThemeGeneration }: UseAppShellInput) => {
 	} = useModalStack()
 	const [startupLoadComplete, setStartupLoadComplete] = useState(false)
 	const [homeCrumbHovered, setHomeCrumbHovered] = useState(false)
+	const launchIntentAppliedRef = useRef(false)
+	const [pendingLaunchPullRequest, setPendingLaunchPullRequest] = useState<{
+		readonly repository: string
+		readonly number: number
+		readonly view: GhuiLaunchView
+	} | null>(null)
 	const usernameResult = useAtomValue(usernameAtom)
 	const {
 		addPullRequestLabel,
@@ -175,6 +178,7 @@ export const useAppShell = ({ systemThemeGeneration }: UseAppShellInput) => {
 		addIssueLabel,
 		removeIssueLabel,
 		toggleDraftStatus,
+		hydrateTargetedPullRequest,
 		listPullRequestComments,
 		listIssueComments,
 		readWorkspacePreferences,
@@ -300,7 +304,25 @@ export const useAppShell = ({ systemThemeGeneration }: UseAppShellInput) => {
 		resetHydration,
 		selectPullRequestByUrl,
 	} = prSurface
+	useTerminalTitle({
+		activeWorkspaceSurface,
+		selectedRepository,
+		selectedPullRequest,
+		detailFullView,
+		diffFullView,
+		commentsViewActive,
+		runsFullView,
+	})
 	const isInitialLoading = !startupLoadComplete && pullRequestStatus === "loading" && pullRequests.length === 0
+	const visibleNotice = visibleNoticeAfterInitialLoading(notice, isInitialLoading)
+	// Atom-side notices do not pass through `useFlashNotice`'s timer. Start their
+	// fallback timeout only once the normal notice surface is visible, so an
+	// early launch failure gets the full 2.5s interval without becoming sticky.
+	useEffect(() => {
+		if (visibleNotice === null) return
+		const handle = globalThis.setTimeout(() => setNotice((current) => expireNotice(current, visibleNotice)), NOTICE_TIMEOUT_MS)
+		return () => globalThis.clearTimeout(handle)
+	}, [setNotice, visibleNotice])
 
 	const issueSurface = useIssueSurface({
 		username,
@@ -524,6 +546,31 @@ export const useAppShell = ({ systemThemeGeneration }: UseAppShellInput) => {
 		issues,
 		pullRequests,
 	})
+
+	useEffect(() => {
+		if (launchIntentAppliedRef.current) return
+		launchIntentAppliedRef.current = true
+		void applyLaunchIntent(launchIntent, {
+			openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
+			hydratePullRequest: hydrateTargetedPullRequest,
+			selectPullRequest: (pullRequest) => {
+				const repositoryView = { _tag: "Repository", repository: pullRequest.repository } as const
+				const index = findLaunchPullRequestIndex(registry.get(visiblePullRequestsAtom), pullRequest)
+				if (index < 0) return false
+				setSelectedIndex(index)
+				setQueueSelection((current) => ({ ...current, [viewCacheKey(repositoryView)]: index }))
+				return true
+			},
+			showNotice: setNotice,
+		}).then((result) => {
+			if (result._tag !== "PullRequestReady") return
+			setPendingLaunchPullRequest({
+				repository: result.pullRequest.repository,
+				number: result.pullRequest.number,
+				view: result.view,
+			})
+		})
+	}, [hydrateTargetedPullRequest, launchIntent, registry, setNotice, setQueueSelection, setSelectedIndex, switchViewTo])
 
 	// Keep list scroll position when toggling between surfaces. Each list's
 	// scrollbox remounts on surface switch; without persistence it starts at
@@ -767,6 +814,41 @@ export const useAppShell = ({ systemThemeGeneration }: UseAppShellInput) => {
 			openUrl,
 			flashNotice,
 		})
+
+	useEffect(() => {
+		if (
+			pendingLaunchPullRequest === null ||
+			selectedPullRequest === null ||
+			selectedPullRequest.repository !== pendingLaunchPullRequest.repository ||
+			selectedPullRequest.number !== pendingLaunchPullRequest.number
+		) {
+			return
+		}
+
+		switchWorkspaceSurface("pullRequests")
+		const viewState = pullRequestLaunchViewState(pendingLaunchPullRequest.view)
+		setDetailFullView(viewState.detailFullView)
+		setDiffFullView(viewState.diffFullView)
+		setCommentsViewActive(viewState.commentsViewActive)
+		setRunsFullView(viewState.runsFullView)
+		if (pendingLaunchPullRequest.view === "diff") openDiffView()
+		if (pendingLaunchPullRequest.view === "comments") {
+			setCommentsViewSelection(0)
+			loadPullRequestComments(selectedPullRequest)
+		}
+		setPendingLaunchPullRequest(null)
+	}, [
+		loadPullRequestComments,
+		openDiffView,
+		pendingLaunchPullRequest,
+		selectedPullRequest,
+		setCommentsViewActive,
+		setCommentsViewSelection,
+		setDetailFullView,
+		setDiffFullView,
+		setRunsFullView,
+		switchWorkspaceSurface,
+	])
 
 	const { movePullRequestStateSelection, confirmPullRequestStateChange, confirmCloseModal, toggleLabelAtIndex, confirmSubmitReview } = useItemModalActions({
 		pullRequestStateModal,

@@ -1,32 +1,34 @@
 import packageJson from "../package.json" with { type: "json" }
+import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent } from "./launchIntent.js"
 
 const help = `ghui ${packageJson.version}
 
 Terminal UI for GitHub pull requests.
 
 Usage:
-  ghui              Start the TUI
+  ghui [target] [--view <view>]
+  ghui upgrade
   ghui -v, --version
-                    Print the installed version
-  ghui -h, --help   Show this help message
+  ghui -h, --help
+
+Targets:
+  owner/repo                         Open a repository
+  owner/repo#123                     Open a pull request
+  https://github.com/owner/repo      Open a GitHub repository URL
+  https://github.com/owner/repo/pull/123
+                                     Open a GitHub pull request URL
+
+Options:
+  --view details|diff|comments|runs  Open a pull request view (default: details)
+
+Commands:
+  upgrade                            Show package-manager upgrade guidance
+  -v, --version                      Print the installed version
+  -h, --help                         Show this help message
 `
 
 const args = Bun.argv.slice(2)
 const command = args[0]
-const commands = ["help", "version"]
-
-const editDistance = (a: string, b: string) => {
-	const distances = Array.from({ length: a.length + 1 }, (_, i) => [i])
-	for (let j = 1; j <= b.length; j++) distances[0]![j] = j
-
-	for (let i = 1; i <= a.length; i++) {
-		for (let j = 1; j <= b.length; j++) {
-			distances[i]![j] = Math.min(distances[i - 1]![j]! + 1, distances[i]![j - 1]! + 1, distances[i - 1]![j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1))
-		}
-	}
-
-	return distances[a.length]![b.length]!
-}
 
 if (command === "-h" || command === "--help" || command === "help") {
 	console.log(help)
@@ -43,12 +45,11 @@ if (command === "upgrade") {
 	process.exit(1)
 }
 
-if (typeof command === "string") {
-	const unknownCommand = command
-	const suggestion = commands.find((name) => editDistance(unknownCommand, name) <= 2)
-	console.error(`Unknown command: ${unknownCommand}`)
-	if (suggestion) console.error(`Did you mean: ghui ${suggestion}?`)
-	console.error("Run `ghui --help` for usage.")
+try {
+	parseLaunchIntent(args)
+} catch (error) {
+	if (!(error instanceof LaunchIntentError)) throw error
+	console.error(formatLaunchIntentError(error))
 	process.exit(1)
 }
 

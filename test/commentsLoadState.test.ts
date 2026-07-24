@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test"
-import type { IssueItem, PullRequestComment } from "../src/domain.js"
+import type { IssueItem, PullRequestComment, PullRequestItem } from "../src/domain.js"
 import { useCommentsLoader } from "../src/hooks/useCommentsLoader.js"
+import { pullRequestLaunchViewState } from "../src/launchBootstrap.js"
 import { commentsHeaderStatus, commentsPaneMode, type StoredCommentLoadState } from "../src/ui/comments/loadState.js"
 
 const issue = { repository: "owner/repo", number: 42 } as IssueItem
 const key = "issue:owner/repo#42"
+const pullRequest = { repository: "owner/repo", number: 42, headRefOid: "abc123" } as PullRequestItem
+const pullRequestKey = "owner/repo#42:abc123"
 
 const deferred = <A>() => {
 	let resolve!: (value: A) => void
@@ -76,6 +79,47 @@ describe("comments load state", () => {
 
 		expect(states[key]).toEqual({ status: "error", error: "refresh failed", cached: true })
 		expect(comments[key]).toEqual([cachedComment])
+	})
+
+	test("opens a cold comments launch with one pull request comments request", async () => {
+		let states: Record<string, StoredCommentLoadState> = {}
+		let comments: Record<string, readonly PullRequestComment[]> = {}
+		const request = deferred<readonly PullRequestComment[]>()
+		const loadedComment = { id: "loaded" } as PullRequestComment
+		const notices: string[] = []
+		let requestCount = 0
+		const loader = useCommentsLoader({
+			refreshGenerationRef: { current: 0 },
+			readCommentsLoadState: () => states,
+			setPullRequestComments: (update) => {
+				comments = update(comments)
+			},
+			setPullRequestCommentsLoaded: (update) => {
+				states = update(states)
+			},
+			listPullRequestComments: () => {
+				requestCount += 1
+				return requestCount === 1 ? request.promise : Promise.reject(new Error("duplicate request failed"))
+			},
+			listIssueComments: async () => [],
+			flashNotice: (message) => notices.push(message),
+		})
+
+		// The selected-subject effect and comments launch transition may run in
+		// the same commit. Both use the guarded load path.
+		loader.loadPullRequestComments(pullRequest)
+		loader.loadPullRequestComments(pullRequest)
+
+		expect(pullRequestLaunchViewState("comments").commentsViewActive).toBe(true)
+		expect(requestCount).toBe(1)
+		expect(states[pullRequestKey]).toEqual({ status: "loading", cached: false })
+
+		request.resolve([loadedComment])
+		await flushPromises()
+
+		expect(comments[pullRequestKey]).toEqual([loadedComment])
+		expect(states[pullRequestKey]).toEqual({ status: "ready" })
+		expect(notices).toEqual([])
 	})
 
 	test("selects centered loading only for uncached loads", () => {

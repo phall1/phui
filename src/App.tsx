@@ -1,3 +1,4 @@
+import type { GhuiLaunchIntent } from "./launchIntent.js"
 import { colors } from "./ui/colors.js"
 import { LoadingLogoPane } from "./ui/LoadingLogo.js"
 import { centerCell, Divider, TextLine } from "./ui/primitives.js"
@@ -8,8 +9,11 @@ import { WorkspaceHeader } from "./surfaces/WorkspaceHeader.js"
 import { WorkspaceModals } from "./surfaces/WorkspaceModals.js"
 import { useAppShell } from "./hooks/useAppShell.js"
 
+const defaultLaunchIntent: GhuiLaunchIntent = { _tag: "Default" }
+
 interface AppProps {
 	readonly systemThemeGeneration?: number
+	readonly launchIntent?: GhuiLaunchIntent
 }
 
 /**
@@ -18,8 +22,8 @@ interface AppProps {
  * `useAppShell`; this component is purely the JSX layout that
  * consumes the shell bundle.
  */
-export const App = ({ systemThemeGeneration = 0 }: AppProps) => {
-	const shell = useAppShell({ systemThemeGeneration })
+export const App = ({ systemThemeGeneration = 0, launchIntent = defaultLaunchIntent }: AppProps) => {
+	const shell = useAppShell({ systemThemeGeneration, launchIntent })
 
 	if (shell.terminalTooSmall) {
 		const lines = ["Terminal too small", `Need 60x16; current ${shell.terminalWidth}x${shell.terminalHeight}`, "Resize to continue"]
