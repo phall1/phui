@@ -1,5 +1,12 @@
 # @kitlangton/ghui
 
+## 0.11.0
+
+### Minor Changes
+
+- 58fc9e4: Open repositories and pull requests directly from launch targets, including diff, comments, and Actions views, with terminal titles and an optional phux handoff integration.
+- 71827a8: Add `w` to open the selected PR's head in an isolated git worktree inside a phux session, with fork-PR fetching, configurable worktree paths, and attached or detached launch behavior based on whether ghui already runs inside phux.
+
 ## 0.10.0
 
 ### Minor Changes

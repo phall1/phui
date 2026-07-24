@@ -121,7 +121,7 @@ Do not expose ghui's internal command registry, React handoffs, or screen text a
 
 ## Status
 
-In progress — implementation and validation are complete; release is pending.
+Shipped — v0.11.0; implementation commit `58fc9e4`.
 Targeted repository and pull-request startup, direct PR hydration, requested
 initial views, and terminal title identity are part of ghui itself with no
 phux dependency. The README documents the zero-plugin handoff and
