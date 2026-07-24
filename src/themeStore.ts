@@ -16,6 +16,7 @@ interface StoredConfig {
 	readonly showScrollbars?: unknown
 	readonly editorCommand?: unknown
 	readonly repoPaths?: unknown
+	readonly worktreePath?: unknown
 }
 
 const configDirectory = () => {
@@ -98,6 +99,20 @@ export const loadStoredEditorConfig: Effect.Effect<StoredEditorConfig> = Effect.
 		return { editorCommand, repoPaths: parseRepoPaths(config.repoPaths) }
 	}),
 	() => Effect.succeed({ editorCommand: null, repoPaths: {} } satisfies StoredEditorConfig),
+)
+
+export interface StoredWorktreeConfig {
+	readonly worktreePath: string | null
+	readonly repoPaths: Readonly<Record<string, string>>
+}
+
+export const loadStoredWorktreeConfig: Effect.Effect<StoredWorktreeConfig> = Effect.catchCause(
+	Effect.tryPromise(async () => {
+		const config = await readStoredConfig()
+		const worktreePath = typeof config.worktreePath === "string" && config.worktreePath.trim().length > 0 ? config.worktreePath : null
+		return { worktreePath, repoPaths: parseRepoPaths(config.repoPaths) }
+	}),
+	() => Effect.succeed({ worktreePath: null, repoPaths: {} } satisfies StoredWorktreeConfig),
 )
 
 export const saveStoredThemeId = (theme: ThemeId): Effect.Effect<void> =>

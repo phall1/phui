@@ -35,3 +35,4 @@ When a plan ships, leave the file in place and update the **Status** line so we 
 - [`github-actions-runs.md`](./github-actions-runs.md) — per-PR workflow runs view (`a`): runs list → jobs/steps/log investigation, as a diff-view-peer PR view mode.
 - [`github-actions-daily-driver.md`](./github-actions-daily-driver.md) — phased repository-wide Actions monitoring, controls, logs, dispatch, artifacts, and operational polish.
 - [`agent-cockpit-handoff.md`](./agent-cockpit-handoff.md) — hand exact PR review context from coding agents to a persistent ghui pane, with phux as the first terminal-service adapter.
+- [`open-in-phux-worktree.md`](./open-in-phux-worktree.md) — check a PR's head out into an isolated git worktree and open it in a phux session via `w`.

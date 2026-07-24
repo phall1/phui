@@ -4,6 +4,7 @@ import { errorMessage } from "../errors.js"
 import { BrowserOpener } from "../services/BrowserOpener.js"
 import { Clipboard } from "../services/Clipboard.js"
 import { EditorOpener } from "../services/EditorOpener.js"
+import { WorktreeOpener } from "../services/WorktreeOpener.js"
 import { GitHubService } from "../services/GitHubService.js"
 import { saveStoredDiffWhitespaceMode } from "../themeStore.js"
 import { commentsViewActiveAtom, selectedCommentKeyAtom } from "../ui/comments/atoms.js"
@@ -523,6 +524,23 @@ export const globalCommands: readonly CommandDefinition[] = [
 			const pr = yield* Atom.get(selectedPullRequestAtom)
 			if (!pr) return
 			yield* EditorOpener.use((opener) => opener.openPullRequest(pr)).pipe(Effect.catch(flashErrorEffect))
+		}),
+	}),
+	defineCommand({
+		id: "pull.open-worktree",
+		title: "Open pull request in phux worktree",
+		scope: "Pull request",
+		subtitle: selectedPullRequestLabelAtom,
+		shortcut: "w",
+		keywords: ["worktree", "phux", "checkout", "branch", "session", "multiplexer"],
+		disabledReason: noPullRequestReasonAtom,
+		run: Effect.gen(function* () {
+			const pr = yield* Atom.get(selectedPullRequestAtom)
+			if (!pr) return
+			yield* WorktreeOpener.use((opener) => opener.openPullRequest(pr)).pipe(
+				Effect.tap((notice) => (notice ? Atom.set(noticeAtom, notice) : Effect.void)),
+				Effect.catch(flashErrorEffect),
+			)
 		}),
 	}),
 	defineCommand({

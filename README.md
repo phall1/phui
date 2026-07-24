@@ -189,6 +189,36 @@ the resolved `repoPath`. Some common recipes:
 "editorCommand": "code {{repoPath}}"
 ```
 
+### Open in a phux worktree
+
+Press `w` on a pull request (list or detail view) to check its head out into an
+isolated [git worktree](https://git-scm.com/docs/git-worktree) and open a
+phux session there — the primary clone's
+checkout is never touched, and each PR gets its own session named
+`<repo>-pr-<number>`.
+
+- Outside phux, ghui suspends the TUI and attaches to the session directly;
+  detaching drops you back into ghui.
+- Inside phux (detected via `PHUX_TERMINAL_ID`), the session is created
+  detached and a footer notice tells you it's ready to switch to.
+
+The local clone comes from the same `repoPaths` map used by open-in-editor.
+The worktree fetches `refs/pull/<number>/head` from the remote matching the
+PR's repository (so fork PRs work without adding the fork as a remote) and
+checks it out on a local `pr/<number>` branch. Pressing `w` again on the same
+PR reuses the existing worktree and session.
+
+By default worktrees live at `{{repoPath}}/.ghui/worktrees/pr-{{number}}`
+(ghui adds `.ghui/` to the clone's `.git/info/exclude` so they never appear in
+`git status`). Override the location with a `worktreePath` template in
+`config.json`, using the same substitutions as `editorCommand`:
+
+```json
+{
+	"worktreePath": "~/worktrees/{{name}}/pr-{{number}}"
+}
+```
+
 ### Workflow runs
 
 Open a repository and select its **Actions** tab to monitor recent workflow runs

@@ -19,7 +19,7 @@ export interface EditorCommandFields {
 /** Map of `owner/repo` / wildcard / `:owner/:repo` template patterns to local paths. */
 export type RepoPaths = Readonly<Record<string, string>>
 
-const expandHome = (value: string) => {
+export const expandHome = (value: string) => {
 	if (value === "~") return homedir()
 	if (value.startsWith("~/")) return `${homedir()}/${value.slice(2)}`
 	return value

@@ -14,6 +14,7 @@ export interface DetailViewCtx extends Scrollable {
 	readonly refresh: () => void
 	readonly openInBrowser: () => void
 	readonly openInEditor: () => void
+	readonly openInWorktree: () => void
 	readonly copyMetadata: () => void
 }
 
@@ -34,5 +35,6 @@ export const detailViewKeymap = Detail(
 	{ id: "detail.refresh", title: "Refresh", keys: ["r"], run: (s) => s.refresh() },
 	{ id: "detail.open-browser", title: "Open in browser", keys: ["o"], run: (s) => s.openInBrowser() },
 	{ id: "detail.open-editor", title: "Open in editor", keys: ["e"], run: (s) => s.openInEditor() },
+	{ id: "detail.open-worktree", title: "Open phux worktree", keys: ["w"], run: (s) => s.openInWorktree() },
 	{ id: "detail.copy", title: "Copy metadata", keys: ["y"], run: (s) => s.copyMetadata() },
 )

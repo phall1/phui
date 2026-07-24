@@ -74,6 +74,7 @@ export const listNavKeymap = List(
 	{ id: "list.close-issue", title: "Close issue", keys: ["x"], when: issuesActive, run: (s) => s.runCommandById("issue.close") },
 	{ id: "list.open-browser", title: "Open in browser", keys: ["o"], when: pullRequestsActive, run: (s) => s.runCommandById("pull.open-browser") },
 	{ id: "list.open-editor", title: "Open in editor", keys: ["e"], when: pullRequestsActive, run: (s) => s.runCommandById("pull.open-editor") },
+	{ id: "list.open-worktree", title: "Open phux worktree", keys: ["w"], when: pullRequestsActive, run: (s) => s.runCommandById("pull.open-worktree") },
 	{ id: "list.issue-open-browser", title: "Open in browser", keys: ["o"], when: issuesActive, run: (s) => s.runCommandById("issue.open-browser") },
 	{ id: "list.toggle-draft", title: "Toggle draft", keys: ["s", "shift+s"], when: pullRequestsActive, run: (s) => s.runCommandById("pull.toggle-draft") },
 	{ id: "list.copy", title: "Copy metadata", keys: ["y"], when: pullRequestsActive, run: (s) => s.runCommandById("pull.copy-metadata") },

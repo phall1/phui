@@ -9,6 +9,7 @@ import { Clipboard } from "./Clipboard.js"
 import { EditorOpener } from "./EditorOpener.js"
 import { CommandRunner } from "./CommandRunner.js"
 import { GitHubService } from "./GitHubService.js"
+import { WorktreeOpener } from "./WorktreeOpener.js"
 
 const parseOptionalPositiveInt = (value: string | undefined, fallback: number | null) => {
 	if (value === undefined) return fallback
@@ -57,8 +58,10 @@ const cacheServiceLayer = mockPrCount !== null ? CacheService.disabledLayer : Ca
 
 const editorOpenerLayer = mockPrCount !== null ? EditorOpener.mockLayer : EditorOpener.layerNoDeps
 
+const worktreeOpenerLayer = mockPrCount !== null ? WorktreeOpener.mockLayer : WorktreeOpener.layerNoDeps
+
 export const githubRuntime = Atom.runtime(
-	Layer.mergeAll(githubServiceLayer, cacheServiceLayer, Clipboard.layerNoDeps, BrowserOpener.layerNoDeps, editorOpenerLayer).pipe(
+	Layer.mergeAll(githubServiceLayer, cacheServiceLayer, Clipboard.layerNoDeps, BrowserOpener.layerNoDeps, editorOpenerLayer, worktreeOpenerLayer).pipe(
 		Layer.provide(CommandRunner.layer),
 		Layer.provideMerge(Observability.layer),
 	),
