@@ -849,7 +849,7 @@ export class CacheService extends Context.Service<
 		readonly writeWorkspacePreferences: (preferences: WorkspacePreferencesInput | WorkspacePreferences) => Effect.Effect<void, CacheError>
 		readonly prune: () => Effect.Effect<void>
 	}
->()("ghui/CacheService") {
+>()("phui/CacheService") {
 	static readonly disabledLayer = Layer.succeed(
 		CacheService,
 		CacheService.of({

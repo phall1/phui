@@ -19,7 +19,7 @@ export interface MockFixtureSnapshot {
 	readonly issues: readonly MockFixtureIssue[]
 }
 
-const fixturePath = () => resolve(process.cwd(), process.env.GHUI_MOCK_FIXTURE_PATH ?? ".ghui/opencode-fixtures.json")
+const fixturePath = () => resolve(process.cwd(), process.env.PHUI_MOCK_FIXTURE_PATH ?? ".phui/opencode-fixtures.json")
 
 const asDate = (value: unknown) => (typeof value === "string" ? new Date(value) : value instanceof Date ? value : new Date())
 

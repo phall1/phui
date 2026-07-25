@@ -78,7 +78,7 @@ export interface Worktree {
 export interface RepoSnapshot {
 	/** Absolute path to the directory. Stable identity for a project. */
 	readonly path: string
-	/** Directory basename, e.g. "ghui". Also the key used for `[intent]` lookups. */
+	/** Directory basename, e.g. "phui". Also the key used for `[intent]` lookups. */
 	readonly name: string
 	/** The configured scan root this directory was found under (absolute). */
 	readonly scanRoot: string

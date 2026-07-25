@@ -1,26 +1,26 @@
-# ghui
+# phui
 
 Terminal UI for keeping up with GitHub pull requests, issues, diffs, and Actions across repositories.
 
-`ghui` gives you one keyboard-driven place to review PR details, inspect diffs, monitor and control Actions, leave diff comments, manage labels, toggle draft state, merge, open PRs in GitHub, and copy PR metadata without leaving the terminal.
+`phui` gives you one keyboard-driven place to review PR details, inspect diffs, monitor and control Actions, leave diff comments, manage labels, toggle draft state, merge, open PRs in GitHub, and copy PR metadata without leaving the terminal.
 
 <img width="1420" height="856" alt="image" src="https://github.com/user-attachments/assets/5e560a4a-5887-4baa-a6d4-e1f4f0410c70" />
 
 ## Install
 
-Homebrew is the recommended install path on macOS and Linux. It installs a standalone `ghui` binary, so you do not need Bun or npm at runtime.
+Homebrew is the recommended install path on macOS and Linux. It installs a standalone `phui` binary, so you do not need Bun or npm at runtime.
 
 ```bash
-brew install phall1/tap/ghui
+brew install phall1/tap/phui
 ```
 
 Upgrade with:
 
 ```bash
-brew upgrade ghui
+brew upgrade phui
 ```
 
-This fork publishes standalone binaries from `phall1/ghui` and updates the
+This fork publishes standalone binaries from `phall1/phui` and updates the
 `phall1/tap` formula automatically. It does not publish the upstream npm package.
 The upstream npm release remains available separately:
 
@@ -37,18 +37,18 @@ Requirements:
 Run it from anywhere:
 
 ```bash
-ghui
+phui
 ```
 
 ## Target a repository or pull request
 
-Ordinary `ghui` startup still needs only the authenticated `gh` CLI. You can
+Ordinary `phui` startup still needs only the authenticated `gh` CLI. You can
 also open an exact repository or pull request at startup:
 
 ```bash
-ghui owner/repo
-ghui owner/repo#123 --view diff
-ghui https://github.com/owner/repo/pull/123 --view comments
+phui owner/repo
+phui owner/repo#123 --view diff
+phui https://github.com/owner/repo/pull/123 --view comments
 ```
 
 For pull requests, `--view` accepts `details`, `diff`, `comments`, or `runs`
@@ -57,33 +57,33 @@ and defaults to `details`. GitHub repository URLs are also accepted.
 ## Optional phux handoff
 
 [`phux`](https://github.com/phall1/phux) is optional. With phux 0.3.0 or
-newer, an agent can open ghui beside its pane without installing a plugin:
+newer, an agent can open phui beside its pane without installing a plugin:
 
 ```bash
 phux spawn --target @7 --split vertical -c /path/to/repo -- \
-  ghui owner/repo#123 --view diff
+  phui owner/repo#123 --view diff
 phux ask @7 --id owner-repo-123-review \
   "owner/repo#123 is ready for review"
 ```
 
 `phux ask` is the advisory human checkpoint. Agents should read and update
 semantic review state through `gh` or the GitHub API, not by scraping or
-keyboard-driving the ghui screen.
+keyboard-driving the phui screen.
 
 This repository also ships a small, optional launch template for people who
 prefer `phux launch`. Linking and enabling it is a manual setup step from a
-ghui checkout:
+phui checkout:
 
 ```bash
 phux plugin link ./phux-plugin/phux-plugin.toml
-phux plugin enable ghui
-phux launch ghui --target @7 --split vertical -c /path/to/repo -- \
+phux plugin enable phui
+phux launch phui --target @7 --split vertical -c /path/to/repo -- \
   owner/repo#123 --view diff
 ```
 
-The template runs `ghui` in the directory where `phux launch` is invoked
+The template runs `phui` in the directory where `phux launch` is invoked
 (`working_directory = "workspace"`); `-c` overrides that workspace for the
-example above. Homebrew installs the ghui binary, not this optional phux
+example above. Homebrew installs the phui binary, not this optional phux
 plugin.
 
 ## Local Development
@@ -91,8 +91,8 @@ plugin.
 Clone, install, and link:
 
 ```bash
-git clone https://github.com/phall1/ghui.git
-cd ghui
+git clone https://github.com/phall1/phui.git
+cd phui
 bun install
 bun link
 ```
@@ -107,20 +107,20 @@ bun run dev
 
 ## Configuration
 
-- `GHUI_PR_FETCH_LIMIT`: max PRs fetched, defaults to `200`
-- `GHUI_RUN_FETCH_LIMIT`: max workflow runs fetched per PR or repository Actions view, defaults to `20`
+- `PHUI_PR_FETCH_LIMIT`: max PRs fetched, defaults to `200`
+- `PHUI_RUN_FETCH_LIMIT`: max workflow runs fetched per PR or repository Actions view, defaults to `20`
 
 Example:
 
 ```bash
-GHUI_PR_FETCH_LIMIT=100 ghui
+PHUI_PR_FETCH_LIMIT=100 phui
 ```
 
 You can also copy `.env.example` to `.env` and edit the values locally.
 
-ghui stores UI preferences in `config.json` under `GHUI_CONFIG_DIR` when set,
+phui stores UI preferences in `config.json` under `PHUI_CONFIG_DIR` when set,
 otherwise under the platform config directory. On Linux this is normally
-`~/.config/ghui/config.json`.
+`~/.config/phui/config.json`.
 
 Example:
 
@@ -133,7 +133,7 @@ Example:
 ```
 
 `systemThemeAutoReload` defaults to `false`. Set it to `true` to let external
-theme reload signals update the active system theme palette while ghui is
+theme reload signals update the active system theme palette while phui is
 running.
 
 Scrollable panes hide their scrollbar rails by default. Set `showScrollbars`
@@ -143,7 +143,7 @@ behavior.
 ### Open in editor
 
 Press `e` on a pull request (in the list, detail, or diff view) to hand it off
-to your editor. ghui suspends the TUI, runs your command attached to the
+to your editor. phui suspends the TUI, runs your command attached to the
 terminal, and resumes when it exits.
 
 Configure this in `config.json`:
@@ -175,7 +175,7 @@ directory.
 - `{{url}}`
 - `{{repoPath}}` — resolved local path (requires a matching `repoPaths` entry)
 
-If `editorCommand` is omitted, ghui falls back to `$VISUAL`/`$EDITOR` opening
+If `editorCommand` is omitted, phui falls back to `$VISUAL`/`$EDITOR` opening
 the resolved `repoPath`. Some common recipes:
 
 ```jsonc
@@ -197,8 +197,8 @@ phux session there — the primary clone's
 checkout is never touched, and each PR gets its own session named
 `<repo>-pr-<number>`.
 
-- Outside phux, ghui suspends the TUI and attaches to the session directly;
-  detaching drops you back into ghui.
+- Outside phux, phui suspends the TUI and attaches to the session directly;
+  detaching drops you back into phui.
 - Inside phux (detected via `PHUX_TERMINAL_ID`), the session is created
   detached and a footer notice tells you it's ready to switch to.
 
@@ -208,8 +208,8 @@ PR's repository (so fork PRs work without adding the fork as a remote) and
 checks it out on a local `pr/<number>` branch. Pressing `w` again on the same
 PR reuses the existing worktree and session.
 
-By default worktrees live at `{{repoPath}}/.ghui/worktrees/pr-{{number}}`
-(ghui adds `.ghui/` to the clone's `.git/info/exclude` so they never appear in
+By default worktrees live at `{{repoPath}}/.phui/worktrees/pr-{{number}}`
+(phui adds `.phui/` to the clone's `.git/info/exclude` so they never appear in
 `git status`). Override the location with a `worktreePath` template in
 `config.json`, using the same substitutions as `editorCommand`:
 
@@ -232,7 +232,7 @@ PR's head commit.
 - `R` reruns a completed workflow, `F` reruns failed jobs, and `x` cancels an active run.
 - `tab` / `shift-tab` move between repository surfaces; `esc` walks back through run detail and repository scope.
 
-Requires the GitHub CLI (`gh`) the same as the rest of ghui; nothing extra to configure.
+Requires the GitHub CLI (`gh`) the same as the rest of phui; nothing extra to configure.
 
 ## Keybindings
 

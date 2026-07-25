@@ -17,16 +17,16 @@ const parseOptionalPositiveInt = (value: string | undefined, fallback: number | 
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
-export const mockPrCount = parseOptionalPositiveInt(process.env.GHUI_MOCK_PR_COUNT, null)
-export const mockRepository = process.env.GHUI_MOCK_REPOSITORY?.trim() || null
+export const mockPrCount = parseOptionalPositiveInt(process.env.PHUI_MOCK_PR_COUNT, null)
+export const mockRepository = process.env.PHUI_MOCK_REPOSITORY?.trim() || null
 export const detectedRepository = mockPrCount === null ? detectCurrentGitHubRepository() : mockRepository
-export const mockUsername = process.env.GHUI_MOCK_USERNAME?.trim() || (mockPrCount !== null ? "kitlangton" : undefined)
+export const mockUsername = process.env.PHUI_MOCK_USERNAME?.trim() || (mockPrCount !== null ? "kitlangton" : undefined)
 
 export const mockWorkspacePreferencesPath = (() => {
 	if (mockPrCount === null) return null
-	const value = process.env.GHUI_MOCK_WORKSPACE_PREFERENCES_PATH?.trim()
+	const value = process.env.PHUI_MOCK_WORKSPACE_PREFERENCES_PATH?.trim()
 	if (value === "off" || value === "0" || value === "false") return null
-	return value && value.length > 0 ? value : ".ghui/mock-workspace-preferences.json"
+	return value && value.length > 0 ? value : ".phui/mock-workspace-preferences.json"
 })()
 
 export const mockRepositoryCatalog =
@@ -41,13 +41,13 @@ export const mockRepositoryCatalog =
 
 export const initialRecentRepositories = mockRepositoryCatalog.length > 0 ? mockRepositoryCatalog.map((repo) => repo.repository) : detectedRepository ? [detectedRepository] : []
 
-export const pullRequestPageSize = Math.min(100, parseOptionalPositiveInt(process.env.GHUI_PR_PAGE_SIZE, config.prPageSize) ?? config.prPageSize)
+export const pullRequestPageSize = Math.min(100, parseOptionalPositiveInt(process.env.PHUI_PR_PAGE_SIZE, config.prPageSize) ?? config.prPageSize)
 
 const githubServiceLayer =
 	mockPrCount !== null
 		? (await import("./MockGitHubService.js")).MockGitHubService.layer({
 				prCount: mockPrCount,
-				repoCount: parseOptionalPositiveInt(process.env.GHUI_MOCK_REPO_COUNT, 4) ?? 4,
+				repoCount: parseOptionalPositiveInt(process.env.PHUI_MOCK_REPO_COUNT, 4) ?? 4,
 				repository: mockRepository,
 				repositories: mockRepositoryCatalog.map((repo) => repo.repository),
 				...(mockUsername ? { username: mockUsername } : {}),

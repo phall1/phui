@@ -2,16 +2,16 @@
 
 ## Why
 
-The repository workspace changes ghui's center of gravity: when launched inside a GitHub repository, the app now starts in that repo's PR/issue workspace. That is useful for project work, but it removes the easy path back to the original cross-repository PR queue.
+The repository workspace changes phui's center of gravity: when launched inside a GitHub repository, the app now starts in that repo's PR/issue workspace. That is useful for project work, but it removes the easy path back to the original cross-repository PR queue.
 
-Users need a way to move between repo-scoped work and global work without restarting ghui, and they need filters that explain what list they are looking at.
+Users need a way to move between repo-scoped work and global work without restarting phui, and they need filters that explain what list they are looking at.
 
 ## What we'd ship
 
 - A workspace scope model: either `global` or `repository`.
 - A lightweight hub opened by `esc` from the root workspace, or by a dedicated command-palette command.
 - Repo-scoped filters for PRs and issues.
-- Global PR filters that preserve the original ghui use case: review queue, authored PRs, assigned/review-requested PRs, etc.
+- Global PR filters that preserve the original phui use case: review queue, authored PRs, assigned/review-requested PRs, etc.
 - Global issue filters, likely starting with involved/assigned/created by me, depending on GitHub API cost and reliability.
 - Header chrome that separates app status, workspace scope, and surface tabs instead of overloading the top row with the repo name.
 
@@ -22,7 +22,7 @@ Users need a way to move between repo-scoped work and global work without restar
 The top row becomes app/status only. The second row carries the current scope and filter. Surface tabs stay below that.
 
 ```text
- ghui                                                                           updated Fri, 5/8 11:37 am
+ phui                                                                           updated Fri, 5/8 11:37 am
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────
  repo anomalyco/opencode        filter: open                                esc hub   f filters
 ──────────────────┬───────────┬─────────────────────────────────────────────────────────────────────────────
@@ -37,13 +37,13 @@ The top row becomes app/status only. The second row carries the current scope an
 Global scope makes the old cross-repo PR workflow explicit. Repository grouping can remain in the list.
 
 ```text
- ghui                                                                           updated Fri, 5/8 11:37 am
+ phui                                                                           updated Fri, 5/8 11:37 am
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────
  all repositories             filter: review requested                       esc hub   f filters
 ──────────────────┬───────────┬─────────────────────────────────────────────────────────────────────────────
  PULL REQUESTS 17 │ ISSUES 8  │
 ──────────────────┴───────────┴───────────────────────────────────┬─────────────────────────────────────────
- · ghui              #41 fix release smoke path                0d ✓ │ fix release smoke path
+ · phui              #41 fix release smoke path                0d ✓ │ fix release smoke path
  · opencode          #26352 feat(acp): emit agent_error...     0d ✓ │ #26352 by truenorth-lj · today
  · effect-smol       #1180 improve Schema error messages       1d ◐ │ improve Schema error messages
 ```

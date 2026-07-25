@@ -19,7 +19,7 @@ terminal multiplexer; `phux new -s NAME -c DIR` creates/attaches a session,
   - `worktreePath` — template for where worktrees live, with the same
     `{{...}}` tokens as `editorCommand` (`{{repoPath}}`, `{{owner}}`,
     `{{name}}`, `{{number}}`, `{{headRef}}`, …).
-    Default: `{{repoPath}}/.ghui/worktrees/pr-{{number}}`.
+    Default: `{{repoPath}}/.phui/worktrees/pr-{{number}}`.
 - Mechanics, all non-interactive except the final attach:
   1. Resolve the clone via `repoPaths` (error notice if unmatched).
   2. If the worktree directory doesn't exist yet: find the git remote whose
@@ -28,13 +28,13 @@ terminal multiplexer; `phux new -s NAME -c DIR` creates/attaches a session,
      `git worktree add -B pr/<n> <path> FETCH_HEAD`. Fetching the pull ref
      works for same-repo and fork PRs alike, no fork remote needed.
   3. When the worktree lands inside the clone, the top-level directory
-     (`.ghui/`) is appended to `<git-common-dir>/info/exclude` so it never
+     (`.phui/`) is appended to `<git-common-dir>/info/exclude` so it never
      pollutes `git status`.
   4. phux session named `<repo>-pr-<n>` (sanitized):
-     - ghui running **outside** phux → suspend the TUI and run
+     - phui running **outside** phux → suspend the TUI and run
        `phux new <session> -c <worktree>` attached (create-or-attach); on
        detach the TUI resumes.
-     - ghui running **inside** phux (detected via `PHUX_TERMINAL_ID`) →
+     - phui running **inside** phux (detected via `PHUX_TERMINAL_ID`) →
        `phux new -s <session> --json -c <worktree>` creates it detached
        ("name already in use" counts as success) and a footer notice says the
        session is ready to switch to.

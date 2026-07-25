@@ -2,12 +2,12 @@
 //
 // PRIVACY CONTRACT: this file must never contain a real scan root, project name
 // or intent note. Every path and every word of intent is USER data, resolved at
-// runtime from (in precedence order) GHUI_* env vars and
-// $XDG_CONFIG_HOME/ghui/projects.toml. With nothing configured the answer is an
+// runtime from (in precedence order) PHUI_* env vars and
+// $XDG_CONFIG_HOME/phui/projects.toml. With nothing configured the answer is an
 // empty root list and the surface renders a hint — never a guessed directory.
 //
 // Conventions borrowed from the codebase, deliberately:
-//   - scalar knobs via Effect `Config` + GHUI_* env, materialized once at module
+//   - scalar knobs via Effect `Config` + PHUI_* env, materialized once at module
 //     load (src/config.ts)
 //   - the XDG config-directory ladder (src/themeStore.ts)
 //   - file reads that degrade to a default instead of failing
@@ -36,17 +36,17 @@ const depthOr = (fallback: number) => (value: number) => Math.min(MAX_MAX_DEPTH,
 // === Paths ===
 
 const configDirectory = () => {
-	if (process.env.GHUI_CONFIG_DIR) return process.env.GHUI_CONFIG_DIR
-	if (process.env.XDG_CONFIG_HOME) return join(process.env.XDG_CONFIG_HOME, "ghui")
-	if (process.platform === "win32" && process.env.APPDATA) return join(process.env.APPDATA, "ghui")
-	return join(homedir(), ".config", "ghui")
+	if (process.env.PHUI_CONFIG_DIR) return process.env.PHUI_CONFIG_DIR
+	if (process.env.XDG_CONFIG_HOME) return join(process.env.XDG_CONFIG_HOME, "phui")
+	if (process.platform === "win32" && process.env.APPDATA) return join(process.env.APPDATA, "phui")
+	return join(homedir(), ".config", "phui")
 }
 
-const pathOverride = () => process.env.GHUI_PROJECTS_CONFIG_PATH?.trim() ?? process.env.GHUI_PROJECTS_CONFIG?.trim()
+const pathOverride = () => process.env.PHUI_PROJECTS_CONFIG_PATH?.trim() ?? process.env.PHUI_PROJECTS_CONFIG?.trim()
 
 /**
  * Absolute path to the user's projects.toml, or null when the file is disabled.
- * Override with GHUI_PROJECTS_CONFIG_PATH (alias: GHUI_PROJECTS_CONFIG);
+ * Override with PHUI_PROJECTS_CONFIG_PATH (alias: PHUI_PROJECTS_CONFIG);
  * "off" / "0" / "false" disables file loading entirely, which is what tests use.
  */
 export const projectsConfigPath = (): string | null => {
@@ -78,8 +78,8 @@ const dedupe = (values: readonly string[]): readonly string[] => [...new Set(val
 // === Env-driven scalars (src/config.ts idiom) ===
 
 const projectsEnvConfig = Config.all({
-	staleDays: Config.int("GHUI_PROJECTS_STALE_DAYS").pipe(Config.withDefault(DEFAULT_STALE_DAYS), Config.map(positiveIntOr(DEFAULT_STALE_DAYS))),
-	maxDepth: Config.int("GHUI_PROJECTS_MAX_DEPTH").pipe(Config.withDefault(DEFAULT_MAX_DEPTH), Config.map(depthOr(DEFAULT_MAX_DEPTH))),
+	staleDays: Config.int("PHUI_PROJECTS_STALE_DAYS").pipe(Config.withDefault(DEFAULT_STALE_DAYS), Config.map(positiveIntOr(DEFAULT_STALE_DAYS))),
+	maxDepth: Config.int("PHUI_PROJECTS_MAX_DEPTH").pipe(Config.withDefault(DEFAULT_MAX_DEPTH), Config.map(depthOr(DEFAULT_MAX_DEPTH))),
 })
 
 export interface ProjectsEnvConfig {
@@ -91,7 +91,7 @@ const envFallback: ProjectsEnvConfig = { staleDays: DEFAULT_STALE_DAYS, maxDepth
 
 /**
  * Materialized at module load like `config` in src/config.ts, but guarded: a
- * non-numeric GHUI_PROJECTS_* value falls back to defaults instead of throwing
+ * non-numeric PHUI_PROJECTS_* value falls back to defaults instead of throwing
  * during import and taking the whole TUI down at startup.
  */
 export const projectsEnv: ProjectsEnvConfig = Effect.runSync(
@@ -100,9 +100,9 @@ export const projectsEnv: ProjectsEnvConfig = Effect.runSync(
 	}).pipe(Effect.catchCause(() => Effect.succeed(envFallback))),
 )
 
-/** GHUI_PROJECTS_ROOTS (alias: GHUI_PROJECT_ROOTS) — colon or comma separated; wins over the config file. */
+/** PHUI_PROJECTS_ROOTS (alias: PHUI_PROJECT_ROOTS) — colon or comma separated; wins over the config file. */
 const envRoots = (): readonly string[] => {
-	const raw = process.env.GHUI_PROJECTS_ROOTS ?? process.env.GHUI_PROJECT_ROOTS ?? ""
+	const raw = process.env.PHUI_PROJECTS_ROOTS ?? process.env.PHUI_PROJECT_ROOTS ?? ""
 	return dedupe(
 		raw
 			.split(/[:,]/)
@@ -227,7 +227,7 @@ const normalizeIntent = (value: unknown, warnings: string[]): Readonly<Record<st
 export interface NormalizeProjectsConfigOptions {
 	readonly configPath: string | null
 	readonly configFileExists: boolean
-	/** Roots from GHUI_PROJECTS_ROOTS; when non-empty they replace the file's roots entirely. */
+	/** Roots from PHUI_PROJECTS_ROOTS; when non-empty they replace the file's roots entirely. */
 	readonly overrideRoots?: readonly string[]
 	/** Warnings accumulated before normalization (e.g. an unreadable file). */
 	readonly warnings?: readonly string[]
@@ -306,7 +306,7 @@ const readConfigFile = (path: string | null): Effect.Effect<RawConfigFile> => {
  * file yields defaults, a malformed file yields defaults plus a warning string
  * that the surface renders.
  *
- * Precedence: GHUI_PROJECTS_ROOTS > projects.toml `roots` > [] (empty).
+ * Precedence: PHUI_PROJECTS_ROOTS > projects.toml `roots` > [] (empty).
  */
 export const loadProjectsConfig: Effect.Effect<ProjectsConfig> = Effect.gen(function* () {
 	const configPath = projectsConfigPath()

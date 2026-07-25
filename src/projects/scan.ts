@@ -64,7 +64,7 @@ import { nonRepoSnapshot, projectSnapshot, type ProjectSnapshot, type RepoSnapsh
 export interface ScanOptions {
 	/** How many repositories to inspect at once. Bounded so a big roots list cannot fork-bomb the TUI. */
 	readonly concurrency?: number
-	/** Per-git-call timeout. Defaults to the app-wide `GHUI_COMMAND_TIMEOUT_MS`. */
+	/** Per-git-call timeout. Defaults to the app-wide `PHUI_COMMAND_TIMEOUT_MS`. */
 	readonly timeoutMs?: number
 	/** Safety valve against a mis-typed root (`/`, `~`): stop after this many projects and warn. */
 	readonly maxProjects?: number

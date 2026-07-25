@@ -20,13 +20,34 @@ interface StoredConfig {
 }
 
 const configDirectory = () => {
-	if (process.env.GHUI_CONFIG_DIR) return process.env.GHUI_CONFIG_DIR
+	if (process.env.PHUI_CONFIG_DIR) return process.env.PHUI_CONFIG_DIR
+	if (process.env.XDG_CONFIG_HOME) return join(process.env.XDG_CONFIG_HOME, "phui")
+	if (process.platform === "win32" && process.env.APPDATA) return join(process.env.APPDATA, "phui")
+	return join(homedir(), ".config", "phui")
+}
+
+/**
+ * This fork was named `ghui` until the rename, so settings written before it
+ * sit in the old directory. Read them once when the new location has nothing,
+ * otherwise upgrading silently resets every preference to its default. Writes
+ * always target the new path, so the first settings change finishes the move.
+ *
+ * Null when PHUI_CONFIG_DIR is set: an explicit directory is a deliberate
+ * choice, and quietly reading somewhere else would defeat it.
+ */
+const legacyConfigDirectory = () => {
+	if (process.env.PHUI_CONFIG_DIR) return null
 	if (process.env.XDG_CONFIG_HOME) return join(process.env.XDG_CONFIG_HOME, "ghui")
 	if (process.platform === "win32" && process.env.APPDATA) return join(process.env.APPDATA, "ghui")
 	return join(homedir(), ".config", "ghui")
 }
 
 export const configPath = () => join(configDirectory(), "config.json")
+
+const legacyConfigPath = () => {
+	const directory = legacyConfigDirectory()
+	return directory === null ? null : join(directory, "config.json")
+}
 
 const parseConfig = (text: string): StoredConfig => {
 	const value = JSON.parse(text) as unknown
@@ -35,7 +56,15 @@ const parseConfig = (text: string): StoredConfig => {
 
 const readStoredConfig = async () => {
 	const file = Bun.file(configPath())
-	return (await file.exists()) ? parseConfig(await file.text()) : {}
+	if (await file.exists()) return parseConfig(await file.text())
+
+	const legacy = legacyConfigPath()
+	if (legacy !== null) {
+		const legacyFile = Bun.file(legacy)
+		if (await legacyFile.exists()) return parseConfig(await legacyFile.text())
+	}
+
+	return {}
 }
 
 const writeStoredConfig = async (config: StoredConfig) => {
@@ -47,9 +76,9 @@ const writeStoredConfig = async (config: StoredConfig) => {
 export const loadStoredThemeId: Effect.Effect<ThemeId> = Effect.catchCause(
 	Effect.tryPromise(async () => {
 		const config = await readStoredConfig()
-		return isThemeId(config.theme) ? config.theme : "ghui"
+		return isThemeId(config.theme) ? config.theme : "phui"
 	}),
-	() => Effect.succeed("ghui" satisfies ThemeId),
+	() => Effect.succeed("phui" satisfies ThemeId),
 )
 
 export const loadStoredThemeConfig: Effect.Effect<ThemeConfig> = Effect.catchCause(

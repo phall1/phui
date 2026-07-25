@@ -232,10 +232,10 @@ export const initialThemeModalState: ThemeModalState = {
 	filterMode: false,
 	mode: "fixed",
 	tone: "dark",
-	fixedTheme: "ghui",
-	darkTheme: "ghui",
+	fixedTheme: "phui",
+	darkTheme: "phui",
 	lightTheme: "catppuccin-latte",
-	initialThemeConfig: { mode: "fixed", theme: "ghui" },
+	initialThemeConfig: { mode: "fixed", theme: "phui" },
 }
 
 export const initialCommandPaletteState: CommandPaletteState = {

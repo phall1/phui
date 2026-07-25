@@ -1,4 +1,4 @@
-import { context } from "@ghui/keymap"
+import { context } from "@phui/keymap"
 import { changedFilesModalKeymap, type ChangedFilesModalCtx } from "./changedFilesModal.ts"
 import { closeModalKeymap, type CloseModalCtx } from "./closeModal.ts"
 import { commandPaletteKeymap, type CommandPaletteCtx } from "./commandPalette.ts"

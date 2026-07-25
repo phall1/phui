@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent, type GhuiLaunchView } from "../src/launchIntent.js"
+import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent, type PhuiLaunchView } from "../src/launchIntent.js"
 
 const captureLaunchError = (args: readonly string[]): LaunchIntentError => {
 	try {
@@ -39,7 +39,7 @@ describe("parseLaunchIntent", () => {
 		expect(parseLaunchIntent(["owner/repo#7"])).toEqual({ _tag: "PullRequest", repository: "owner/repo", number: 7, view: "details" })
 	})
 
-	test.each<GhuiLaunchView>(["details", "diff", "comments", "runs"])("accepts the explicit %s view", (view) => {
+	test.each<PhuiLaunchView>(["details", "diff", "comments", "runs"])("accepts the explicit %s view", (view) => {
 		expect(parseLaunchIntent(["owner/repo#7", "--view", view])).toEqual({ _tag: "PullRequest", repository: "owner/repo", number: 7, view })
 	})
 
@@ -117,6 +117,6 @@ describe("parseLaunchIntent", () => {
 
 describe("formatLaunchIntentError", () => {
 	test("formats a concise pre-TUI error with a help hint", () => {
-		expect(formatLaunchIntentError(new LaunchIntentError("Invalid target: nope."))).toBe("ghui: Invalid target: nope.\nRun `ghui --help` for usage.")
+		expect(formatLaunchIntentError(new LaunchIntentError("Invalid target: nope."))).toBe("phui: Invalid target: nope.\nRun `phui --help` for usage.")
 	})
 })

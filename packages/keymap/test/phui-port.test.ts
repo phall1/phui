@@ -9,7 +9,7 @@ import {
 	type DiffCtx,
 	type ListNavCtx,
 	type MergeModalCtx,
-} from "../examples/ghui-port.ts"
+} from "../examples/phui-port.ts"
 
 const makeCloseCtx = (log: string[]): CloseModalCtx => ({
 	closeModal: () => log.push("close-modal"),
@@ -106,7 +106,7 @@ const makeAppCtx = (log: string[], mode: Mode = {}): AppCtx => ({
 	openCommandPalette: () => log.push("palette"),
 })
 
-describe("ghui port — appKeymap", () => {
+describe("phui port — appKeymap", () => {
 	test("PR list nav: j/k step selection", () => {
 		const log: string[] = []
 		let ctx = makeAppCtx(log)

@@ -60,7 +60,7 @@ const readStream = async (stream: ReadableStream | null | undefined) => {
 /**
  * Run one git command in `cwd`. Never fails and never throws — inspect
  * `result.ok`. A hung git is killed at `timeoutMs` (defaults to the same
- * `GHUI_COMMAND_TIMEOUT_MS` knob every other subprocess in the app uses) so a
+ * `PHUI_COMMAND_TIMEOUT_MS` knob every other subprocess in the app uses) so a
  * single bad repo can never wedge the surface.
  */
 export const runGit = (cwd: string, args: readonly string[], timeoutMs: number = config.commandTimeoutMs): Effect.Effect<GitResult> =>

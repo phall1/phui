@@ -1,4 +1,4 @@
-import type { GhuiLaunchIntent } from "./launchIntent.js"
+import type { PhuiLaunchIntent } from "./launchIntent.js"
 import { colors } from "./ui/colors.js"
 import { LoadingLogoPane } from "./ui/LoadingLogo.js"
 import { centerCell, Divider, TextLine } from "./ui/primitives.js"
@@ -9,11 +9,11 @@ import { WorkspaceHeader } from "./surfaces/WorkspaceHeader.js"
 import { WorkspaceModals } from "./surfaces/WorkspaceModals.js"
 import { useAppShell } from "./hooks/useAppShell.js"
 
-const defaultLaunchIntent: GhuiLaunchIntent = { _tag: "Default" }
+const defaultLaunchIntent: PhuiLaunchIntent = { _tag: "Default" }
 
 interface AppProps {
 	readonly systemThemeGeneration?: number
-	readonly launchIntent?: GhuiLaunchIntent
+	readonly launchIntent?: PhuiLaunchIntent
 }
 
 /**

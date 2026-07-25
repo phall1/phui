@@ -12,7 +12,7 @@ import { discoverProjectDirectories } from "../../src/projects/scan.ts"
 const roots: string[] = []
 
 const makeRoot = async (): Promise<string> => {
-	const root = await mkdtemp(join(tmpdir(), "ghui-projects-scan-"))
+	const root = await mkdtemp(join(tmpdir(), "phui-projects-scan-"))
 	roots.push(root)
 	return root
 }

@@ -1,17 +1,17 @@
 {
-	"name": "@kitlangton/ghui",
+	"name": "phui",
 	"version": "0.11.0",
 	"description": "Terminal UI for GitHub pull requests",
 	"type": "module",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/kitlangton/ghui.git"
+		"url": "git+https://github.com/phall1/phui.git"
 	},
 	"bugs": {
-		"url": "https://github.com/kitlangton/ghui/issues"
+		"url": "https://github.com/phall1/phui/issues"
 	},
-	"homepage": "https://github.com/kitlangton/ghui#readme",
+	"homepage": "https://github.com/phall1/phui#readme",
 	"keywords": [
 		"github",
 		"pull-requests",
@@ -32,7 +32,7 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"bin": {
-		"ghui": "bin/ghui.js"
+		"phui": "bin/phui.js"
 	},
 	"scripts": {
 		"build:cli": "bun run dev/build-cli.ts",
@@ -41,8 +41,8 @@
 		"changeset": "npm exec --package @changesets/cli@2.31.0 -- changeset",
 		"changeset:status": "npm exec --package @changesets/cli@2.31.0 -- changeset status",
 		"changeset:version": "npm exec --package @changesets/cli@2.31.0 -- changeset version",
-		"dev": "GHUI_FORCE_FULL_REPAINT_ON_START=1 GHUI_MOTEL_PORT=${GHUI_MOTEL_PORT:-27686} GHUI_DEBUG_LOG=${GHUI_DEBUG_LOG:-/tmp/ghui-debug.log} bun --watch src/index.tsx",
-		"dev:mock": "GHUI_FORCE_FULL_REPAINT_ON_START=1 GHUI_MOCK_PR_COUNT=200 GHUI_MOCK_REPO_COUNT=4 bun --watch src/index.tsx",
+		"dev": "PHUI_FORCE_FULL_REPAINT_ON_START=1 PHUI_MOTEL_PORT=${PHUI_MOTEL_PORT:-27686} PHUI_DEBUG_LOG=${PHUI_DEBUG_LOG:-/tmp/phui-debug.log} bun --watch src/index.tsx",
+		"dev:mock": "PHUI_FORCE_FULL_REPAINT_ON_START=1 PHUI_MOCK_PR_COUNT=200 PHUI_MOCK_REPO_COUNT=4 bun --watch src/index.tsx",
 		"link:fork": "bun run dev/link-fork.ts",
 		"start": "bun run src/index.tsx",
 		"sync:upstream": "bun run dev/sync-upstream.ts",
@@ -71,7 +71,7 @@
 	},
 	"devDependencies": {
 		"@effect/language-service": "0.86.2",
-		"@ghui/keymap": "workspace:*",
+		"@phui/keymap": "workspace:*",
 		"@types/bun": "1.3.14",
 		"@types/react": "19.2.17",
 		"oxfmt": "0.56.0",

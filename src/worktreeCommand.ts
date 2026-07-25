@@ -8,7 +8,7 @@ import { type EditorCommandFields, expandHome, renderEditorCommand } from "./edi
  * subprocesses; everything here is unit-testable in isolation.
  */
 
-export const defaultWorktreePathTemplate = "{{repoPath}}/.ghui/worktrees/pr-{{number}}"
+export const defaultWorktreePathTemplate = "{{repoPath}}/.phui/worktrees/pr-{{number}}"
 
 /** Render the worktree location template (same `{{...}}` tokens as `editorCommand`). */
 export const renderWorktreePath = (template: string, fields: EditorCommandFields, repoPath: string): string =>
@@ -27,13 +27,13 @@ export const phuxSessionName = (fields: EditorCommandFields): string => {
 	return `${name}-pr-${fields.number}`.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
 }
 
-/** True when ghui itself is running inside a phux pane. */
+/** True when phui itself is running inside a phux pane. */
 export const isInsidePhux = (env: Record<string, string | undefined>): boolean => typeof env.PHUX_TERMINAL_ID === "string" && env.PHUX_TERMINAL_ID.length > 0
 
 /**
  * When the worktree lives inside the clone, the entry to append to
  * `.git/info/exclude` so worktrees never show up in `git status` — the
- * top-level directory segment (e.g. `.ghui/`). Null when the worktree is
+ * top-level directory segment (e.g. `.phui/`). Null when the worktree is
  * outside the repo (nothing to exclude).
  */
 export const worktreeExcludeEntry = (repoPath: string, worktreePath: string): string | null => {

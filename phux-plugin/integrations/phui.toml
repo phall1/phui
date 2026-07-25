@@ -1,7 +1,7 @@
-id = "ghui"
-display_name = "ghui"
+id = "phui"
+display_name = "phui"
 kind = "terminal-tui"
 
 [launch]
-command = ["ghui"]
+command = ["phui"]
 working_directory = "workspace"

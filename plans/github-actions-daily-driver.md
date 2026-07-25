@@ -1,6 +1,6 @@
 # GitHub Actions daily-driver plan
 
-Build ghui into a terminal-first replacement for the routine GitHub Actions web
+Build phui into a terminal-first replacement for the routine GitHub Actions web
 experience. Reuse the shipped PR runs view and progressively widen it into a
 repository-level monitoring and control surface.
 

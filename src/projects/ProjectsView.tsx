@@ -197,7 +197,7 @@ const unconfiguredLines = (state: ProjectsSurfaceState): readonly { readonly tex
 	// most often because their projects.toml failed to parse (below).
 	const step1 =
 		configPath === null
-			? { text: "1. config file loading is disabled (GHUI_PROJECTS_CONFIG_PATH=off)", fg: colors.muted }
+			? { text: "1. config file loading is disabled (PHUI_PROJECTS_CONFIG_PATH=off)", fg: colors.muted }
 			: state.config.configFileExists
 				? { text: `1. add roots to  ${configPath}`, fg: colors.text }
 				: { text: `1. create        ${configPath}`, fg: colors.text }
@@ -218,7 +218,7 @@ const unconfiguredLines = (state: ProjectsSurfaceState): readonly { readonly tex
 		{ text: `     staleDays = 14              # optional: days before "stale"`, fg: colors.accent },
 		{ text: `     maxDepth = 1                # optional: 1 = a root's children`, fg: colors.accent },
 		{ text: "", fg: colors.muted },
-		{ text: "Then press r to rescan. GHUI_PROJECTS_ROOTS=~/code works for a one-off run.", fg: colors.muted },
+		{ text: "Then press r to rescan. PHUI_PROJECTS_ROOTS=~/code works for a one-off run.", fg: colors.muted },
 	]
 }
 

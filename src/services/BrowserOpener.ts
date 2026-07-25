@@ -16,7 +16,7 @@ export class BrowserOpener extends Context.Service<
 		readonly openPullRequest: (pullRequest: PullRequestItem) => Effect.Effect<void, CommandError>
 		readonly openUrl: (url: string) => Effect.Effect<void, CommandError>
 	}
->()("ghui/BrowserOpener") {
+>()("phui/BrowserOpener") {
 	static readonly layerNoDeps = Layer.effect(
 		BrowserOpener,
 		Effect.gen(function* () {

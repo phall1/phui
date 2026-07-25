@@ -1,4 +1,4 @@
-import { context } from "@ghui/keymap"
+import { context } from "@phui/keymap"
 
 export interface FilterModeCtx {
 	readonly cancel: () => void

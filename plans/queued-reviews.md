@@ -2,7 +2,7 @@
 
 ## Why
 
-Today, every inline diff comment posts immediately as a single-comment review. GitHub's web UI lets you stage multiple comments under a single pending review, then submit them together with a verdict (Approve / Comment / Request changes). That's the dominant review workflow on the platform — ghui should support it.
+Today, every inline diff comment posts immediately as a single-comment review. GitHub's web UI lets you stage multiple comments under a single pending review, then submit them together with a verdict (Approve / Comment / Request changes). That's the dominant review workflow on the platform — phui should support it.
 
 ## What we'd ship
 

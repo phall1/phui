@@ -6,7 +6,7 @@ the diff view. Not a tab, not a modal.
 
 ## Why
 
-ghui shows a PR's check rollup but offers no way to investigate *why* checks are
+phui shows a PR's check rollup but offers no way to investigate *why* checks are
 red, or to watch a run's jobs/steps. Users (gh-dash refugees) want to view / run /
 investigate Actions. The smallest high-value slice: open the selected PR's runs,
 drill into jobs → steps, and read failing step logs — without leaving the terminal.
@@ -20,7 +20,7 @@ drill into jobs → steps, and read failing step logs — without leaving the te
 - **Run detail (view B):** `enter` on a run → jobs and steps; failed steps expand a
   log tail inline; `enter` on a step opens its full (scrollable) log; `n`/`p` jump
   between failures.
-- Loading / error / empty states matching the rest of ghui.
+- Loading / error / empty states matching the rest of phui.
 - Works in mock mode via `MockGitHubService` run fixtures.
 
 Out of slice 1 (follow-ups): `↻` re-run / re-run-failed, `x` cancel, the repo-wide

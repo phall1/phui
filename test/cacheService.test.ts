@@ -19,7 +19,7 @@ afterEach(async () => {
 })
 
 const tempCachePath = async () => {
-	const dir = await mkdtemp(join(tmpdir(), "ghui-cache-"))
+	const dir = await mkdtemp(join(tmpdir(), "phui-cache-"))
 	tempDirs.push(dir)
 	return join(dir, "cache.sqlite")
 }
@@ -433,7 +433,7 @@ describe("CacheService", () => {
 	})
 
 	test("layerFromPath falls back to disabled cache when startup fails", async () => {
-		const dir = await mkdtemp(join(tmpdir(), "ghui-cache-fallback-"))
+		const dir = await mkdtemp(join(tmpdir(), "phui-cache-fallback-"))
 		tempDirs.push(dir)
 		const blockedParent = join(dir, "not-a-directory")
 		await Bun.write(blockedParent, "blocked")

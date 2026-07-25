@@ -2,7 +2,7 @@
 
 ## Why
 
-ghui is growing from a single pull-request queue into a workspace with user and repository scopes. Loading pull requests unconditionally at startup is now the wrong abstraction: the visible surface might be the repository PR list, repository issues, the user repo hub, user PRs, or user issues.
+phui is growing from a single pull-request queue into a workspace with user and repository scopes. Loading pull requests unconditionally at startup is now the wrong abstraction: the visible surface might be the repository PR list, repository issues, the user repo hub, user PRs, or user issues.
 
 The app should load only what the current surface needs, progressively hydrate richer data when panes become visible, and make GitHub API cost visible in local telemetry before rate limits are exhausted.
 
@@ -14,7 +14,7 @@ The app should load only what the current surface needs, progressively hydrate r
 - Cached visible data renders immediately while refresh happens in the background.
 - Rate-limit failures do not retry with exponential backoff.
 - Local-only API telemetry records each `gh` command's operation, endpoint/query kind, page size, retry count, duration, exit code, and rate-limit hints.
-- Motel receives telemetry when `GHUI_MOTEL_PORT` or `GHUI_OTLP_ENDPOINT` is configured; otherwise no telemetry leaves the process.
+- Motel receives telemetry when `PHUI_MOTEL_PORT` or `PHUI_OTLP_ENDPOINT` is configured; otherwise no telemetry leaves the process.
 
 ## API / Architecture Mapping
 
@@ -34,8 +34,8 @@ The app should load only what the current surface needs, progressively hydrate r
   - `PR_LIST_FIELDS_FRAGMENT`: cheap rows only.
   - `PR_DETAIL_FIELDS_FRAGMENT`: body, labels, stats, and optional checks.
 - Keep `statusCheckRollup`, comments, review comments, and diffs out of list queries.
-- Treat `GHUI_PR_PAGE_SIZE` as the first page size.
-- Treat `GHUI_PR_FETCH_LIMIT` as a hard cap for pagination, not eager startup loading.
+- Treat `PHUI_PR_PAGE_SIZE` as the first page size.
+- Treat `PHUI_PR_FETCH_LIMIT` as a hard cap for pagination, not eager startup loading.
 - Add a small GitHub API operation descriptor alongside command execution:
   - service label: `GitHubService.listRepositoryPullRequestPage`, `GitHubService.listUserPullRequestPage`, etc.
   - command kind: `graphql`, `rest`, `gh-pr`, `gh-issue`, `gh-label`

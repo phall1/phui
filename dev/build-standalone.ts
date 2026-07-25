@@ -34,8 +34,8 @@ const hostTargetId = currentReleaseTargetId()
 
 for (const target of selectedTargets()) {
 	const stageDir = join(releaseDir, target.id)
-	const binaryPath = join(stageDir, "ghui")
-	const assetName = `ghui-${target.id}.tar.gz`
+	const binaryPath = join(stageDir, "phui")
+	const assetName = `phui-${target.id}.tar.gz`
 	const assetPath = join(releaseDir, assetName)
 
 	await mkdir(stageDir, { recursive: true })
@@ -47,7 +47,7 @@ for (const target of selectedTargets()) {
 		if (version.exitCode !== 0) throw new Error(`Standalone smoke failed for ${target.id}: ${version.stderr.toString()}`)
 	}
 
-	run(["tar", "-czf", assetPath, "-C", stageDir, "ghui"])
+	run(["tar", "-czf", assetPath, "-C", stageDir, "phui"])
 	const checksumLine = `${await sha256(assetPath)}  ${assetName}`
 	checksums.push(checksumLine)
 	await writeFile(join(releaseDir, `${assetName}.sha256`), `${checksumLine}\n`)

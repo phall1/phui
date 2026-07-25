@@ -2,7 +2,7 @@
 
 ## Why
 
-Today the only way out of ghui to inspect a PR is `o` (open in browser). Several
+Today the only way out of phui to inspect a PR is `o` (open in browser). Several
 users (and gh-dash refugees) want to hand a PR off to their editor — most often
 `nvim` with `diffview.nvim` / `octo.nvim`, but also `code .`, `zed`, etc.
 
@@ -20,7 +20,7 @@ local clone directory. The "Neovim" part is entirely the user's command, e.g.:
     '
 ```
 
-We adopt the same idea but make it first-class and ergonomic for ghui's
+We adopt the same idea but make it first-class and ergonomic for phui's
 foreground TUI: a configurable command + a `repoPaths` map, launched by
 **suspending the TUI, running the command attached to the real terminal, and
 resuming** when it exits (the `git commit` opens `$EDITOR` model). This works

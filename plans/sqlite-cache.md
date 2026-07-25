@@ -2,9 +2,9 @@
 
 ## Why
 
-ghui currently keeps pull request queues, hydrated details, comments, diffs, labels, and merge metadata in memory-only atoms. That gives good intra-session navigation, but every fresh launch starts cold and every network failure leaves the UI with no durable fallback.
+phui currently keeps pull request queues, hydrated details, comments, diffs, labels, and merge metadata in memory-only atoms. That gives good intra-session navigation, but every fresh launch starts cold and every network failure leaves the UI with no durable fallback.
 
-The SQLite cache should make ghui feel local-first without pretending cached GitHub data is authoritative: show useful stale data immediately, refresh in the background, and update or discard cached records when GitHub confirms newer state.
+The SQLite cache should make phui feel local-first without pretending cached GitHub data is authoritative: show useful stale data immediately, refresh in the background, and update or discard cached records when GitHub confirms newer state.
 
 ## What we'd ship
 
@@ -14,7 +14,7 @@ The SQLite cache should make ghui feel local-first without pretending cached Git
 4. **Persistent comments cache (v1.1)** — details previews and the comments view can use cached issue/review comments, then refresh the combined comments stream when opened.
 5. **Optional persistent diff cache (v1.2)** — diffs can be cached by `repository + number + headRefOid` so stale diffs never cross commits.
 6. **Best-effort writes** — cache failures never block GitHub reads/writes or UI updates; they only degrade to current behavior.
-7. **Manual escape hatch** — `GHUI_CACHE_PATH` can point at an alternate database, and `GHUI_CACHE_PATH=off` (or equivalent) can disable persistence if we choose that spelling.
+7. **Manual escape hatch** — `PHUI_CACHE_PATH` can point at an alternate database, and `PHUI_CACHE_PATH=off` (or equivalent) can disable persistence if we choose that spelling.
 
 ## Phasing
 
@@ -60,7 +60,7 @@ Effect persistence helpers are useful, but only for the right shape:
 
 - `KeyValueStore.layerSql({ table })` + `KeyValueStore.toSchemaStore(...)` is good for simple typed blobs like small app preferences or maybe repo metadata caches.
 - `Persistence.layerSql` and `PersistedCache.make(...)` are good for request-shaped TTL caches where a miss should execute a lookup and store the `Exit`.
-- ghui's core queue cache needs ordered snapshots, queryable PR rows, pruning, and stale-while-revalidate UI semantics, so implement it as a domain-specific `CacheService` over `SqlClient`, not only as key/value blobs.
+- phui's core queue cache needs ordered snapshots, queryable PR rows, pruning, and stale-while-revalidate UI semantics, so implement it as a domain-specific `CacheService` over `SqlClient`, not only as key/value blobs.
 - `SqlResolver.findById` / `SqlResolver.grouped` can batch concurrent row reads if we later split cache reads into many per-PR requests. For v1, explicit bulk reads with `WHERE id IN (...)` are simpler.
 
 ### New service
@@ -80,15 +80,15 @@ export class CacheService extends Context.Service<CacheService, {
   readonly readDiff: (key: PullRequestCacheKey, headRefOid: string) => Effect.Effect<string | null, CacheError>
   readonly writeDiff: (key: PullRequestCacheKey, headRefOid: string, patch: string) => Effect.Effect<void, never>
   readonly prune: () => Effect.Effect<void, never>
-}>()("ghui/CacheService") {}
+}>()("phui/CacheService") {}
 ```
 
 Implementation layer: `CacheService.layerSqlite`, depending on `SqlClient.SqlClient` and using Effect SQL template statements internally. Move the current local `PullRequestLoad` interface out of `App.tsx` or define a cache-specific DTO so the service is not coupled to component-local types.
 
 ### Config and boot behavior
 
-- Default path: `GHUI_CACHE_PATH` if set, otherwise `${XDG_CACHE_HOME:-~/.cache}/ghui/cache.sqlite`.
-- Disable path: `GHUI_CACHE_PATH=off` should provide `CacheService.disabledLayer` and should not create directories.
+- Default path: `PHUI_CACHE_PATH` if set, otherwise `${XDG_CACHE_HOME:-~/.cache}/phui/cache.sqlite`.
+- Disable path: `PHUI_CACHE_PATH=off` should provide `CacheService.disabledLayer` and should not create directories.
 - Create the parent directory lazily before opening SQLite.
 - If opening SQLite, applying pragmas, or running migrations fails, fall back to `disabledLayer` and keep the app booting with the current network-only behavior.
 - Expose cache failures only as low-priority diagnostics/logs unless a read miss changes visible UI behavior; never turn cache boot failure into an app error screen.
@@ -241,7 +241,7 @@ Use real statements in code, not string concatenation. Table identifiers should 
 
 PR #16 is useful as a seed, but too thin to merge as-is:
 
-- It adds `GHUI_CACHE_PATH` and a raw `SqliteCacheService`.
+- It adds `PHUI_CACHE_PATH` and a raw `SqliteCacheService`.
 - It stores a single scoped list of PR JSON.
 - It does not wire the service into `App`, `Atom.runtime`, queue hydration, detail hydration, comments, or tests.
 
@@ -250,7 +250,7 @@ Use the PR as contributor context, but implement the production shape above in s
 ## Open questions
 
 1. **Diff cache in v1 or v1.1?** Diffs are easy to key by `headRefOid` but can grow the DB quickly. Lean: implement queue/details first, comments in v1.1, then diffs once pruning exists.
-2. **Disable spelling.** `GHUI_CACHE_PATH=off` is convenient, but a separate `GHUI_CACHE=0` may be clearer.
+2. **Disable spelling.** `PHUI_CACHE_PATH=off` is convenient, but a separate `PHUI_CACHE=0` may be clearer.
 3. **Stale labeling.** We can avoid new UI by relying on existing `fetchedAt`, or add a small `cached`/`refreshing` label in headers. Lean: reuse `fetchedAt` for v1.
 4. **Schema validation.** Cached JSON should be decoded through the same domain parsing helpers where practical. If the shape fails, drop that row and treat it as a miss.
 5. **Viewer scoping.** User queues must be viewer-scoped; explicit repository views could be shared across viewers. Lean: include viewer everywhere first for safety and do not hydrate user queues until viewer is known.

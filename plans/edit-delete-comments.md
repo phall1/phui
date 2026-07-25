@@ -2,7 +2,7 @@
 
 ## Why
 
-Today the comments view is read + reply-only. Once a comment is posted, it can't be revised or removed without leaving ghui. Editing typos, fixing markdown that didn't render right, or deleting an accidental drive-by are all common after-the-fact actions and the missing affordance is felt immediately.
+Today the comments view is read + reply-only. Once a comment is posted, it can't be revised or removed without leaving phui. Editing typos, fixing markdown that didn't render right, or deleting an accidental drive-by are all common after-the-fact actions and the missing affordance is felt immediately.
 
 ## What we'd ship
 

@@ -6,17 +6,17 @@ import { SPINNER_FRAMES } from "./spinner.js"
 
 type LoadingLogoContent = Pick<DetailPlaceholderContent, "hint">
 
-const GHUI_LOGO = ["█▀▀▀ █  █ █  █ ▀█▀", "█ ▀█ █▀▀█ █  █  █ ", "▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀▀▀"] as const
+const PHUI_LOGO = ["█▀▀▀ █  █ █  █ ▀█▀", "█ ▀█ █▀▀█ █  █  █ ", "▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀▀▀"] as const
 
 const LEFT_WORD_WIDTH = 9
-const LOGO_WIDTH = Math.max(...GHUI_LOGO.map((line) => line.length))
-const LOGO_HEIGHT = GHUI_LOGO.length
+const LOGO_WIDTH = Math.max(...PHUI_LOGO.map((line) => line.length))
+const LOGO_HEIGHT = PHUI_LOGO.length
 const LOGO_BLOCK_HEIGHT = LOGO_HEIGHT + 2
 
 const logoColor = (x: number) => (x < LEFT_WORD_WIDTH ? mixHex(colors.accent, colors.text, 0.14) : mixHex(colors.accent, colors.text, 0.52))
 
 const LOGO_COLORS = Array.from({ length: LOGO_WIDTH }, (_, index) => logoColor(index))
-const LOGO_ROWS = GHUI_LOGO.map((line) => Array.from(line.padEnd(LOGO_WIDTH, " "), (char, index) => ({ char, color: LOGO_COLORS[index]! })))
+const LOGO_ROWS = PHUI_LOGO.map((line) => Array.from(line.padEnd(LOGO_WIDTH, " "), (char, index) => ({ char, color: LOGO_COLORS[index]! })))
 
 const LogoRow = ({ row, left }: { row: (typeof LOGO_ROWS)[number]; left: number }) => (
 	<TextLine>
