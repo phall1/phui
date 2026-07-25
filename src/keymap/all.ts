@@ -14,6 +14,7 @@ import { labelModalKeymap, type LabelModalCtx } from "./labelModal.ts"
 import { listNavKeymap, type ListNavCtx } from "./listNav.ts"
 import { mergeModalKeymap, type MergeModalCtx } from "./mergeModal.ts"
 import { openRepositoryModalKeymap, type OpenRepositoryModalCtx } from "./openRepositoryModal.ts"
+import { buildProjectsViewCtx, projectsViewKeymap } from "../projects/keymap.js"
 import { pullRequestStateModalKeymap, type PullRequestStateModalCtx } from "./pullRequestStateModal.ts"
 import { runsViewKeymap, type RunsViewCtx } from "./runsView.ts"
 import { submitReviewModalKeymap, type SubmitReviewModalCtx } from "./submitReviewModal.ts"
@@ -109,6 +110,9 @@ export const appKeymap = App(
 		run: (s) => s.handleQuitOrClose(),
 	},
 
+	// `listNav` only binds 1/2/3; see src/projects/keymap.ts
+	{ id: "workspace.fourth", title: "Fourth surface", keys: ["4"], when: (s) => inListMode(s), run: (s) => s.listNav.switchWorkspaceSurface("projects") },
+
 	// Modal layers
 	closeModalKeymap.scope((a) => a.closeModalActive && a.closeModal),
 	pullRequestStateModalKeymap.scope((a) => a.pullRequestStateModalActive && a.pullRequestStateModal),
@@ -131,6 +135,9 @@ export const appKeymap = App(
 	detailViewKeymap.scope((a) => a.detailFullView && !modalActive(a) && a.detail),
 	commentsViewKeymap.scope((a) => a.commentsViewActive && !modalActive(a) && a.commentsView),
 
+	// Projects surface — see src/projects/keymap.ts
+	projectsViewKeymap.scope((a) => (modalActive(a) || a.filterMode ? null : buildProjectsViewCtx(a.listNav))),
+
 	// PR list nav
-	listNavKeymap.scope((a) => inListMode(a) && a.listNav),
+	listNavKeymap.scope((a) => inListMode(a) && a.listNav.activeSurface !== "projects" && a.listNav),
 )

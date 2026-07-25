@@ -16,6 +16,7 @@ import { PullRequestSurface } from "./PullRequestSurface.js"
 import type { RunsViewModel } from "../hooks/useRunsView.js"
 import { RepoSurface } from "./RepoSurface.js"
 import { ActionsSurface } from "./ActionsSurface.js"
+import { ProjectsView } from "../projects/ProjectsView.js"
 
 export interface WorkspaceContentProps {
 	readonly showScrollbars: boolean
@@ -133,6 +134,11 @@ export const WorkspaceContent = (props: WorkspaceContentProps) => {
 				detailFullView={detailFullView}
 				onLinkOpen={props.openInlineLink}
 			/>
+		)
+	}
+	if (activeWorkspaceSurface === "projects") {
+		return (
+			<ProjectsView contentWidth={layout.fullscreenContentWidth} height={layout.wideBodyHeight} loadingIndicator={props.loadingIndicator} showScrollbar={props.showScrollbars} />
 		)
 	}
 	if (activeWorkspaceSurface === "actions" && props.selectedRepository) {
