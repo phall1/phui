@@ -1,5 +1,5 @@
 /**
- * Self-contained, compiling translation of ghui's keyboard surface using the
+ * Self-contained, compiling translation of phui's keyboard surface using the
  * sweetened `context<C>()` API. Each layer's context is declared once with
  * `context<Ctx>()`; commands are then plain config objects passed positionally.
  *
@@ -10,7 +10,7 @@
 import { context, Keymap } from "../src/index.ts"
 import { type Scrollable, scrollCommands } from "../src/scroll.ts"
 
-// ─── Mocked ghui types (minimal subset) ────────────────────────────────────
+// ─── Mocked phui types (minimal subset) ────────────────────────────────────
 
 interface PullRequest {
 	readonly url: string

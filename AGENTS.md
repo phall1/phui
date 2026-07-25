@@ -2,8 +2,8 @@
 
 ## Release Process
 
-- Fork releases on `phall1/ghui` use `.github/workflows/fork-publish.yml` and
-  publish standalone binaries plus `phall1/tap/ghui`; they do not publish npm.
+- Fork releases on `phall1/phui` use `.github/workflows/fork-publish.yml` and
+  publish standalone binaries plus `phall1/tap/phui`; they do not publish npm.
 - The upstream npm workflow is repository-gated and skips on the fork.
 
 - Release workflow: `.github/workflows/publish.yml`.

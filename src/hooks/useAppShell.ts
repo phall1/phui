@@ -3,7 +3,7 @@ import { useRenderer, useTerminalDimensions } from "@opentui/react"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
 import { useContext, useEffect, useRef, useState } from "react"
 import type { AppCommand } from "../commands.js"
-import type { GhuiLaunchIntent, GhuiLaunchView } from "../launchIntent.js"
+import type { PhuiLaunchIntent, PhuiLaunchView } from "../launchIntent.js"
 import { applyLaunchIntent, findLaunchPullRequestIndex, pullRequestLaunchViewState } from "../launchBootstrap.js"
 import { parseRepositoryInput, viewCacheKey } from "../pullRequestViews.js"
 
@@ -71,7 +71,7 @@ import { detectedRepository, mockRepositoryCatalog, mockWorkspacePreferencesPath
 
 export interface UseAppShellInput {
 	readonly systemThemeGeneration: number
-	readonly launchIntent: GhuiLaunchIntent
+	readonly launchIntent: PhuiLaunchIntent
 }
 
 export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShellInput) => {
@@ -169,7 +169,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	const [pendingLaunchPullRequest, setPendingLaunchPullRequest] = useState<{
 		readonly repository: string
 		readonly number: number
-		readonly view: GhuiLaunchView
+		readonly view: PhuiLaunchView
 	} | null>(null)
 	const usernameResult = useAtomValue(usernameAtom)
 	const {

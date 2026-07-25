@@ -31,13 +31,13 @@ We looked at hunk, which solves a similar terminal diff problem elegantly. The u
 
 - Can OpenTUI `<diff>` support word-level changed-span highlighting, or do we need a custom renderer for that feature?
 - Should the first implementation replace only unified mode, or should unified and split move together to avoid duplicated behavior?
-- Does ghui need true hunk-level row modeling immediately, or is file-level windowing enough before custom highlighting lands?
+- Does phui need true hunk-level row modeling immediately, or is file-level windowing enough before custom highlighting lands?
 - Which parser/highlighter stack should provide the semantic row model, syntax tokens, and word-diff spans?
 - How should comment-thread preview and click-to-comment selection behave when the selected anchor belongs to an offscreen placeholder file?
 
 ## Out Of Scope (For V1)
 
-- Replacing ghui's diff parser before proving comment-anchor and whitespace-filter behavior match the current implementation.
+- Replacing phui's diff parser before proving comment-anchor and whitespace-filter behavior match the current implementation.
 - Rewriting every diff view at once without an incremental fallback to the current OpenTUI `<diff>` path.
 - Inline PR comment authoring inside the diff body.
 - Full hunk collapsing/expansion UI.

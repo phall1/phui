@@ -21,7 +21,7 @@ coverage/
 .vscode/
 
 # local mock snapshots
-.ghui/
+.phui/
 
 # Beads / Dolt files (added by bd init)
 .dolt/

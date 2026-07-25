@@ -2,7 +2,7 @@
 
 ## Why
 
-Users can choose one fixed theme today, including the terminal-derived `System` theme. There is no way to configure separate light and dark themes and have ghui pick between them based on the OS appearance.
+Users can choose one fixed theme today, including the terminal-derived `System` theme. There is no way to configure separate light and dark themes and have phui pick between them based on the OS appearance.
 
 ## What We'd Ship
 

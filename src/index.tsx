@@ -26,7 +26,7 @@ const launchIntent = (() => {
 
 process.env.OTUI_USE_ALTERNATE_SCREEN = "true"
 
-const addGhUiParsers = () =>
+const addPhUiParsers = () =>
 	addDefaultParsers([
 		{
 			filetype: "bash",
@@ -50,7 +50,7 @@ type AppBundle = {
 let notifySystemThemeReload = () => {}
 
 const SYSTEM_THEME_READ_TIMEOUT_MS = 500
-const SYSTEM_THEME_DEBUG_LOG_PATH = process.env.GHUI_DEBUG_THEME_RELOAD_LOG ?? null
+const SYSTEM_THEME_DEBUG_LOG_PATH = process.env.PHUI_DEBUG_THEME_RELOAD_LOG ?? null
 
 const logReloadEvent = (event: SystemThemeReloadEvent) => {
 	if (SYSTEM_THEME_DEBUG_LOG_PATH === null) return
@@ -130,7 +130,7 @@ process.on("SIGUSR2", () => {
 
 const Bootstrap = () => {
 	const [appBundle, setAppBundle] = useState<AppBundle | null>(null)
-	const [bootHint, setBootHint] = useState("Starting ghui")
+	const [bootHint, setBootHint] = useState("Starting phui")
 	const [systemThemeGeneration, setSystemThemeGeneration] = useState(0)
 
 	useEffect(() => {
@@ -138,13 +138,13 @@ const Bootstrap = () => {
 		notifySystemThemeReload = () => setSystemThemeGeneration((current) => current + 1)
 		const timer = globalThis.setTimeout(() => {
 			setBootHint("Registering syntax parsers")
-			addGhUiParsers()
+			addPhUiParsers()
 
-			setBootHint("Loading ghui app")
+			setBootHint("Loading phui app")
 			void Promise.all([import("@effect/atom-react"), import("./App.js")]).then(
 				([{ RegistryProvider }, { App }]) => {
 					if (cancelled) return
-					setBootHint("Mounting ghui app")
+					setBootHint("Mounting phui app")
 					setAppBundle({ RegistryProvider, App })
 				},
 				(error) => {
@@ -174,7 +174,7 @@ const Bootstrap = () => {
 }
 
 process.stdout.write(FOCUS_REPORTING_ENABLE)
-if (process.env.GHUI_FORCE_FULL_REPAINT_ON_START === "1") {
+if (process.env.PHUI_FORCE_FULL_REPAINT_ON_START === "1") {
 	process.stdout.write(FULL_SCREEN_REPAINT)
 	renderer.requestRender()
 }

@@ -3,7 +3,7 @@ import { filterThemeDefinitions, pairedThemeId, themeToneForThemeId } from "../s
 
 describe("filterThemeDefinitions", () => {
 	test("keeps dark and light themes in separate lists", () => {
-		expect(filterThemeDefinitions("", "dark").map((theme) => theme.id)).toContain("ghui")
+		expect(filterThemeDefinitions("", "dark").map((theme) => theme.id)).toContain("phui")
 		expect(filterThemeDefinitions("", "dark").map((theme) => theme.id)).not.toContain("catppuccin-latte")
 		expect(filterThemeDefinitions("", "light").map((theme) => theme.id)).toEqual([
 			"catppuccin-latte",
@@ -52,7 +52,7 @@ describe("pairedThemeId", () => {
 	test("returns the matching light or dark variant when one exists", () => {
 		expect(pairedThemeId("catppuccin", "light")).toBe("catppuccin-latte")
 		expect(pairedThemeId("catppuccin-latte", "dark")).toBe("catppuccin")
-		expect(pairedThemeId("ghui", "light")).toBeNull()
+		expect(pairedThemeId("phui", "light")).toBeNull()
 	})
 
 	test("pairs ayu themes correctly", () => {

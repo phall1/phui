@@ -1,19 +1,25 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect } from "effect"
 import { loadStoredEditorConfig, loadStoredShowScrollbars, loadStoredSystemThemeAutoReload } from "../src/themeStore.js"
 
-const originalConfigDir = process.env.GHUI_CONFIG_DIR
+const originalConfigDir = process.env.PHUI_CONFIG_DIR
+const originalXdgConfigHome = process.env.XDG_CONFIG_HOME
 const tempDirs: string[] = []
 
-const restoreConfigDir = () => {
-	if (originalConfigDir === undefined) {
-		delete process.env.GHUI_CONFIG_DIR
+const restoreEnvVar = (name: string, original: string | undefined) => {
+	if (original === undefined) {
+		delete process.env[name]
 	} else {
-		process.env.GHUI_CONFIG_DIR = originalConfigDir
+		process.env[name] = original
 	}
+}
+
+const restoreConfigDir = () => {
+	restoreEnvVar("PHUI_CONFIG_DIR", originalConfigDir)
+	restoreEnvVar("XDG_CONFIG_HOME", originalXdgConfigHome)
 }
 
 afterEach(async () => {
@@ -23,9 +29,9 @@ afterEach(async () => {
 })
 
 const useTempConfig = async (content?: string) => {
-	const dir = await mkdtemp(join(tmpdir(), "ghui-theme-store-"))
+	const dir = await mkdtemp(join(tmpdir(), "phui-theme-store-"))
 	tempDirs.push(dir)
-	process.env.GHUI_CONFIG_DIR = dir
+	process.env.PHUI_CONFIG_DIR = dir
 	if (content !== undefined) await writeFile(join(dir, "config.json"), content)
 }
 
@@ -109,5 +115,48 @@ describe("loadStoredEditorConfig", () => {
 		await useTempConfig('{"repoPaths":"nope"}')
 
 		expect((await loadEditorConfig()).repoPaths).toEqual({})
+	})
+})
+
+describe("pre-rename ghui config", () => {
+	// The fork was renamed ghui -> phui. Settings written before the rename must
+	// still load, or upgrading silently resets every preference to its default.
+	const useTempHome = async (dirs: { readonly phui?: string; readonly ghui?: string }) => {
+		const home = await mkdtemp(join(tmpdir(), "phui-legacy-config-"))
+		tempDirs.push(home)
+		delete process.env.PHUI_CONFIG_DIR
+		process.env.XDG_CONFIG_HOME = home
+		for (const [name, content] of Object.entries(dirs)) {
+			await mkdir(join(home, name), { recursive: true })
+			await writeFile(join(home, name, "config.json"), content)
+		}
+		return home
+	}
+
+	test("reads settings from the ghui directory when phui has none", async () => {
+		await useTempHome({ ghui: '{"systemThemeAutoReload":true}' })
+
+		expect(await loadSystemThemeAutoReload()).toBe(true)
+	})
+
+	test("prefers the phui directory when both exist", async () => {
+		// phui carries the non-default value, so a pass cannot come from the
+		// fallback winning or from neither file being read at all.
+		await useTempHome({ phui: '{"systemThemeAutoReload":true}', ghui: '{"systemThemeAutoReload":false}' })
+
+		expect(await loadSystemThemeAutoReload()).toBe(true)
+	})
+
+	test("falls back to defaults when neither directory exists", async () => {
+		await useTempHome({})
+
+		expect(await loadSystemThemeAutoReload()).toBe(false)
+	})
+
+	test("ignores the ghui directory when PHUI_CONFIG_DIR is set explicitly", async () => {
+		const home = await useTempHome({ ghui: '{"systemThemeAutoReload":true}' })
+		process.env.PHUI_CONFIG_DIR = join(home, "explicit")
+
+		expect(await loadSystemThemeAutoReload()).toBe(false)
 	})
 })

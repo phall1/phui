@@ -2,7 +2,7 @@
 
 Visual exploration of the "view / run / investigate Actions" request, as a per-PR
 view mode. Rendered in
-ghui's real vocabulary: header tabs, status glyphs (`✓ ✗ ● ○ ↻`), `◆` group icon,
+phui's real vocabulary: header tabs, status glyphs (`✓ ✗ ● ○ ↻`), `◆` group icon,
 box frames, footer hint row.
 
 **Direction (decided):** the runs view is a **PR view mode**, exactly like the diff
@@ -126,7 +126,7 @@ without touching workspace tabs or surfaces.
 - `cancelRun(repo, runId)` (`gh run cancel <id>`).
 
 A `MockGitHubService` fixture supplies runs/jobs/steps so the whole flow is testable
-and demoable in mock mode, like the rest of ghui.
+and demoable in mock mode, like the rest of phui.
 
 ---
 

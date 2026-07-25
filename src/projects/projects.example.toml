@@ -1,12 +1,12 @@
-# ghui — Projects surface configuration
+# phui — Projects surface configuration
 #
-# Copy this file to $XDG_CONFIG_HOME/ghui/projects.toml
-# (fallback: ~/.config/ghui/projects.toml), then edit the values below.
-# Nothing here is read unless you create that file; ghui never guesses a
+# Copy this file to $XDG_CONFIG_HOME/phui/projects.toml
+# (fallback: ~/.config/phui/projects.toml), then edit the values below.
+# Nothing here is read unless you create that file; phui never guesses a
 # directory to scan.
 #
-# Override the location with GHUI_PROJECTS_CONFIG_PATH=/path/to/projects.toml
-# Disable file loading entirely with GHUI_PROJECTS_CONFIG_PATH=off
+# Override the location with PHUI_PROJECTS_CONFIG_PATH=/path/to/projects.toml
+# Disable file loading entirely with PHUI_PROJECTS_CONFIG_PATH=off
 
 # Directories to scan. `~` is expanded. Required — with no roots the Projects
 # surface just shows a hint pointing back at this file.
@@ -14,18 +14,18 @@ roots = ["~/code"]
 # roots = ["~/code", "~/src", "/opt/work"]
 #
 # Environment override (wins over this file), colon or comma separated:
-#   GHUI_PROJECTS_ROOTS=~/code:~/src
+#   PHUI_PROJECTS_ROOTS=~/code:~/src
 
 # Directory names to skip while scanning. Optional.
 exclude = ["archive", "node_modules", "vendor"]
 
 # Days without a commit before a repository counts as "stale". Default: 14.
-# Env override: GHUI_PROJECTS_STALE_DAYS
+# Env override: PHUI_PROJECTS_STALE_DAYS
 staleDays = 14
 
 # How deep below each root to look for projects.
 # 1 = a root's immediate children (the common layout). Default: 1, max: 6.
-# Env override: GHUI_PROJECTS_MAX_DEPTH
+# Env override: PHUI_PROJECTS_MAX_DEPTH
 maxDepth = 1
 
 # Your notes about what each project IS. Keyed by the project's directory name.

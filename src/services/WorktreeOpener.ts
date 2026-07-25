@@ -116,7 +116,7 @@ export class WorktreeOpener extends Context.Service<
 		/** Succeeds with the footer-notice text describing what was opened. */
 		readonly openPullRequest: (pullRequest: PullRequestItem) => Effect.Effect<string, CommandError>
 	}
->()("ghui/WorktreeOpener") {
+>()("phui/WorktreeOpener") {
 	static readonly layerNoDeps = Layer.effect(
 		WorktreeOpener,
 		Effect.gen(function* () {

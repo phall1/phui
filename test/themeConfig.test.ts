@@ -39,9 +39,9 @@ describe("resolveThemeId", () => {
 
 describe("themeConfigWithSelection", () => {
 	test("updates the selected system tone only", () => {
-		expect(themeConfigWithSelection({ mode: "system", darkTheme: "ghui", lightTheme: "catppuccin-latte" }, "rose-pine-dawn", "light")).toEqual({
+		expect(themeConfigWithSelection({ mode: "system", darkTheme: "phui", lightTheme: "catppuccin-latte" }, "rose-pine-dawn", "light")).toEqual({
 			mode: "system",
-			darkTheme: "ghui",
+			darkTheme: "phui",
 			lightTheme: "rose-pine-dawn",
 		})
 	})

@@ -30,8 +30,8 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 const assertInstalledPackage = async (projectDir: string) => {
-	const packageDir = join(projectDir, "node_modules", "@kitlangton", "ghui")
-	const binaryPackageDir = binaryPackageName ? join(projectDir, "node_modules", "@kitlangton", `ghui-${targetId}`) : null
+	const packageDir = join(projectDir, "node_modules", "phui")
+	const binaryPackageDir = binaryPackageName ? join(projectDir, "node_modules", `phui-${targetId}`) : null
 	const packageJson = JSON.parse(await readFile(join(packageDir, "package.json"), "utf8")) as {
 		dependencies?: Record<string, string>
 		optionalDependencies?: Record<string, string>
@@ -39,17 +39,17 @@ const assertInstalledPackage = async (projectDir: string) => {
 	}
 
 	assert(packageJson.version === rootPackageJson.version, `Expected installed version ${rootPackageJson.version}, got ${packageJson.version}`)
-	assert(!packageJson.dependencies?.["@ghui/keymap"], "Published package must not depend on private workspace @ghui/keymap")
+	assert(!packageJson.dependencies?.["@phui/keymap"], "Published package must not depend on private workspace @phui/keymap")
 	assert(binaryPackageName && packageJson.optionalDependencies?.[binaryPackageName] === rootPackageJson.version, `Published package must depend on ${binaryPackageName}`)
-	assert(binaryPackageDir && (await Bun.file(join(binaryPackageDir, "bin", "ghui")).exists()), "Installed package must include the platform binary package")
+	assert(binaryPackageDir && (await Bun.file(join(binaryPackageDir, "bin", "phui")).exists()), "Installed package must include the platform binary package")
 	assert(!(await Bun.file(join(packageDir, "src", "index.tsx")).exists()), "Published package must not rely on src/index.tsx")
 
-	const version = await run(["node_modules/.bin/ghui", "--version"], projectDir)
-	assert(version.stdout.trim() === rootPackageJson.version, `Expected ghui --version to print ${rootPackageJson.version}, got ${JSON.stringify(version.stdout.trim())}`)
+	const version = await run(["node_modules/.bin/phui", "--version"], projectDir)
+	assert(version.stdout.trim() === rootPackageJson.version, `Expected phui --version to print ${rootPackageJson.version}, got ${JSON.stringify(version.stdout.trim())}`)
 }
 
 const assertCacheServiceOpens = async () => {
-	const dir = await mkdtemp(join(tmpdir(), "ghui-cache-smoke-"))
+	const dir = await mkdtemp(join(tmpdir(), "phui-cache-smoke-"))
 	try {
 		const cached = await Effect.runPromise(
 			Effect.gen(function* () {
@@ -63,7 +63,7 @@ const assertCacheServiceOpens = async () => {
 	}
 }
 
-const tempRoot = await mkdtemp(join(tmpdir(), "ghui-package-smoke-"))
+const tempRoot = await mkdtemp(join(tmpdir(), "phui-package-smoke-"))
 try {
 	const packDir = join(tempRoot, "pack")
 	const npmProject = join(tempRoot, "npm-install")

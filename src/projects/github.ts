@@ -65,9 +65,9 @@ const MAX_BATCH_CONCURRENCY = 2
 const boundedIntOr = (fallback: number, min: number, max: number) => (value: number) => (Number.isFinite(value) ? Math.min(max, Math.max(min, Math.floor(value))) : fallback)
 
 const projectsGitHubEnvConfig = Config.all({
-	ttlMs: Config.int("GHUI_PROJECTS_GITHUB_TTL_MS").pipe(Config.withDefault(DEFAULT_TTL_MS), Config.map(boundedIntOr(DEFAULT_TTL_MS, 0, 24 * 60 * 60 * 1000))),
-	concurrency: Config.int("GHUI_PROJECTS_GITHUB_CONCURRENCY").pipe(Config.withDefault(DEFAULT_CONCURRENCY), Config.map(boundedIntOr(DEFAULT_CONCURRENCY, 1, 8))),
-	batchSize: Config.int("GHUI_PROJECTS_GITHUB_BATCH_SIZE").pipe(Config.withDefault(DEFAULT_BATCH_SIZE), Config.map(boundedIntOr(DEFAULT_BATCH_SIZE, 1, 25))),
+	ttlMs: Config.int("PHUI_PROJECTS_GITHUB_TTL_MS").pipe(Config.withDefault(DEFAULT_TTL_MS), Config.map(boundedIntOr(DEFAULT_TTL_MS, 0, 24 * 60 * 60 * 1000))),
+	concurrency: Config.int("PHUI_PROJECTS_GITHUB_CONCURRENCY").pipe(Config.withDefault(DEFAULT_CONCURRENCY), Config.map(boundedIntOr(DEFAULT_CONCURRENCY, 1, 8))),
+	batchSize: Config.int("PHUI_PROJECTS_GITHUB_BATCH_SIZE").pipe(Config.withDefault(DEFAULT_BATCH_SIZE), Config.map(boundedIntOr(DEFAULT_BATCH_SIZE, 1, 25))),
 })
 
 export interface ProjectsGitHubEnv {
@@ -83,7 +83,7 @@ const envFallback: ProjectsGitHubEnv = { ttlMs: DEFAULT_TTL_MS, concurrency: DEF
 
 /**
  * Materialized at module load like `config` in src/config.ts, but guarded: a
- * non-numeric GHUI_PROJECTS_GITHUB_* value falls back to defaults instead of
+ * non-numeric PHUI_PROJECTS_GITHUB_* value falls back to defaults instead of
  * throwing during import.
  */
 export const projectsGitHubEnv: ProjectsGitHubEnv = Effect.runSync(

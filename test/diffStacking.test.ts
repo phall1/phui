@@ -131,8 +131,8 @@ describe("whitespace-minimized diffs", () => {
 +++ b/format.ts
 @@ -1,3 +1,3 @@
  export const value = {
--  name: "ghui",
-+	name: "ghui",
+-  name: "phui",
++	name: "phui",
  }
 `)
 
@@ -145,15 +145,15 @@ describe("whitespace-minimized diffs", () => {
 +++ b/mixed.ts
 @@ -1,4 +1,4 @@
  export const value = {
--  name: "ghui",
+-  name: "phui",
 -  count: 1,
-+	name: "ghui",
++	name: "phui",
 +	count: 2,
  }
 `)
 
 		expect(minimized).toContain("@@ -1,4 +1,4 @@")
-		expect(minimized).toContain(' \tname: "ghui"')
+		expect(minimized).toContain(' \tname: "phui"')
 		expect(minimized).not.toContain("-  name")
 		expect(minimized).not.toContain("+\tname")
 		expect(minimized).toContain("-  count: 1,")
@@ -200,9 +200,9 @@ ${additions}`)
 +++ b/comments.ts
 @@ -10,4 +10,4 @@
  export const value = {
--  name: "ghui",
+-  name: "phui",
 -  count: 1,
-+	name: "ghui",
++	name: "phui",
 +	count: 2,
  }
 `),
@@ -213,7 +213,7 @@ ${additions}`)
 
 		expect(anchors.map((anchor) => `${anchor.kind}:${anchor.side}:${anchor.line}:${anchor.text}`)).toEqual([
 			"context:RIGHT:10:export const value = {",
-			'context:RIGHT:11:\tname: "ghui",',
+			'context:RIGHT:11:\tname: "phui",',
 			"deletion:LEFT:12:  count: 1,",
 			"addition:RIGHT:12:\tcount: 2,",
 			"context:RIGHT:13:}",

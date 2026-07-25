@@ -1,7 +1,7 @@
 // Append-only JSONL trace logger for diagnosing live bugs in `bun run dev`.
 //
-// Enabled by setting `GHUI_DEBUG_LOG=<path>`. The `dev` script in
-// `package.json` defaults this to `/tmp/ghui-debug.log` so developers get
+// Enabled by setting `PHUI_DEBUG_LOG=<path>`. The `dev` script in
+// `package.json` defaults this to `/tmp/phui-debug.log` so developers get
 // a trace by default; production binaries never set the env var so this
 // module is a no-op there.
 //
@@ -14,14 +14,14 @@
 
 import { appendFileSync, writeFileSync } from "node:fs"
 
-const LOG_PATH = process.env.GHUI_DEBUG_LOG ?? null
+const LOG_PATH = process.env.PHUI_DEBUG_LOG ?? null
 
 let initialized = false
 const ensureInit = () => {
 	if (initialized || !LOG_PATH) return
 	initialized = true
 	try {
-		writeFileSync(LOG_PATH, `=== ghui session ${new Date().toISOString()} pid=${process.pid} ===\n`)
+		writeFileSync(LOG_PATH, `=== phui session ${new Date().toISOString()} pid=${process.pid} ===\n`)
 	} catch {
 		// no-op
 	}

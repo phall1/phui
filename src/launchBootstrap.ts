@@ -1,6 +1,6 @@
 import type { PullRequestItem } from "./domain.js"
 import { errorMessage } from "./errors.js"
-import type { GhuiLaunchIntent, GhuiLaunchView } from "./launchIntent.js"
+import type { PhuiLaunchIntent, PhuiLaunchView } from "./launchIntent.js"
 
 export interface PullRequestLaunchViewState {
 	readonly detailFullView: boolean
@@ -9,7 +9,7 @@ export interface PullRequestLaunchViewState {
 	readonly runsFullView: boolean
 }
 
-export const pullRequestLaunchViewState = (view: GhuiLaunchView): PullRequestLaunchViewState => ({
+export const pullRequestLaunchViewState = (view: PhuiLaunchView): PullRequestLaunchViewState => ({
 	detailFullView: view === "details",
 	diffFullView: view === "diff",
 	commentsViewActive: view === "comments",
@@ -29,7 +29,7 @@ export interface LaunchBootstrapActions {
 export type LaunchBootstrapResult =
 	| { readonly _tag: "Default" }
 	| { readonly _tag: "RepositoryReady"; readonly repository: string }
-	| { readonly _tag: "PullRequestReady"; readonly pullRequest: PullRequestItem; readonly view: GhuiLaunchView }
+	| { readonly _tag: "PullRequestReady"; readonly pullRequest: PullRequestItem; readonly view: PhuiLaunchView }
 	| { readonly _tag: "PullRequestFailed"; readonly repository: string; readonly number: number; readonly error: string }
 
 /**
@@ -38,7 +38,7 @@ export type LaunchBootstrapResult =
  * to be observable in the next render. Failures resolve to a value after
  * notifying, so repository navigation stays usable.
  */
-export const applyLaunchIntent = async (intent: GhuiLaunchIntent, actions: LaunchBootstrapActions): Promise<LaunchBootstrapResult> => {
+export const applyLaunchIntent = async (intent: PhuiLaunchIntent, actions: LaunchBootstrapActions): Promise<LaunchBootstrapResult> => {
 	if (intent._tag === "Default") return { _tag: "Default" }
 
 	actions.openRepository(intent.repository)

@@ -2,7 +2,7 @@
 
 ## Why
 
-`plans/sqlite-cache.md` has shipped a v1 foundation: SQLite-backed queue snapshots and hydrated PR rows, opportunistic prune, `GHUI_CACHE_PATH=off` escape hatch, best-effort writes. That covers the highest-leverage caching but leaves real gaps:
+`plans/sqlite-cache.md` has shipped a v1 foundation: SQLite-backed queue snapshots and hydrated PR rows, opportunistic prune, `PHUI_CACHE_PATH=off` escape hatch, best-effort writes. That covers the highest-leverage caching but leaves real gaps:
 
 - The biggest perceived latency (opening a PR diff) still hits the network every time.
 - Per-repo metadata (labels, allowed merge methods) is fetched from cold every cold start.
@@ -35,7 +35,7 @@ What still hits GitHub on every call:
 Safety/lifecycle gaps still open:
 
 1. **No size cap, no `VACUUM`.** After 30-day deletes, the file holds whitespace. Not urgent (months at realistic usage) but worth a `PRAGMA auto_vacuum = INCREMENTAL` future migration.
-2. **No user-facing `--cache-info` / `--cache-clear`.** The escape hatch today is `rm ~/.cache/ghui/cache.sqlite`. Workable, rough.
+2. **No user-facing `--cache-info` / `--cache-clear`.** The escape hatch today is `rm ~/.cache/phui/cache.sqlite`. Workable, rough.
 3. **Pruning is silent.** No telemetry, no flash notice. If it ever deletes too aggressively, we won't know.
 
 ## What we'd ship
@@ -50,8 +50,8 @@ Safety/lifecycle gaps still open:
 
 ### v2.1 — observability and operator ergonomics
 
-1. **`ghui --cache-info`.** Print path, total file size, per-table row count, last prune time. Reuses the existing `CacheService` runtime; fails closed (prints "cache disabled") if `GHUI_CACHE_PATH=off`.
-2. **`ghui --cache-clear`.** Best-effort `DELETE FROM` each cache table inside one transaction, then `VACUUM`. Confirm with `--yes` to make scripting safe.
+1. **`phui --cache-info`.** Print path, total file size, per-table row count, last prune time. Reuses the existing `CacheService` runtime; fails closed (prints "cache disabled") if `PHUI_CACHE_PATH=off`.
+2. **`phui --cache-clear`.** Best-effort `DELETE FROM` each cache table inside one transaction, then `VACUUM`. Confirm with `--yes` to make scripting safe.
 3. **Last-prune metadata.** Track `last_pruned_at` in a small `cache_meta(key, value)` table so `--cache-info` shows it and `prune()` can throttle itself (skip if pruned within 1h).
 
 ### v2.2 — comments cache (only if latency becomes annoying)

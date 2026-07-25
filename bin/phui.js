@@ -22,15 +22,15 @@ const archMap = {
 	x64: "x64",
 }
 
-const help = `ghui ${packageJson.version}
+const help = `phui ${packageJson.version}
 
 Terminal UI for GitHub pull requests.
 
 Usage:
-  ghui [target] [--view <view>]
-  ghui upgrade
-  ghui -v, --version
-  ghui -h, --help
+  phui [target] [--view <view>]
+  phui upgrade
+  phui -v, --version
+  phui -h, --help
 
 Targets:
   owner/repo                         Open a repository
@@ -43,7 +43,7 @@ Options:
   --view details|diff|comments|runs  Open a pull request view (default: details)
 
 Commands:
-  upgrade                            Upgrade ghui to the latest npm release
+  upgrade                            Upgrade phui to the latest npm release
   -v, --version                      Print the installed version
   -h, --help                         Show this help message
 `
@@ -57,8 +57,8 @@ const run = (target, args = process.argv.slice(2)) => {
 	process.exit(typeof result.status === "number" ? result.status : 0)
 }
 
-if (process.env.GHUI_BIN_PATH) {
-	run(process.env.GHUI_BIN_PATH)
+if (process.env.PHUI_BIN_PATH) {
+	run(process.env.PHUI_BIN_PATH)
 }
 
 if (process.argv[2] === "-h" || process.argv[2] === "--help" || process.argv[2] === "help") {
@@ -115,7 +115,7 @@ const packageName = `${packageJson.name}-${platform}-${arch}`
 const resolveBinary = () => {
 	try {
 		const packageJsonPath = requireFromHere.resolve(`${packageName}/package.json`)
-		return path.join(path.dirname(packageJsonPath), "bin", "ghui")
+		return path.join(path.dirname(packageJsonPath), "bin", "phui")
 	} catch {
 		return null
 	}

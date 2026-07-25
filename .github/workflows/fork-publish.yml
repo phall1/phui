@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   verify:
-    if: github.repository == 'phall1/ghui'
+    if: github.repository == 'phall1/phui'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -58,7 +58,7 @@ jobs:
       - name: Upload standalone release assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${GITHUB_REF_NAME}" "dist/release/ghui-${{ matrix.target }}.tar.gz" "dist/release/ghui-${{ matrix.target }}.tar.gz.sha256" --clobber
+        run: gh release upload "${GITHUB_REF_NAME}" "dist/release/phui-${{ matrix.target }}.tar.gz" "dist/release/phui-${{ matrix.target }}.tar.gz.sha256" --clobber
 
   update-homebrew:
     needs: standalone
@@ -81,10 +81,10 @@ jobs:
             awk -v file="$1" '$2 == file { print $1 }' dist/release/checksums.txt
           }
           gh api --method POST repos/phall1/homebrew-tap/dispatches \
-            -f event_type=ghui-release \
+            -f event_type=phui-release \
             -f client_payload[tag]="${GITHUB_REF_NAME}" \
             -f client_payload[version]="${GITHUB_REF_NAME#v}" \
-            -f client_payload[darwin_arm64_sha256]="$(checksum ghui-darwin-arm64.tar.gz)" \
-            -f client_payload[darwin_x64_sha256]="$(checksum ghui-darwin-x64.tar.gz)" \
-            -f client_payload[linux_arm64_sha256]="$(checksum ghui-linux-arm64.tar.gz)" \
-            -f client_payload[linux_x64_sha256]="$(checksum ghui-linux-x64.tar.gz)"
+            -f client_payload[darwin_arm64_sha256]="$(checksum phui-darwin-arm64.tar.gz)" \
+            -f client_payload[darwin_x64_sha256]="$(checksum phui-darwin-x64.tar.gz)" \
+            -f client_payload[linux_arm64_sha256]="$(checksum phui-linux-arm64.tar.gz)" \
+            -f client_payload[linux_x64_sha256]="$(checksum phui-linux-x64.tar.gz)"

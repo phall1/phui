@@ -42,7 +42,7 @@ export class EditorOpener extends Context.Service<
 	{
 		readonly openPullRequest: (pullRequest: PullRequestItem) => Effect.Effect<void, CommandError>
 	}
->()("ghui/EditorOpener") {
+>()("phui/EditorOpener") {
 	static readonly layerNoDeps = Layer.effect(
 		EditorOpener,
 		Effect.gen(function* () {

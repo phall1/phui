@@ -302,7 +302,7 @@ session.ts:???  kit · 7h:  hello
 ```
 
 **Tradeoffs.**
-- Strongest spatial structure. Useful when threads branch (which today's PR threads in ghui rarely do).
+- Strongest spatial structure. Useful when threads branch (which today's PR threads in phui rarely do).
 - Box-drawing chars require terminal/font support; can render fragile in some emulators.
 - More "visual chrome" than the other three. Intentional design statement, not a quiet utility.
 
@@ -310,13 +310,13 @@ session.ts:???  kit · 7h:  hello
 
 ## Notes on author color
 
-ghui currently has one human author for most comments (you). Author-color hashing only earns its keep when reviewers show up. For the solo case, all three "kit" lines render in the same color, which is functionally identical to no color.
+phui currently has one human author for most comments (you). Author-color hashing only earns its keep when reviewers show up. For the solo case, all three "kit" lines render in the same color, which is functionally identical to no color.
 
 Suggested hashing: stable per-author hue selection from a 6-color palette (so colors stay in the theme), avoiding the file-header color and the focus-bar color.
 
 ## Open questions
 
-1. **Selection indicator across styles.** Is `▌` always the right cursor? In Style D the cursor inverts the author label instead. Worth exploring whether ghui should pick *one* selection language pane-wide or let each pane choose.
+1. **Selection indicator across styles.** Is `▌` always the right cursor? In Style D the cursor inverts the author label instead. Worth exploring whether phui should pick *one* selection language pane-wide or let each pane choose.
 2. **What does the focused row do?** Right now the cursor is just visual. Likely should also drive the keymap: `r` reply, `e` edit, `d` delete, `c` collapse/expand thread.
 3. **Empty states.** What does "no comments yet" look like in each style? Probably the file header + a single dim "—" or "no comments" line.
 4. **Long bodies (paragraphs / code fences / images).** Fenced code in a comment body should render with its own subtle indent, not the comment's indent — otherwise nested fences become hard to read.

@@ -1,15 +1,15 @@
 import packageJson from "../package.json" with { type: "json" }
 import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent } from "./launchIntent.js"
 
-const help = `ghui ${packageJson.version}
+const help = `phui ${packageJson.version}
 
 Terminal UI for GitHub pull requests.
 
 Usage:
-  ghui [target] [--view <view>]
-  ghui upgrade
-  ghui -v, --version
-  ghui -h, --help
+  phui [target] [--view <view>]
+  phui upgrade
+  phui -v, --version
+  phui -h, --help
 
 Targets:
   owner/repo                         Open a repository
@@ -41,7 +41,7 @@ if (command === "-v" || command === "--version" || command === "version") {
 }
 
 if (command === "upgrade") {
-	console.error("Use your package manager to upgrade ghui, for example `brew upgrade ghui`.")
+	console.error("Use your package manager to upgrade phui, for example `brew upgrade phui`.")
 	process.exit(1)
 }
 

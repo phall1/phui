@@ -26,7 +26,7 @@ const NOW = new Date("2026-01-15T12:00:00.000Z")
 const DAY_MS = 24 * 60 * 60 * 1000
 const ROOT = "/roots/code"
 
-const ctx: CheckContext = { now: NOW, staleDays: 14, configPath: "/config/ghui/projects.toml" }
+const ctx: CheckContext = { now: NOW, staleDays: 14, configPath: "/config/phui/projects.toml" }
 
 const daysAgo = (days: number): Date => new Date(NOW.getTime() - days * DAY_MS)
 
@@ -136,22 +136,22 @@ describe("aheadNoPr", () => {
 	test("finds a cross-fork PR in the parent repository's snapshot", () => {
 		// origin is the fork, upstream is the parent; the PR's base — and so the PR
 		// itself — lives in the parent's pull-request connection only.
-		const fork = ahead({ remote: "me/ghui", githubRemotes: ["me/ghui", "them/ghui"] })
-		const parent = github({ repository: "them/ghui", openPullRequests: [pullRequest("feat/x")] })
-		const snapshots = [projectSnapshot(fork, github({ repository: "me/ghui" }), null, [parent])]
+		const fork = ahead({ remote: "me/phui", githubRemotes: ["me/phui", "them/phui"] })
+		const parent = github({ repository: "them/phui", openPullRequests: [pullRequest("feat/x")] })
+		const snapshots = [projectSnapshot(fork, github({ repository: "me/phui" }), null, [parent])]
 		expect(aheadNoPrCheck.run(snapshots, ctx)).toEqual([])
 	})
 
 	test("stays silent when a remote of the clone was never fetched", () => {
-		const fork = ahead({ remote: "me/ghui", githubRemotes: ["me/ghui", "them/ghui"] })
+		const fork = ahead({ remote: "me/phui", githubRemotes: ["me/phui", "them/phui"] })
 		// Only the fork answered: the parent's PRs are unknown, so "no open PR" is
 		// not a claim this check is entitled to make.
-		expect(aheadNoPrCheck.run([projectSnapshot(fork, github({ repository: "me/ghui" }))], ctx)).toEqual([])
+		expect(aheadNoPrCheck.run([projectSnapshot(fork, github({ repository: "me/phui" }))], ctx)).toEqual([])
 	})
 
 	test("omits --repo when the clone has more than one GitHub remote", () => {
-		const fork = ahead({ remote: "me/ghui", githubRemotes: ["me/ghui", "them/ghui"] })
-		const snapshots = [projectSnapshot(fork, github({ repository: "me/ghui" }), null, [github({ repository: "them/ghui" })])]
+		const fork = ahead({ remote: "me/phui", githubRemotes: ["me/phui", "them/phui"] })
+		const snapshots = [projectSnapshot(fork, github({ repository: "me/phui" }), null, [github({ repository: "them/phui" })])]
 		const findings = aheadNoPrCheck.run(snapshots, ctx)
 		expect(findings).toHaveLength(1)
 		expect(findings[0]!.suggestion).toBe("Open one: gh pr create --head feat/x")
@@ -291,7 +291,7 @@ describe("notARepo", () => {
 		expect(findings).toHaveLength(1)
 		expect(findings[0]!.projectName).toBe("notes")
 		expect(findings[0]!.severity).toBe("warning")
-		expect(findings[0]!.suggestion).toContain("/config/ghui/projects.toml")
+		expect(findings[0]!.suggestion).toContain("/config/phui/projects.toml")
 	})
 
 	test("stays silent for directories the scanner could not inspect", () => {

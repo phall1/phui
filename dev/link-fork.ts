@@ -1,7 +1,7 @@
-// Point the global `ghui` command at this checkout instead of the npm-published
-// @kitlangton/ghui package. bin/ghui.js falls back to running src/standalone.ts
+// Point the global `phui` command at this checkout instead of the npm-published
+// @kitlangton/ghui package. bin/phui.js falls back to running src/standalone.ts
 // from source when it can't resolve a prebuilt platform binary, so linking here
-// means `ghui` always runs your fork's current code — no build step required.
+// means `phui` always runs your fork's current code — no build step required.
 //
 // Usage: bun run link:fork
 

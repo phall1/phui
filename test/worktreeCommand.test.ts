@@ -13,8 +13,8 @@ const fields: EditorCommandFields = {
 }
 
 describe("renderWorktreePath", () => {
-	test("default template nests under the repo's .ghui directory", () => {
-		expect(renderWorktreePath(defaultWorktreePathTemplate, fields, "/code/gh-dash")).toBe("/code/gh-dash/.ghui/worktrees/pr-42")
+	test("default template nests under the repo's .phui directory", () => {
+		expect(renderWorktreePath(defaultWorktreePathTemplate, fields, "/code/gh-dash")).toBe("/code/gh-dash/.phui/worktrees/pr-42")
 	})
 
 	test("substitutes owner, name, and headRef tokens", () => {
@@ -52,7 +52,7 @@ describe("isInsidePhux", () => {
 
 describe("worktreeExcludeEntry", () => {
 	test("returns the top-level segment for an in-repo worktree", () => {
-		expect(worktreeExcludeEntry("/code/gh-dash", "/code/gh-dash/.ghui/worktrees/pr-42")).toBe(".ghui/")
+		expect(worktreeExcludeEntry("/code/gh-dash", "/code/gh-dash/.phui/worktrees/pr-42")).toBe(".phui/")
 	})
 
 	test("returns null when the worktree is outside the repo", () => {

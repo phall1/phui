@@ -3,18 +3,18 @@ import { FetchHttpClient } from "effect/unstable/http"
 import { OtlpLogger, OtlpSerialization, OtlpTracer } from "effect/unstable/observability"
 
 const observabilityConfig = Config.all({
-	endpoint: Config.string("GHUI_OTLP_ENDPOINT").pipe(
+	endpoint: Config.string("PHUI_OTLP_ENDPOINT").pipe(
 		Config.withDefault(""),
 		Config.map((value) => value.trim()),
 	),
-	motelPort: Config.string("GHUI_MOTEL_PORT").pipe(
+	motelPort: Config.string("PHUI_MOTEL_PORT").pipe(
 		Config.withDefault(""),
 		Config.map((value) => value.trim()),
 	),
 })
 
 const resource = {
-	serviceName: "ghui",
+	serviceName: "phui",
 	serviceVersion: "local",
 }
 

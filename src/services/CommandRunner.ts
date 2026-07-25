@@ -70,7 +70,7 @@ export class CommandRunner extends Context.Service<
 			args: readonly string[],
 		) => Effect.Effect<S["Type"], CommandError | JsonParseError | Schema.SchemaError, S["DecodingServices"]>
 	}
->()("ghui/CommandRunner") {
+>()("phui/CommandRunner") {
 	static readonly layer = Layer.effect(
 		CommandRunner,
 		Effect.gen(function* () {
@@ -138,7 +138,7 @@ export class CommandRunner extends Context.Service<
 							...(result.exitCode === 0 ? {} : { "github.rate_limit.kind": classifyGitHubRateLimit(result.stderr || result.stdout) ?? "none" }),
 						}),
 					),
-					Effect.withSpan("ghui.command.runProcess", {
+					Effect.withSpan("phui.command.runProcess", {
 						attributes,
 					}),
 				)

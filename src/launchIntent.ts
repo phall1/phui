@@ -1,13 +1,13 @@
-export type GhuiLaunchView = "details" | "diff" | "comments" | "runs"
+export type PhuiLaunchView = "details" | "diff" | "comments" | "runs"
 
-export type GhuiLaunchIntent =
+export type PhuiLaunchIntent =
 	| { readonly _tag: "Default" }
 	| { readonly _tag: "Repository"; readonly repository: string }
 	| {
 			readonly _tag: "PullRequest"
 			readonly repository: string
 			readonly number: number
-			readonly view: GhuiLaunchView
+			readonly view: PhuiLaunchView
 	  }
 
 export class LaunchIntentError extends Error {
@@ -24,9 +24,9 @@ const PULL_REQUEST_PATTERN = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)#(-?\d+)$/
 const GITHUB_REPOSITORY_URL_PATTERN = /^https?:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/
 const GITHUB_PULL_REQUEST_URL_PATTERN = /^https?:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/pull\/(-?\d+)\/?$/
 
-const isLaunchView = (value: string): value is GhuiLaunchView => value === "details" || value === "diff" || value === "comments" || value === "runs"
+const isLaunchView = (value: string): value is PhuiLaunchView => value === "details" || value === "diff" || value === "comments" || value === "runs"
 
-const parseView = (value: string): GhuiLaunchView => {
+const parseView = (value: string): PhuiLaunchView => {
 	if (isLaunchView(value)) return value
 	throw new LaunchIntentError(`Invalid --view value: ${value || "(empty)"}. Expected details, diff, comments, or runs.`)
 }
@@ -37,7 +37,7 @@ const parsePullRequestNumber = (value: string): number => {
 	return number
 }
 
-const parseTarget = (target: string, view: GhuiLaunchView | undefined): GhuiLaunchIntent => {
+const parseTarget = (target: string, view: PhuiLaunchView | undefined): PhuiLaunchIntent => {
 	const pullRequest = target.match(PULL_REQUEST_PATTERN) ?? target.match(GITHUB_PULL_REQUEST_URL_PATTERN)
 	if (pullRequest) {
 		const owner = pullRequest[1]!
@@ -55,9 +55,9 @@ const parseTarget = (target: string, view: GhuiLaunchView | undefined): GhuiLaun
 	throw new LaunchIntentError(`Invalid target: ${target || "(empty)"}. Expected owner/repo, owner/repo#123, or a GitHub URL.`)
 }
 
-export const parseLaunchIntent = (args: readonly string[]): GhuiLaunchIntent => {
+export const parseLaunchIntent = (args: readonly string[]): PhuiLaunchIntent => {
 	let target: string | undefined
-	let view: GhuiLaunchView | undefined
+	let view: PhuiLaunchView | undefined
 
 	for (let index = 0; index < args.length; index++) {
 		const argument = args[index]!
@@ -94,4 +94,4 @@ export const parseLaunchIntent = (args: readonly string[]): GhuiLaunchIntent => 
 	return parseTarget(target, view)
 }
 
-export const formatLaunchIntentError = (error: LaunchIntentError): string => `ghui: ${error.message}\nRun \`ghui --help\` for usage.`
+export const formatLaunchIntentError = (error: LaunchIntentError): string => `phui: ${error.message}\nRun \`phui --help\` for usage.`

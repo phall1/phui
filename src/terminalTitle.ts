@@ -38,19 +38,19 @@ export const deriveTerminalTitle = (state: TerminalTitleState): string => {
 	const repository = sanitizeTerminalTitle(state.selectedRepository ?? "")
 
 	if (state.activeWorkspaceSurface === "issues" || state.activeWorkspaceSurface === "actions") {
-		return repository.length > 0 ? `ghui · ${repository} · ${state.activeWorkspaceSurface}` : "ghui"
+		return repository.length > 0 ? `phui · ${repository} · ${state.activeWorkspaceSurface}` : "phui"
 	}
 
-	if (state.activeWorkspaceSurface !== "pullRequests") return "ghui"
+	if (state.activeWorkspaceSurface !== "pullRequests") return "phui"
 
 	if (state.selectedPullRequest) {
 		const pullRequestRepository = sanitizeTerminalTitle(state.selectedPullRequest.repository) || repository
 		const pullRequestScope = pullRequestRepository.length > 0 ? `${pullRequestRepository}#${state.selectedPullRequest.number}` : `#${state.selectedPullRequest.number}`
 		const view = activePullRequestView(state)
-		return view === null ? `ghui · ${pullRequestScope}` : `ghui · ${pullRequestScope} · ${view}`
+		return view === null ? `phui · ${pullRequestScope}` : `phui · ${pullRequestScope} · ${view}`
 	}
 
-	return repository.length > 0 ? `ghui · ${repository}` : "ghui"
+	return repository.length > 0 ? `phui · ${repository}` : "phui"
 }
 
 export const encodeTerminalTitle = (title: string): string => `\u001b]0;${sanitizeTerminalTitle(title)}\u0007`

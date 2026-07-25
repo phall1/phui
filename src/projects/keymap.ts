@@ -2,7 +2,7 @@
 //
 // Fork-owned, and deliberately NOT under `src/keymap/`: upstream restructures
 // that directory (the whole layer moved once already, `useScopedBindings` →
-// `@ghui/keymap`), and a rename there would silently orphan fork-only files
+// `@phui/keymap`), and a rename there would silently orphan fork-only files
 // sitting in it — a clean merge that fails to typecheck. Living here means a
 // rename produces a loud unresolved import in one fork-owned file instead.
 //
@@ -29,7 +29,7 @@
 // a stale view. All actual state still lives in atoms (./atoms.ts); this is a
 // function table, not a state store.
 
-import { context } from "@ghui/keymap"
+import { context } from "@phui/keymap"
 import { countedVerticalBindings } from "../keymap/helpers.js"
 import type { WorkspaceSurface } from "../workspaceSurfaces.js"
 

@@ -14,9 +14,9 @@ const state = (overrides: Partial<TerminalTitleState> = {}): TerminalTitleState 
 
 describe("terminal title derivation", () => {
 	test("uses the application title at home and whenever no scope is selected", () => {
-		expect(deriveTerminalTitle(state())).toBe("ghui")
-		expect(deriveTerminalTitle(state({ activeWorkspaceSurface: "pullRequests" }))).toBe("ghui")
-		expect(deriveTerminalTitle(state({ activeWorkspaceSurface: "issues" }))).toBe("ghui")
+		expect(deriveTerminalTitle(state())).toBe("phui")
+		expect(deriveTerminalTitle(state({ activeWorkspaceSurface: "pullRequests" }))).toBe("phui")
+		expect(deriveTerminalTitle(state({ activeWorkspaceSurface: "issues" }))).toBe("phui")
 	})
 
 	test("identifies a selected repository", () => {
@@ -27,7 +27,7 @@ describe("terminal title derivation", () => {
 					selectedRepository: "kitlangton/ghui",
 				}),
 			),
-		).toBe("ghui · kitlangton/ghui")
+		).toBe("phui · kitlangton/ghui")
 	})
 
 	test.each([
@@ -44,7 +44,7 @@ describe("terminal title derivation", () => {
 					...viewState,
 				}),
 			),
-		).toBe(`ghui · kitlangton/ghui#123 · ${view}`)
+		).toBe(`phui · kitlangton/ghui#123 · ${view}`)
 	})
 
 	test.each(["issues", "actions"] as const)("identifies the repository %s surface", (surface) => {
@@ -60,7 +60,7 @@ describe("terminal title derivation", () => {
 					runsFullView: true,
 				}),
 			),
-		).toBe(`ghui · kitlangton/ghui · ${surface}`)
+		).toBe(`phui · kitlangton/ghui · ${surface}`)
 	})
 
 	test("matches the rendered view precedence while flags transition", () => {
@@ -76,12 +76,12 @@ describe("terminal title derivation", () => {
 					runsFullView: true,
 				}),
 			),
-		).toBe("ghui · kitlangton/ghui#123 · comments")
+		).toBe("phui · kitlangton/ghui#123 · comments")
 		expect(
 			deriveTerminalTitle(state({ activeWorkspaceSurface: "pullRequests", selectedPullRequest: pullRequest, detailFullView: true, diffFullView: true, runsFullView: true })),
-		).toBe("ghui · kitlangton/ghui#123 · runs")
+		).toBe("phui · kitlangton/ghui#123 · runs")
 		expect(deriveTerminalTitle(state({ activeWorkspaceSurface: "pullRequests", selectedPullRequest: pullRequest, detailFullView: true, diffFullView: true }))).toBe(
-			"ghui · kitlangton/ghui#123 · diff",
+			"phui · kitlangton/ghui#123 · diff",
 		)
 	})
 
@@ -93,25 +93,25 @@ describe("terminal title derivation", () => {
 				diffFullView: true,
 			}),
 		)
-		expect(title).toBe("ghui · ow ner/re po#12 · diff")
+		expect(title).toBe("phui · ow ner/re po#12 · diff")
 		expect(title).not.toMatch(/\p{Cc}/u)
 	})
 })
 
 describe("terminal title output", () => {
 	test("encodes a sanitized title with standard OSC 0", () => {
-		expect(encodeTerminalTitle("ghui\u001b]2;hijack\u0007")).toBe("\u001b]0;ghui ]2;hijack\u0007")
+		expect(encodeTerminalTitle("phui\u001b]2;hijack\u0007")).toBe("\u001b]0;phui ]2;hijack\u0007")
 	})
 
 	test("writes only when the sanitized title changes", () => {
 		const sequences: string[] = []
 		const writeTitle = createTerminalTitleWriter((sequence) => sequences.push(sequence))
 
-		expect(writeTitle("ghui")).toBe(true)
-		expect(writeTitle("ghui")).toBe(false)
-		expect(writeTitle("ghui\u0000")).toBe(false)
-		expect(writeTitle("ghui · kitlangton/ghui")).toBe(true)
-		expect(sequences).toEqual(["\u001b]0;ghui\u0007", "\u001b]0;ghui · kitlangton/ghui\u0007"])
+		expect(writeTitle("phui")).toBe(true)
+		expect(writeTitle("phui")).toBe(false)
+		expect(writeTitle("phui\u0000")).toBe(false)
+		expect(writeTitle("phui · kitlangton/ghui")).toBe(true)
+		expect(sequences).toEqual(["\u001b]0;phui\u0007", "\u001b]0;phui · kitlangton/ghui\u0007"])
 	})
 
 	test("does not attach output in non-terminal environments", () => {

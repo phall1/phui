@@ -52,10 +52,10 @@ describe("item view atoms", () => {
 			].join(","))
 		`
 		const stdout = await runIsolatedProbe(probe, {
-			GHUI_MOCK_PR_COUNT: "20",
-			GHUI_MOCK_REPOSITORY: "owner/repo",
-			GHUI_MOCK_WORKSPACE_PREFERENCES_PATH: "off",
-			GHUI_PR_FETCH_LIMIT: "2",
+			PHUI_MOCK_PR_COUNT: "20",
+			PHUI_MOCK_REPOSITORY: "owner/repo",
+			PHUI_MOCK_WORKSPACE_PREFERENCES_PATH: "off",
+			PHUI_PR_FETCH_LIMIT: "2",
 		})
 		expect(stdout).toBe("true,true,true")
 	})
@@ -80,11 +80,11 @@ describe("item view atoms", () => {
 			console.log([first !== second, firstDetail.number, secondDetail.number, completed.detailLoaded, completed.state].join(","))
 		`
 		const stdout = await runIsolatedProbe(probe, {
-			GHUI_MOCK_PR_COUNT: "2",
-			GHUI_MOCK_REPO_COUNT: "1",
-			GHUI_MOCK_REPOSITORY: "owner/repo",
-			GHUI_MOCK_FIXTURE_PATH: "/tmp/ghui-no-detail-fixture.json",
-			GHUI_MOCK_WORKSPACE_PREFERENCES_PATH: "off",
+			PHUI_MOCK_PR_COUNT: "2",
+			PHUI_MOCK_REPO_COUNT: "1",
+			PHUI_MOCK_REPOSITORY: "owner/repo",
+			PHUI_MOCK_FIXTURE_PATH: "/tmp/phui-no-detail-fixture.json",
+			PHUI_MOCK_WORKSPACE_PREFERENCES_PATH: "off",
 		})
 		expect(stdout).toBe("true,1000,1001,true,closed")
 	})
@@ -105,11 +105,11 @@ describe("item view atoms", () => {
 			console.log([before, filtered].join(","))
 		`
 		const stdout = await runIsolatedProbe(probe, {
-			GHUI_MOCK_PR_COUNT: "20",
-			GHUI_MOCK_FIXTURE_PATH: "/tmp/ghui-no-pagination-fixture.json",
-			GHUI_MOCK_WORKSPACE_PREFERENCES_PATH: "off",
-			GHUI_PR_PAGE_SIZE: "2",
-			GHUI_PR_FETCH_LIMIT: "20",
+			PHUI_MOCK_PR_COUNT: "20",
+			PHUI_MOCK_FIXTURE_PATH: "/tmp/phui-no-pagination-fixture.json",
+			PHUI_MOCK_WORKSPACE_PREFERENCES_PATH: "off",
+			PHUI_PR_PAGE_SIZE: "2",
+			PHUI_PR_FETCH_LIMIT: "20",
 		})
 		expect(stdout).toBe("true,false")
 	})

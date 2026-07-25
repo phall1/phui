@@ -2,9 +2,9 @@
 
 ## Why
 
-ghui currently opens directly into pull request queues. That makes sense for the first mature workflow, but it hides the repository as the primary object and makes future Issues, Actions, and Releases surfaces feel bolted on.
+phui currently opens directly into pull request queues. That makes sense for the first mature workflow, but it hides the repository as the primary object and makes future Issues, Actions, and Releases surfaces feel bolted on.
 
-When launched inside or pointed at a GitHub repository, ghui should feel like a project workspace: pull requests and issues first, releases/actions later.
+When launched inside or pointed at a GitHub repository, phui should feel like a project workspace: pull requests and issues first, releases/actions later.
 
 ## What we'd ship
 

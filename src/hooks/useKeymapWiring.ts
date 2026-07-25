@@ -1,5 +1,5 @@
-import { useKeymap } from "@ghui/keymap/react"
-import type { KeySubscribe } from "@ghui/keymap/react"
+import { useKeymap } from "@phui/keymap/react"
+import type { KeySubscribe } from "@phui/keymap/react"
 import { useMemo } from "react"
 import { appKeymap } from "../keymap/all.js"
 import { buildAppCtx, type BuildAppCtxInput } from "../keymap/contexts/appCtx.js"
