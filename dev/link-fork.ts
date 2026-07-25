@@ -23,7 +23,11 @@ if (!globalBinDir) {
 }
 const globalModulesDir = `${globalBinDir.replace(/\/bin$/, "")}/install/global/node_modules`
 
-await Bun.$`mkdir -p ${globalModulesDir}/${pkgName.split("/")[0]}`.quiet()
+// Only a scoped name needs its scope directory created first. For an unscoped
+// name the "scope" is the package itself, and creating it as a real directory
+// makes the link below land *inside* it rather than replacing it.
+const scope = pkgName.startsWith("@") ? pkgName.slice(0, pkgName.indexOf("/")) : null
+await Bun.$`mkdir -p ${scope === null ? globalModulesDir : `${globalModulesDir}/${scope}`}`.quiet()
 await Bun.$`ln -sfn ${root} ${globalModulesDir}/${pkgName}`.quiet()
 await Bun.$`ln -sfn ${globalModulesDir}/${pkgName}/bin/${binName}.js ${globalBinDir}/${binName}`.quiet()
 
