@@ -1,4 +1,21 @@
-# @kitlangton/ghui
+# phui
+
+## 0.12.0
+
+### Minor Changes
+
+- 403eae6: Add a PROJECTS surface (`4`): a linter over the repositories in your configured scan roots. It reports uncommitted-and-stale work, unpushed branches with no open PR, red CI on the default branch, duplicate clones, stale worktrees, and stray directories — findings first, grouped by check, most severe at the top. `a` toggles the full inventory (branch, dirty count, last-commit age, lifecycle, remote), `r` rescans, `enter` opens the finding's run URL or its directory. Scan roots and per-project intent come from `$XDG_CONFIG_HOME/phui/projects.toml`; with nothing configured the surface shows a setup hint with the exact TOML to paste, and never guesses a directory. GitHub-dependent checks degrade silently when `gh` is unavailable.
+- 7f37bdd: Rename the fork from `ghui` to `phui`.
+
+  The binary, the npm package name, the `GHUI_*` environment variables (now
+  `PHUI_*`), the config and cache directories, and the `@ghui/keymap` workspace
+  package all change name. Settings written before the rename are still read from
+  the old config directory when the new one is empty, so upgrading does not reset
+  preferences; the first settings change writes to the new location.
+
+  The SQLite cache moves to a new directory and re-warms on first run. Cache table
+  names are deliberately unchanged so that pointing `PHUI_CACHE_PATH` at a
+  pre-rename database still resolves its migration history.
 
 ## 0.11.0
 
