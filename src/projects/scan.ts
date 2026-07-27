@@ -21,7 +21,7 @@
 //        dirty-entry count, all from one call. This single flag combination is
 //        what replaces the naive four (`rev-parse --abbrev-ref`, `rev-list
 //        --left-right --count`, `status --porcelain`, `stash list`).
-//   2. git log -1 --format=%aI%x1f%ar        last commit instant + relative age
+//   2. git log -1 --format=%cI%x1f%cr        last commit instant + relative age
 //   3. git worktree list --porcelain         worktrees, with git's own
 //                                            locked/prunable verdicts
 //   4. git config --get-regexp ^remote\..*\.url$   all remote URLs at once,

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect } from "effect"
 import { emptyProjectsConfig, type ProjectsConfig } from "../../src/projects/config.ts"
-import { discoverProjectDirectories } from "../../src/projects/scan.ts"
+import { discoverProjectDirectories, scanProjects } from "../../src/projects/scan.ts"
 
 // Every path here is built inside an OS temp directory at run time — no real
 // scan root belongs in this repo.
@@ -72,5 +72,38 @@ describe("discoverProjectDirectories — nested scan roots", () => {
 		const { base } = await build()
 		const result = await discover(config({ roots: [base], maxDepth: 1 }))
 		expect(names(result)).toEqual(["experiments:directory", "top:repository"])
+	})
+})
+
+describe("scanProjects — last commit date", () => {
+	// A rebase, amend or cherry-pick rewrites the committer date and leaves the
+	// author date at the original writing. Staleness asks "when was this last
+	// touched", so it must read the committer date: reading the author date
+	// reported a branch rebased today as months old, and the skew is unbounded.
+	const gitWithDates = async (cwd: string, authorDate: string, committerDate: string, ...args: string[]) => {
+		const proc = Bun.spawn({
+			cmd: ["git", ...args],
+			cwd,
+			env: { ...process.env, GIT_AUTHOR_DATE: authorDate, GIT_COMMITTER_DATE: committerDate },
+			stdout: "ignore",
+			stderr: "ignore",
+		})
+		await proc.exited
+	}
+
+	test("reports the committer date when a rebase moved it past the author date", async () => {
+		const root = await makeRoot()
+		const repoPath = join(root, "rebased")
+		await Bun.write(join(repoPath, "file.txt"), "content")
+		await git(repoPath, "init", "-q")
+		await git(repoPath, "config", "user.email", "test@example.com")
+		await git(repoPath, "config", "user.name", "Test")
+		await git(repoPath, "add", "-A")
+		await gitWithDates(repoPath, "2020-01-01T00:00:00Z", "2024-06-15T12:00:00Z", "commit", "-q", "-m", "written long ago, replayed later")
+
+		const result = await Effect.runPromise(scanProjects(config({ roots: [root], maxDepth: 1 })))
+		const scanned = result.projects.find((project) => project.repo.name === "rebased")
+
+		expect(scanned?.repo.lastCommitAt?.toISOString()).toBe("2024-06-15T12:00:00.000Z")
 	})
 })

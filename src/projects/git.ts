@@ -203,8 +203,18 @@ export const parseStatusPorcelainV2 = (stdout: string): GitStatus => {
 
 // === `git log -1` ===
 
-/** Author date (ISO strict) and git's own pre-rendered relative age, separated by US (0x1f). */
-export const LAST_COMMIT_FORMAT = "%aI%x1f%ar"
+/**
+ * Committer date (ISO strict) and git's own pre-rendered relative age,
+ * separated by US (0x1f).
+ *
+ * Committer date, not author date. The question staleness asks is "when was
+ * this repository last touched", and a rebase, amend or cherry-pick moves the
+ * committer date while leaving the author date at the original writing. Reading
+ * %aI reports a branch someone rebased this morning as months old — the skew is
+ * unbounded and grows with exactly the long-lived-branch workflow that makes a
+ * staleness check worth having.
+ */
+export const LAST_COMMIT_FORMAT = "%cI%x1f%cr"
 
 export interface GitLastCommit {
 	readonly at: Date | null
