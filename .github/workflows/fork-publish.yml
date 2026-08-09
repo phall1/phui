@@ -153,27 +153,19 @@ jobs:
     needs: standalone
     runs-on: ubuntu-latest
     steps:
-      - name: Download standalone checksums
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p dist/release
-          gh release download "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --pattern "*.sha256" --dir dist/release
-
-      - name: Update phall1 Homebrew tap
+      # Just a ping. The tap re-resolves this release and recomputes every
+      # digest from the assets it downloads — it has to, since a payload is only
+      # as trustworthy as whoever sent it — so the four checksums this job used
+      # to gather and forward were never read by anything.
+      #
+      # The tap also polls hourly, so a failure here (an expired
+      # HOMEBREW_TAP_TOKEN, most likely) delays the formula rather than
+      # stranding it.
+      - name: Tell the phall1 tap to pick up this release
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           : "${GH_TOKEN:?Set HOMEBREW_TAP_TOKEN with access to phall1/homebrew-tap}"
-          cat dist/release/*.sha256 > dist/release/checksums.txt
-          checksum() {
-            awk -v file="$1" '$2 == file { print $1 }' dist/release/checksums.txt
-          }
           gh api --method POST repos/phall1/homebrew-tap/dispatches \
-            -f event_type=phui-release \
-            -f client_payload[tag]="${RELEASE_TAG}" \
-            -f client_payload[version]="${RELEASE_TAG#v}" \
-            -f client_payload[darwin_arm64_sha256]="$(checksum phui-darwin-arm64.tar.gz)" \
-            -f client_payload[darwin_x64_sha256]="$(checksum phui-darwin-x64.tar.gz)" \
-            -f client_payload[linux_arm64_sha256]="$(checksum phui-linux-arm64.tar.gz)" \
-            -f client_payload[linux_x64_sha256]="$(checksum phui-linux-x64.tar.gz)"
+            -f event_type=tap-release \
+            -f client_payload[tool]=phui
