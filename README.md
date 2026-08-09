@@ -1,5 +1,13 @@
 # phui
 
+> **A fork of [ghui](https://github.com/kitlangton/ghui) by
+> [Kit Langton](https://github.com/kitlangton).** The application, its design,
+> and the great majority of the code are his work — this fork stands entirely on
+> it. If you want the original, that's
+> [`@kitlangton/ghui`](https://www.npmjs.com/package/@kitlangton/ghui), and it's
+> the one to star. See [credits](#credits-and-license) for what this fork adds
+> and why it exists separately.
+
 Terminal UI for keeping up with GitHub pull requests, issues, diffs, and Actions across repositories.
 
 `phui` gives you one keyboard-driven place to triage your GitHub notifications, browse your starred repositories, review PR details, inspect diffs, monitor and control Actions, leave diff comments, manage labels, toggle draft state, merge, open PRs in GitHub, and copy PR metadata without leaving the terminal.
@@ -342,3 +350,27 @@ Review submission:
 - Press `enter` to move to the optional summary area.
 - Press `enter` again to submit, or `shift-enter` to insert a newline.
 - Press `esc` from the summary to return to action selection; press `esc` from action selection to cancel.
+
+## Credits and license
+
+phui is a fork of [**ghui**](https://github.com/kitlangton/ghui), created by
+[Kit Langton](https://github.com/kitlangton). Kit wrote the application: the
+PR, issue, and diff surfaces, the review flow, the keyboard model, the theming,
+and the overall design that makes it worth using at all. Everything below is a
+layer on top of that work, and the credit for the tool belongs to him.
+
+What this fork adds:
+
+- A repository **Actions** dashboard, and **Inbox**, **Stars**, and **Projects**
+  surfaces (the last a portfolio linter over local repos)
+- Handoff into [phux](https://github.com/phall1/phux) — open a PR directly in a
+  phux worktree session with `w`, plus agent cockpit handoff
+- Packaging for my own setup: standalone binaries, a `phall1/tap` Homebrew
+  formula, scoped npm publishing, and automated releases
+
+It exists as a fork rather than as pull requests because most of it is wired to
+my own tooling — phux handoff in particular — which is a reasonable thing for
+upstream not to carry. Nothing here is a criticism of the original, and if any
+of it is useful to Kit, it's his to take.
+
+Licensed MIT, under the original copyright — see [LICENSE](LICENSE).
