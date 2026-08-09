@@ -1,19 +1,11 @@
 name: Publish fork release
 
+# Reachable only through release-please.yml. npm's trusted publishing validates
+# the calling workflow's filename, so a second entry point here would be a path
+# that silently cannot authenticate — see the header of that file.
+
 on:
-  release:
-    types: [published]
   workflow_call:
-    inputs:
-      tag:
-        description: "Release tag to publish (e.g. v0.13.0)"
-        required: true
-        type: string
-  # Re-publish an existing tag without cutting a new release. Publishing can
-  # fail for reasons that have nothing to do with the code — an expired token,
-  # a registry outage — and re-running a release's jobs is not always possible
-  # once the run has aged out.
-  workflow_dispatch:
     inputs:
       tag:
         description: "Release tag to publish (e.g. v0.14.1)"
@@ -22,13 +14,13 @@ on:
 
 permissions:
   contents: write
-  # Required for npm provenance. Provenance comes from the Actions OIDC token,
-  # not from how npm is authenticated, so it works with NPM_TOKEN as well as
-  # with a trusted publisher.
+  # Mints the OIDC token. npm uses it for provenance, and — once a trusted
+  # publisher is registered — for authentication itself, in preference to any
+  # token that happens to be set.
   id-token: write
 
 env:
-  RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+  RELEASE_TAG: ${{ inputs.tag }}
 
 jobs:
   verify:
@@ -37,12 +29,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          ref: ${{ inputs.tag }}
 
       # `registry-url` is what makes setup-node write the .npmrc that reads
       # NODE_AUTH_TOKEN. Without it npm ignores the token entirely and every
-      # authenticated command fails with ENEEDAUTH, which is exactly what the
-      # credential preflight below hit the first time it ran.
+      # authenticated command fails with ENEEDAUTH.
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -61,42 +52,47 @@ jobs:
           version="$(node -p "require('./package.json').version")"
           test "v${version}" = "${RELEASE_TAG}"
 
-      # npm answers "cannot publish here" with `404 Not Found - PUT`, because it
-      # will not leak whether a scope exists. That is indistinguishable from a
-      # typo'd package name, and it costs a whole release to learn nothing. So
-      # resolve the one fact the 404 hides — who the token actually is — before
-      # building four binaries, and say plainly how it disagrees with the scope
-      # being published to.
-      - name: Check npm credentials against the package scope
+      # npm reports "you cannot publish here" as `404 Not Found - PUT`, because
+      # it will not leak whether a scope exists — indistinguishable from a
+      # typo'd name, and it costs a whole release to learn nothing. Resolve what
+      # the failure hides up front, before four binaries get built.
+      - name: Report npm authentication
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -uo pipefail
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "::warning title=npm publish will be skipped::NPM_TOKEN is not set."
-            exit 0
-          fi
-
           name="$(node -p "require('./package.json').name")"
-          scope="${name%%/*}"
-          scope="${scope#@}"
+          scope="${name%%/*}"; scope="${scope#@}"
 
-          if ! who="$(npm whoami 2>&1)"; then
-            echo "::error title=npm token is not usable::npm whoami failed: ${who}"
-            exit 1
-          fi
-          echo "npm authenticated as: ${who}"
-          echo "publishing scope:     @${scope}"
-
-          if [ "$who" != "$scope" ]; then
-            echo "::error title=npm scope does not match the token's account::Authenticated as '${who}' but publishing to '@${scope}'. A personal npm scope only exists for the account whose username matches it, and publishing into someone else's scope fails as a 404, not a permission error. Either rename the package to @${who}/... or use a token for an account that owns @${scope}."
-            exit 1
+          if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            oidc=yes
+            echo "OIDC:      available — npm prefers trusted publishing over any token"
+          else
+            oidc=no
+            echo "::warning title=OIDC unavailable::No id-token permission reached this job; npm can only fall back to a token."
           fi
 
-          # Ownership of the scope is not the same as permission to create new
-          # packages in it: a granular token restricted to selected packages can
-          # read everything and still publish nothing.
-          echo "Scope matches the authenticated account."
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then token=yes; else token=no; fi
+          echo "NPM_TOKEN: ${token}"
+          echo "package:   ${name} (scope @${scope})"
+
+          if [ "$oidc" = no ] && [ "$token" = no ]; then
+            echo "::error title=No npm credentials::Neither OIDC nor NPM_TOKEN is available; publishing cannot succeed."
+            exit 1
+          fi
+
+          # Only meaningful for the token path. Under trusted publishing there
+          # is no account to ask about, so a mismatch here is not fatal.
+          if [ "$token" = yes ]; then
+            if who="$(npm whoami 2>&1)"; then
+              echo "token is:  ${who}"
+              if [ "$who" != "$scope" ]; then
+                echo "::warning title=Token account does not own this scope::Authenticated as '${who}' but the package is '@${scope}'. Fine if trusted publishing handles the publish; fatal if it falls back to this token."
+              fi
+            else
+              echo "::warning title=NPM_TOKEN is not usable::npm whoami failed: ${who}"
+            fi
+          fi
 
   standalone:
     needs: verify
@@ -116,12 +112,26 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          ref: ${{ inputs.tag }}
 
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
+
+      # Trusted publishing needs npm >= 11.5.1. Node 24 currently bundles a
+      # new enough npm, but "currently" is not a guarantee worth a broken
+      # release, and the upgrade is skipped when it is already satisfied.
+      - name: Ensure npm supports trusted publishing
+        run: |
+          set -euo pipefail
+          need=11.5.1
+          have="$(npm -v)"
+          if [ "$(printf '%s\n%s\n' "$need" "$have" | sort -V | head -1)" != "$need" ]; then
+            echo "npm ${have} is older than ${need}; upgrading."
+            npm install -g npm@latest
+          fi
+          npm -v
 
       - uses: oven-sh/setup-bun@v2
 
@@ -134,7 +144,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${RELEASE_TAG}" "dist/release/phui-${{ matrix.target }}.tar.gz" "dist/release/phui-${{ matrix.target }}.tar.gz.sha256" --clobber
 
-      # Reuses the binary built above rather than compiling it a second time.
+      # Reuses the binary built above rather than compiling it a second time,
+      # so npm ships the exact bytes the release tarball and Homebrew do.
       - run: bun run build:npm-packages -- ${{ matrix.target }}
         env:
           PHUI_REUSE_RELEASE_BINARY: "1"
@@ -144,10 +155,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "::warning title=npm publish skipped::NPM_TOKEN is not set; published binaries and the Homebrew formula only."
-            exit 0
-          fi
           package_dir="dist/npm/binaries/${{ matrix.target }}"
           name="$(node -p "require('./${package_dir}/package.json').name")"
           version="$(node -p "require('./${package_dir}/package.json').version")"
@@ -167,12 +174,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          ref: ${{ inputs.tag }}
 
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
+
+      - name: Ensure npm supports trusted publishing
+        run: |
+          set -euo pipefail
+          need=11.5.1
+          have="$(npm -v)"
+          if [ "$(printf '%s\n%s\n' "$need" "$have" | sort -V | head -1)" != "$need" ]; then
+            npm install -g npm@latest
+          fi
+          npm -v
 
       - uses: oven-sh/setup-bun@v2
 
@@ -189,10 +206,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "::warning title=npm publish skipped::NPM_TOKEN is not set; published binaries and the Homebrew formula only."
-            exit 0
-          fi
           name="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
           if npm view "${name}@${version}" version >/dev/null 2>&1; then
@@ -201,30 +214,56 @@ jobs:
           fi
           npm publish
 
-  update-homebrew:
-    needs: standalone
-    # Runs even when `standalone` failed, because npm publishing lives in that
-    # job and an npm problem must not hold Homebrew hostage. The release assets
-    # are uploaded before anything npm-related runs, so by this point they
-    # exist. If the build genuinely failed and they do not, the tap refuses the
-    # update on its own — it verifies every asset before rendering a formula —
-    # so the worst case is the formula staying where it is.
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+  # A green `npm publish` is not proof anyone can install the thing. It says
+  # nothing about whether the registry has caught up, whether the wrapper
+  # resolves the right platform package, or whether the binary inside actually
+  # runs on that platform. Install it the way a user would, on every platform
+  # published, and run it.
+  verify-published:
+    needs: npm-main
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+          - runner: macos-15-intel
+          - runner: ubuntu-24.04-arm
+          - runner: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     steps:
-      # Just a ping. The tap re-resolves this release and recomputes every
-      # digest from the assets it downloads — it has to, since a payload is only
-      # as trustworthy as whoever sent it — so the four checksums this job used
-      # to gather and forward were never read by anything.
-      #
-      # The tap also polls hourly, so a failure here (an expired
-      # HOMEBREW_TAP_TOKEN, most likely) delays the formula rather than
-      # stranding it.
-      - name: Tell the phall1 tap to pick up this release
-        env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install from the registry and run it
         run: |
-          : "${GH_TOKEN:?Set HOMEBREW_TAP_TOKEN with access to phall1/homebrew-tap}"
-          gh api --method POST repos/phall1/homebrew-tap/dispatches \
-            -f event_type=tap-release \
-            -f client_payload[tool]=phui
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+
+          # A newly published scoped package is not immediately readable; the
+          # write succeeds well before the read path catches up.
+          for attempt in $(seq 1 30); do
+            if npm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "registry served ${name}@${version} after $(( (attempt - 1) * 20 ))s"
+              break
+            fi
+            if [ "$attempt" = 30 ]; then
+              echo "::error title=Published package never became readable::${name}@${version} was still 404 after 10 minutes."
+              exit 1
+            fi
+            sleep 20
+          done
+
+          work="$(mktemp -d)"
+          cd "$work"
+          npm init -y >/dev/null 2>&1
+          npm install --no-audit --no-fund "${name}@${version}"
+
+          got="$(./node_modules/.bin/phui --version)"
+          echo "phui --version -> ${got}"
+          test "${got}" = "${version}"

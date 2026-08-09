@@ -15,15 +15,22 @@
   `v<version>`, creates the GitHub release, and calls
   `.github/workflows/fork-publish.yml` (via `workflow_call`, because releases
   created with the workflow token do not emit a `release` event) to build
-  standalone binaries, publish npm, and dispatch `phall1/homebrew-tap`.
+  standalone binaries, publish npm, and verify the published package installs.
+- `release-please.yml` is the only entry point that publishes. npm's trusted
+  publishing validates the *calling* workflow's filename when the publish runs
+  inside a reusable workflow, so a second entry point would be a path that
+  cannot authenticate. To re-publish an existing tag, run `Release Please` with
+  the `publish_tag` input rather than triggering `fork-publish.yml` directly.
 - Do not hand-edit the `package.json` version or `CHANGELOG.md`;
   release-please owns both, and `.release-please-manifest.json` tracks the
   last released version.
-- Homebrew tap automation uses the `HOMEBREW_TAP_TOKEN` Actions secret on
-  `phall1/phui`: a fine-grained PAT scoped to `phall1/homebrew-tap` with
-  repository `Contents: Read and write`.
-- After merging a release PR, verify the `Release Please` run (including the
-  called publish jobs and tap dispatch) passes.
+- This repository holds **no Homebrew credential**. `phall1/homebrew-tap` polls
+  every fifteen minutes and re-resolves each release itself, so the old
+  `repository_dispatch` (and the `HOMEBREW_TAP_TOKEN` PAT it needed) bought
+  nothing but latency. A formula lands within fifteen minutes of a release.
+- After merging a release PR, verify the `Release Please` run passes — it
+  includes the called publish jobs and a `verify-published` matrix that installs
+  the published package from the registry on every platform and runs it.
 - The upstream npm workflow (`.github/workflows/publish.yml`) is
   repository-gated to `kitlangton/ghui` and skips on the fork. Do not un-gate
   it; fork publishing lives in `fork-publish.yml`, which is fork-owned and does
@@ -42,14 +49,20 @@
   `404 Not Found - PUT` rather than a permission error: npm returns 404 so it
   does not leak whether a scope exists. v0.14.0 shipped binaries and Homebrew
   but no npm packages for exactly this reason.
-- Publishing needs an `NPM_TOKEN` repository secret. Without it a release still
-  publishes binaries and Homebrew and emits a workflow warning rather than
-  failing. Provenance comes from `id-token: write` (the Actions OIDC token),
-  not from how npm is authenticated, so a token publish is still signed.
-- OIDC/trusted publishing cannot perform a package's *first* publish — npm
-  requires the package to exist before a trusted publisher can be attached. Once
-  the packages exist, configure trusted publishing per package and delete the
-  token.
+- Publishing prefers **trusted publishing**: npm detects the Actions OIDC
+  environment and uses it ahead of any token. `NPM_TOKEN` remains only as a
+  migration fallback and should be deleted once a release is observed
+  publishing without it.
+- The trusted publisher must be registered per package (the wrapper plus all
+  four binary packages) against workflow **`release-please.yml`** — the caller,
+  not `fork-publish.yml`.
+- Trusted publishing cannot perform a package's *first* publish; npm requires
+  the package to exist before a publisher can be attached. That is why the
+  packages were created with a bypass-2FA token first.
+- Provenance comes from `id-token: write` regardless of how npm authenticates,
+  so both paths are signed.
+- Trusted publishing needs npm >= 11.5.1; the publish jobs upgrade npm when the
+  runner's bundled version is older.
 - Nothing in `dev/` should hard-code the package name; `dev/package-smoke.ts`
   derives `node_modules` paths from `package.json`, because a scoped package
   installs to `node_modules/@scope/name`.
@@ -58,14 +71,10 @@
 
 - `phall1/homebrew-tap` is generated: `tools/<tool>.json` plus
   `.github/scripts/render/<tool>.sh`, driven by one `update-packages.yml`.
-- The tap update is a bare `repository_dispatch` (`tap-release`, with
-  `client_payload[tool]=phui`). Do not send checksums: the tap re-resolves the
-  release and recomputes every digest itself, so a forwarded payload would be
-  both ignored and untrustworthy.
-- The tap also polls hourly, so a failed dispatch (usually an expired
-  `HOMEBREW_TAP_TOKEN`) delays the formula by up to an hour rather than
-  stranding it. Check the tap's `Update packages` workflow before assuming a
-  release did not land.
+- phui no longer dispatches the tap at all. The tap re-resolves every release
+  and recomputes every digest itself, so a dispatch only ever saved time — and
+  cost a credential that expires silently. Check the tap's `Update packages`
+  workflow before assuming a release did not land.
 
 ## Commands
 
