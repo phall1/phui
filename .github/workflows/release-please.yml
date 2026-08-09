@@ -25,6 +25,12 @@ jobs:
   publish:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
+    # A called workflow cannot grant itself permissions the caller does not
+    # have, so `id-token: write` has to be here as well as in fork-publish.yml —
+    # without it npm provenance fails at publish time, not at parse time.
+    permissions:
+      contents: write
+      id-token: write
     uses: ./.github/workflows/fork-publish.yml
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}

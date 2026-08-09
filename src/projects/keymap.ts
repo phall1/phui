@@ -113,9 +113,9 @@ const goToSurfaceAt = (s: ProjectsViewCtx, index: number) => {
 }
 const hasSelection = (s: ProjectsViewCtx) => (s.hasSelection ? true : "Nothing to open.")
 
-// No `4` binding here: `workspace.fourth` in src/keymap/all.ts is always on and
-// already switches to Projects, so a second one would only duplicate the entry
-// in the command palette.
+// No `4`/`5` bindings here: `workspace.fourth` and `workspace.fifth` in
+// src/keymap/all.ts are always on and already reach the Inbox and Projects, so
+// duplicates would only double the entries in the command palette.
 export const projectsViewKeymap = Projects(
 	{ id: "projects.escape", title: "Back to repositories", keys: ["escape"], run: (s) => s.switchWorkspaceSurface("repos") },
 	{ id: "projects.open", title: "Open selected", keys: ["return", "right", "l", "o"], enabled: hasSelection, run: (s) => s.openSelected() },
@@ -140,4 +140,5 @@ export const projectsViewKeymap = Projects(
 	{ id: "projects.go-home", title: "Go home", keys: ["g h", "g r"], run: (s) => s.switchWorkspaceSurface("repos") },
 	{ id: "projects.go-pulls", title: "Go to pull requests", keys: ["g p"], run: (s) => s.switchWorkspaceSurface("pullRequests") },
 	{ id: "projects.go-issues", title: "Go to issues", keys: ["g i"], run: (s) => s.switchWorkspaceSurface("issues") },
+	{ id: "projects.go-inbox", title: "Go to inbox", keys: ["g n"], run: (s) => s.switchWorkspaceSurface("notifications") },
 )

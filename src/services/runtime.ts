@@ -60,9 +60,13 @@ const editorOpenerLayer = mockPrCount !== null ? EditorOpener.mockLayer : Editor
 
 const worktreeOpenerLayer = mockPrCount !== null ? WorktreeOpener.mockLayer : WorktreeOpener.layerNoDeps
 
+// `CommandRunner` is `provideMerge`d rather than `provide`d so it stays in the
+// runtime's own context: the Inbox surface talks to GitHub's REST-only
+// notifications endpoint directly through `gh`, with no GraphQL helper on
+// `GitHubService` to hide behind.
 export const githubRuntime = Atom.runtime(
 	Layer.mergeAll(githubServiceLayer, cacheServiceLayer, Clipboard.layerNoDeps, BrowserOpener.layerNoDeps, editorOpenerLayer, worktreeOpenerLayer).pipe(
-		Layer.provide(CommandRunner.layer),
+		Layer.provideMerge(CommandRunner.layer),
 		Layer.provideMerge(Observability.layer),
 	),
 )

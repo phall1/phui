@@ -10,6 +10,7 @@ import { LabelChips, labelChipRows } from "./LabelChips.js"
 import { SelectableRow, useHoverState } from "./listSelection/SelectableRow.js"
 import { PaneDivider, PaneInsetLine, paneContentWidth } from "./paneLayout.js"
 import { Filler, fitCell, MatchedCell, PlainLine, TextLine } from "./primitives.js"
+import { SKELETON_ROW_COUNT, SkeletonList } from "./SkeletonRows.js"
 import { groupBy, repoColor } from "./pullRequests.js"
 import { SubjectMetaLine } from "./SubjectMetaLine.js"
 import { collectUrlPositions, findUrlAt } from "./inlineSegments.js"
@@ -80,6 +81,7 @@ export const IssueList = ({
 	loadingIndicator = "-",
 	loadMoreSelected = false,
 	onSelectLoadMore,
+	skeletonRowCount = SKELETON_ROW_COUNT,
 }: {
 	issues: readonly IssueItem[]
 	selectedIndex: number
@@ -97,6 +99,7 @@ export const IssueList = ({
 	loadingIndicator?: string
 	loadMoreSelected?: boolean
 	onSelectLoadMore?: () => void
+	skeletonRowCount?: number
 }) => {
 	const { isHovered, onHoverChange } = useHoverState<number>()
 	const ageWidth = Math.max(4, ...issues.map((issue) => issueActivityAgeText(issue).length + 1))
@@ -114,7 +117,8 @@ export const IssueList = ({
 			{status === "ready" && repository === null && issues.length === 0 ? (
 				<PlainLine text={filterText.length > 0 ? "- No matching issues." : "- No issues in your repositories."} fg={colors.muted} />
 			) : null}
-			{status === "loading" && issues.length === 0 ? <PlainLine text="- Loading issues..." fg={colors.muted} /> : null}
+			{/* Placeholder rows rather than a "Loading..." line — see SkeletonRows. */}
+			{status === "loading" && issues.length === 0 ? <SkeletonList contentWidth={contentWidth} rowCount={skeletonRowCount} compact /> : null}
 			{status === "error" ? <PlainLine text={`- ${error ?? "Could not load issues."}`} fg={colors.error} /> : null}
 			{status === "ready" && repository && issues.length === 0 ? (
 				<PlainLine text={filterText.length > 0 ? "- No matching issues." : "- No open issues."} fg={colors.muted} />

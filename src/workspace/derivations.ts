@@ -7,6 +7,7 @@ import { getIssueDetailJunctionRows, issueListVisualLineCount } from "../ui/Issu
 import type { IssueList } from "../ui/IssueList.js"
 import { type PullRequestGroups, type PullRequestListRow, pullRequestListVisualLineCount } from "../ui/PullRequestList.js"
 import type { PullRequestList } from "../ui/PullRequestList.js"
+import { skeletonRowCountForHeight } from "../ui/SkeletonRows.js"
 import type { RepoList, RepositoryListItem } from "../ui/RepoList.js"
 import { workspaceTabSeparatorColumns } from "../ui/WorkspaceTabs.js"
 import type { WorkspaceSurface } from "../workspaceSurfaces.js"
@@ -48,6 +49,8 @@ export interface WorkspaceDerivationsInput {
 	readonly issuesError: string | null
 	readonly repositoryItems: readonly RepositoryListItem[]
 	readonly actionsRunCount: number | string
+	/** Unread GitHub notifications, or null while the first fetch is in flight. */
+	readonly notificationsUnreadCount: number | null
 	readonly selectedIssueIndex: number
 	readonly selectedRepositoryIndex: number
 	readonly hasMorePullRequests: boolean
@@ -151,6 +154,7 @@ export const computeWorkspaceDerivations = (input: WorkspaceDerivationsInput): W
 		issuesError,
 		repositoryItems,
 		actionsRunCount,
+		notificationsUnreadCount,
 		selectedIssueIndex,
 		selectedRepositoryIndex,
 		hasMorePullRequests,
@@ -208,6 +212,15 @@ export const computeWorkspaceDerivations = (input: WorkspaceDerivationsInput): W
 				commentsStatus: selectedCommentsStatus,
 			})
 
+	const issueFilterBarHeight = issueActiveFilterLabel ? ACTIVE_FILTER_BAR_HEIGHT : 0
+	const wideIssueRowsHeight = Math.max(1, wideBodyHeight - issueFilterBarHeight)
+	const narrowIssueRowsHeight = Math.max(1, narrowIssueListHeight - issueFilterBarHeight)
+
+	// Fill the pane the real rows are about to occupy, so a list grows into its
+	// skeleton instead of expanding out of a single line.
+	const pullRequestSkeletonRowCount = skeletonRowCountForHeight(isWideLayout ? widePullRequestListHeight : narrowPullRequestRowsHeight, compactPullRequestRows)
+	const issueSkeletonRowCount = skeletonRowCountForHeight(isWideLayout ? wideIssueRowsHeight : narrowIssueRowsHeight, true)
+
 	const prListProps = {
 		groups: visibleGroups,
 		selectedUrl: selectedPullRequest?.url ?? null,
@@ -224,6 +237,7 @@ export const computeWorkspaceDerivations = (input: WorkspaceDerivationsInput): W
 		showTitle: false,
 		showRepositoryGroups: selectedRepository === null,
 		compact: compactPullRequestRows,
+		skeletonRowCount: pullRequestSkeletonRowCount,
 	} as const
 	const issueListProps = {
 		issues,
@@ -241,6 +255,7 @@ export const computeWorkspaceDerivations = (input: WorkspaceDerivationsInput): W
 		loadingIndicator,
 		loadMoreSelected: loadMoreIssueRowSelected,
 		onSelectLoadMore: onSelectLoadMoreIssues,
+		skeletonRowCount: issueSkeletonRowCount,
 	} as const
 	const repoListProps = {
 		repositories: repositoryItems,
@@ -255,9 +270,6 @@ export const computeWorkspaceDerivations = (input: WorkspaceDerivationsInput): W
 	const showIssueSplit = activeWorkspaceSurface === "issues" && isWideLayout && !detailFullView && !diffFullView && !runsFullView && !commentsViewActive
 	const issueJunctions = showIssueSplit ? getIssueDetailJunctionRows(selectedIssue, rightPaneWidth) : []
 	const showPaneSplit = showWideSplit || showRepoSplit || showIssueSplit
-	const issueFilterBarHeight = issueActiveFilterLabel ? ACTIVE_FILTER_BAR_HEIGHT : 0
-	const wideIssueRowsHeight = Math.max(1, wideBodyHeight - issueFilterBarHeight)
-	const narrowIssueRowsHeight = Math.max(1, narrowIssueListHeight - issueFilterBarHeight)
 	const issueVisualLineCount = issueListVisualLineCount(issues, showIssueRepositoryGroups, issueLoadMoreSlotAvailable)
 	const issueListNeedsScroll = issuesStatus === "ready" && issueVisualLineCount > wideIssueRowsHeight
 	const narrowIssueListNeedsScroll = issuesStatus === "ready" && issueVisualLineCount > narrowIssueRowsHeight
@@ -268,6 +280,7 @@ export const computeWorkspaceDerivations = (input: WorkspaceDerivationsInput): W
 		pullRequests: hasMorePullRequests ? `${visiblePullRequests.length}+` : visiblePullRequests.length,
 		issues: hasMoreIssues ? `${issues.length}+` : issues.length,
 		actions: actionsRunCount,
+		notifications: notificationsUnreadCount ?? "…",
 	}
 	const filterPlaceholder =
 		activeWorkspaceSurface === "pullRequests"
