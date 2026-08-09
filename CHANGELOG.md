@@ -1,5 +1,17 @@
 # phui
 
+## [0.13.0](https://github.com/phall1/phui/compare/v0.12.0...v0.13.0) (2026-08-09)
+
+
+### Features
+
+* **release:** automate releases with release-please ([#1](https://github.com/phall1/phui/issues/1)) ([a03a07b](https://github.com/phall1/phui/commit/a03a07b5baeedb949ab9cf1a749459bc249262ab))
+
+
+### Bug Fixes
+
+* **projects:** measure staleness from the committer date ([ebe7d15](https://github.com/phall1/phui/commit/ebe7d15828dc877e4c8d2f9e69bbd130f98a8ff8))
+
 ## 0.12.0
 
 ### Minor Changes
