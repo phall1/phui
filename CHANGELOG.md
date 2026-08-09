@@ -1,5 +1,18 @@
 # phui
 
+## [0.15.0](https://github.com/phall1/phui/compare/v0.14.1...v0.15.0) (2026-08-09)
+
+
+### Features
+
+* **release:** publish through one trusted entry point and verify what shipped ([#14](https://github.com/phall1/phui/issues/14)) ([6680a9d](https://github.com/phall1/phui/commit/6680a9db162a19b02ce96ac708c35abe01571ace))
+
+
+### Bug Fixes
+
+* **release:** diagnose npm auth before building, and allow re-publishing a tag ([#11](https://github.com/phall1/phui/issues/11)) ([35a5513](https://github.com/phall1/phui/commit/35a55133c1258b9a16ae6884ac5665c7817224ac))
+* **release:** give the credential preflight a registry to authenticate against ([#13](https://github.com/phall1/phui/issues/13)) ([a751a8d](https://github.com/phall1/phui/commit/a751a8d80e9467a78039fb174542815d5f37da3a))
+
 ## [0.14.1](https://github.com/phall1/phui/compare/v0.14.0...v0.14.1) (2026-08-09)
 
 
