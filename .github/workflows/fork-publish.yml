@@ -39,9 +39,14 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.event.release.tag_name }}
 
+      # `registry-url` is what makes setup-node write the .npmrc that reads
+      # NODE_AUTH_TOKEN. Without it npm ignores the token entirely and every
+      # authenticated command fails with ENEEDAUTH, which is exactly what the
+      # credential preflight below hit the first time it ran.
       - uses: actions/setup-node@v6
         with:
           node-version: 24
+          registry-url: https://registry.npmjs.org/
 
       - uses: oven-sh/setup-bun@v2
 
