@@ -17,6 +17,8 @@ import type { RunsViewModel } from "../hooks/useRunsView.js"
 import { RepoSurface } from "./RepoSurface.js"
 import { ActionsSurface } from "./ActionsSurface.js"
 import { ProjectsView } from "../projects/ProjectsView.js"
+import { NotificationsView } from "../notifications/NotificationsView.js"
+import { StarsView } from "../stars/StarsView.js"
 
 export interface WorkspaceContentProps {
 	readonly showScrollbars: boolean
@@ -67,6 +69,7 @@ export interface WorkspaceContentProps {
 		readonly issueListScrollRef: MutableRefObject<ScrollBoxRenderable | null>
 	}
 	readonly openInlineLink: (url: string) => void
+	readonly showNotice: (message: string) => void
 	readonly diffFilePanel: DiffFilePanelBundle
 }
 
@@ -139,6 +142,28 @@ export const WorkspaceContent = (props: WorkspaceContentProps) => {
 	if (activeWorkspaceSurface === "projects") {
 		return (
 			<ProjectsView contentWidth={layout.fullscreenContentWidth} height={layout.wideBodyHeight} loadingIndicator={props.loadingIndicator} showScrollbar={props.showScrollbars} />
+		)
+	}
+	if (activeWorkspaceSurface === "notifications") {
+		return (
+			<NotificationsView
+				contentWidth={layout.fullscreenContentWidth}
+				height={layout.wideBodyHeight}
+				loadingIndicator={props.loadingIndicator}
+				showScrollbar={props.showScrollbars}
+				onNotice={props.showNotice}
+			/>
+		)
+	}
+	if (activeWorkspaceSurface === "stars") {
+		return (
+			<StarsView
+				contentWidth={layout.fullscreenContentWidth}
+				height={layout.wideBodyHeight}
+				loadingIndicator={props.loadingIndicator}
+				showScrollbar={props.showScrollbars}
+				onNotice={props.showNotice}
+			/>
 		)
 	}
 	if (activeWorkspaceSurface === "actions" && props.selectedRepository) {

@@ -36,3 +36,5 @@ When a plan ships, leave the file in place and update the **Status** line so we 
 - [`github-actions-daily-driver.md`](./github-actions-daily-driver.md) — phased repository-wide Actions monitoring, controls, logs, dispatch, artifacts, and operational polish.
 - [`agent-cockpit-handoff.md`](./agent-cockpit-handoff.md) — hand exact PR review context from coding agents to a persistent phui pane, with phux as the first terminal-service adapter.
 - [`open-in-phux-worktree.md`](./open-in-phux-worktree.md) — check a PR's head out into an isolated git worktree and open it in a phux session via `w`.
+- [`notification-inbox.md`](./notification-inbox.md) — the Inbox surface: GitHub notifications grouped by what they want from you, opened in phui rather than a browser.
+- [`stars-browser.md`](./stars-browser.md) — the Stars surface: browse, search, and jump into everything you have starred.

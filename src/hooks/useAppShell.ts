@@ -1,10 +1,13 @@
 import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { useRenderer, useTerminalDimensions } from "@opentui/react"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
-import { useContext, useEffect, useRef, useState } from "react"
+import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { AppCommand } from "../commands.js"
 import type { PhuiLaunchIntent, PhuiLaunchView } from "../launchIntent.js"
 import { applyLaunchIntent, findLaunchPullRequestIndex, pullRequestLaunchViewState } from "../launchBootstrap.js"
+import { notificationsReportAtom } from "../notifications/atoms.js"
+import { clearInboxNavigator, setInboxNavigator, type InboxNavigator } from "../notifications/navigation.js"
+import { unreadCount } from "../notifications/types.js"
 import { parseRepositoryInput, viewCacheKey } from "../pullRequestViews.js"
 
 import { colors } from "../ui/colors.js"
@@ -365,6 +368,11 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	}
 
 	const workspaceTabSurfaces: readonly WorkspaceSurface[] = selectedRepository ? repositoryWorkspaceSurfaces : userWorkspaceSurfaces
+	// Subscribed here rather than inside the Inbox so the tab badge is live
+	// before you ever open the surface — the whole point being that phui, not
+	// github.com, is where you notice you have been asked for a review.
+	const notificationsResult = useAtomValue(notificationsReportAtom)
+	const notificationsUnreadCount = AsyncResult.isSuccess(notificationsResult) ? unreadCount(notificationsResult.value.items) : null
 	const repo = useRepoSurface({
 		pullRequests,
 		allIssues,
@@ -547,30 +555,58 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		pullRequests,
 	})
 
+	// The `phui owner/repo#123` startup path and the Inbox's `enter` want exactly
+	// the same thing — scope to the repository, hydrate the PR, select it, open a
+	// view — so the actions are named once and both callers drive them.
+	const openLaunchTarget = useCallback(
+		(intent: PhuiLaunchIntent) =>
+			applyLaunchIntent(intent, {
+				openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
+				hydratePullRequest: hydrateTargetedPullRequest,
+				selectPullRequest: (pullRequest) => {
+					const repositoryView = { _tag: "Repository", repository: pullRequest.repository } as const
+					const index = findLaunchPullRequestIndex(registry.get(visiblePullRequestsAtom), pullRequest)
+					if (index < 0) return false
+					setSelectedIndex(index)
+					setQueueSelection((current) => ({ ...current, [viewCacheKey(repositoryView)]: index }))
+					return true
+				},
+				showNotice: setNotice,
+			}).then((result) => {
+				if (result._tag !== "PullRequestReady") return result
+				setPendingLaunchPullRequest({
+					repository: result.pullRequest.repository,
+					number: result.pullRequest.number,
+					view: result.view,
+				})
+				return result
+			}),
+		[hydrateTargetedPullRequest, registry, setNotice, setQueueSelection, setSelectedIndex, switchViewTo],
+	)
+
 	useEffect(() => {
 		if (launchIntentAppliedRef.current) return
 		launchIntentAppliedRef.current = true
-		void applyLaunchIntent(launchIntent, {
-			openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
-			hydratePullRequest: hydrateTargetedPullRequest,
-			selectPullRequest: (pullRequest) => {
-				const repositoryView = { _tag: "Repository", repository: pullRequest.repository } as const
-				const index = findLaunchPullRequestIndex(registry.get(visiblePullRequestsAtom), pullRequest)
-				if (index < 0) return false
-				setSelectedIndex(index)
-				setQueueSelection((current) => ({ ...current, [viewCacheKey(repositoryView)]: index }))
-				return true
+		void openLaunchTarget(launchIntent)
+	}, [launchIntent, openLaunchTarget])
+
+	// Publish the navigation bridge the Inbox surface calls into. See
+	// src/notifications/navigation.ts for why the dependency points this way.
+	useEffect(() => {
+		const navigator: InboxNavigator = {
+			openPullRequest: async (target) => {
+				const result = await openLaunchTarget({ _tag: "PullRequest", repository: target.repository, number: target.number, view: "details" })
+				if (result._tag === "PullRequestFailed") throw new Error(result.error)
 			},
-			showNotice: setNotice,
-		}).then((result) => {
-			if (result._tag !== "PullRequestReady") return
-			setPendingLaunchPullRequest({
-				repository: result.pullRequest.repository,
-				number: result.pullRequest.number,
-				view: result.view,
-			})
-		})
-	}, [hydrateTargetedPullRequest, launchIntent, registry, setNotice, setQueueSelection, setSelectedIndex, switchViewTo])
+			openIssue: (target) => {
+				switchViewTo({ _tag: "Repository", repository: target.repository })
+				setActiveWorkspaceSurface("issues")
+			},
+			openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
+		}
+		setInboxNavigator(navigator)
+		return () => clearInboxNavigator(navigator)
+	}, [openLaunchTarget, setActiveWorkspaceSurface, switchViewTo])
 
 	// Keep list scroll position when toggling between surfaces. Each list's
 	// scrollbox remounts on surface switch; without persistence it starts at
@@ -1205,6 +1241,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		issuesError,
 		repositoryItems,
 		actionsRunCount: actionsRunsView.runsState.status === "ready" ? actionsRunsView.runsState.value.length : "…",
+		notificationsUnreadCount,
 		selectedIssueIndex,
 		selectedRepositoryIndex,
 		hasMorePullRequests,
@@ -1344,6 +1381,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 			systemThemeGeneration,
 			scrollRefs: { prListScrollRef, detailScrollRef, detailPreviewScrollRef, diffScrollRef, issueListScrollRef },
 			openInlineLink,
+			showNotice: flashNotice,
 			diffFilePanel: {
 				visible: diffFilePanelVisible,
 				width: diffFilePanelEffectiveWidth,

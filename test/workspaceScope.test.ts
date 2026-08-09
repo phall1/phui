@@ -26,7 +26,7 @@ describe("Workspace Scope", () => {
 		`
 		const stdout = await runIsolatedProbe(probe)
 		expect(JSON.parse(stdout)).toEqual({
-			user: [null, ["repos", "pullRequests", "issues", "projects"]],
+			user: [null, ["repos", "pullRequests", "issues", "notifications", "stars", "projects"]],
 			repository: ["kitlangton/ghui", ["pullRequests", "issues", "actions"]],
 		})
 	})
