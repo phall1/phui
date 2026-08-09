@@ -9,6 +9,16 @@ on:
         description: "Release tag to publish (e.g. v0.13.0)"
         required: true
         type: string
+  # Re-publish an existing tag without cutting a new release. Publishing can
+  # fail for reasons that have nothing to do with the code — an expired token,
+  # a registry outage — and re-running a release's jobs is not always possible
+  # once the run has aged out.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v0.14.1)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -45,6 +55,43 @@ jobs:
         run: |
           version="$(node -p "require('./package.json').version")"
           test "v${version}" = "${RELEASE_TAG}"
+
+      # npm answers "cannot publish here" with `404 Not Found - PUT`, because it
+      # will not leak whether a scope exists. That is indistinguishable from a
+      # typo'd package name, and it costs a whole release to learn nothing. So
+      # resolve the one fact the 404 hides — who the token actually is — before
+      # building four binaries, and say plainly how it disagrees with the scope
+      # being published to.
+      - name: Check npm credentials against the package scope
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -uo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::warning title=npm publish will be skipped::NPM_TOKEN is not set."
+            exit 0
+          fi
+
+          name="$(node -p "require('./package.json').name")"
+          scope="${name%%/*}"
+          scope="${scope#@}"
+
+          if ! who="$(npm whoami 2>&1)"; then
+            echo "::error title=npm token is not usable::npm whoami failed: ${who}"
+            exit 1
+          fi
+          echo "npm authenticated as: ${who}"
+          echo "publishing scope:     @${scope}"
+
+          if [ "$who" != "$scope" ]; then
+            echo "::error title=npm scope does not match the token's account::Authenticated as '${who}' but publishing to '@${scope}'. A personal npm scope only exists for the account whose username matches it, and publishing into someone else's scope fails as a 404, not a permission error. Either rename the package to @${who}/... or use a token for an account that owns @${scope}."
+            exit 1
+          fi
+
+          # Ownership of the scope is not the same as permission to create new
+          # packages in it: a granular token restricted to selected packages can
+          # read everything and still publish nothing.
+          echo "Scope matches the authenticated account."
 
   standalone:
     needs: verify
