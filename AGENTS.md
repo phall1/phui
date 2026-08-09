@@ -31,11 +31,17 @@
 
 ### npm
 
-- The fork publishes to npm as **`@phall1/phui`**. It is scoped because the
+- The fork publishes to npm as **`@phall/phui`**. It is scoped because the
   unscoped `phui` name belongs to an unrelated package (`phui@3.x`, a front-end
   component library) and cannot be used. The four per-platform binary packages
-  derive from it automatically (`@phall1/phui-darwin-arm64`, ...) via
+  derive from it automatically (`@phall/phui-darwin-arm64`, ...) via
   `binaryPackageName` in `dev/release-targets.ts`.
+- The scope is `@phall` — the **npm** username — not `@phall1`, which is the
+  GitHub one. They differ. A personal npm scope is auto-created on first publish
+  only when it matches the username, so publishing to the wrong one fails with
+  `404 Not Found - PUT` rather than a permission error: npm returns 404 so it
+  does not leak whether a scope exists. v0.14.0 shipped binaries and Homebrew
+  but no npm packages for exactly this reason.
 - Publishing needs an `NPM_TOKEN` repository secret. Without it a release still
   publishes binaries and Homebrew and emits a workflow warning rather than
   failing. Provenance comes from `id-token: write` (the Actions OIDC token),
@@ -70,7 +76,7 @@
 - Package smoke: `bun run package:smoke`.
 - Find the open release PR: `gh pr list --label "autorelease: pending"`.
 - Check release runs: `gh run list --workflow release-please.yml --limit 5`.
-- Check npm version: `npm view @phall1/phui version`.
+- Check npm version: `npm view @phall/phui version`.
 - Check tap workflow: `gh run list --repo phall1/homebrew-tap --workflow update-packages.yml --limit 5`.
 - Check Homebrew formula: `brew info phall1/tap/phui`.
 - Test Homebrew install: `brew reinstall phall1/tap/phui && /opt/homebrew/opt/phui/bin/phui --version`.

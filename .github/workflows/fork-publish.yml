@@ -108,7 +108,7 @@ jobs:
 
   # The wrapper package, published last: it lists every binary package as an
   # optionalDependency, so publishing it before they exist would leave a window
-  # where `npm i -g @phall1/phui` installs a launcher with nothing to launch.
+  # where `npm i -g @phall/phui` installs a launcher with nothing to launch.
   npm-main:
     needs: standalone
     runs-on: ubuntu-latest

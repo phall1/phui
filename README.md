@@ -24,22 +24,22 @@ Or install from npm — the package ships a prebuilt binary per platform, so
 Bun is not needed at runtime:
 
 ```bash
-npm install -g @phall1/phui
+npm install -g @phall/phui
 ```
 
 Any npm-compatible client works, since they all install from the same registry:
 
 ```bash
-pnpm add -g @phall1/phui
-bun add -g @phall1/phui
-yarn global add @phall1/phui
+pnpm add -g @phall/phui
+bun add -g @phall/phui
+yarn global add @phall/phui
 ```
 
 To try it without installing anything:
 
 ```bash
-npx @phall1/phui
-bunx @phall1/phui
+npx @phall/phui
+bunx @phall/phui
 ```
 
 The package is scoped because the unscoped `phui` name on npm belongs to an
