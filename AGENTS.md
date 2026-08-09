@@ -2,23 +2,31 @@
 
 ## Release Process
 
-- Fork releases on `phall1/phui` use `.github/workflows/fork-publish.yml` and
-  publish standalone binaries plus `phall1/tap/phui`; they do not publish npm.
-- The upstream npm workflow is repository-gated and skips on the fork.
-
-- Release workflow: `.github/workflows/publish.yml`.
-- npm Trusted Publisher should be configured for owner `kitlangton`, repository `ghui`, workflow `publish.yml`, environment `npm`.
-- Add a changeset for every user-facing change with `bun run changeset`.
-- Check pending changesets with `bun run changeset:status`.
-- Apply pending changesets with `bun run changeset:version`; this bumps `package.json` and updates `CHANGELOG.md` when release notes exist.
-- Run `bun run format:check`, `bun run typecheck`, `bun run lint`, `bun run test`, and `bun run package:smoke` before committing the version bump.
-- Commit and push the version bump and consumed changesets to `main`.
-- Create a GitHub release named and tagged `v<package.json version>`.
-- Publishing to npm happens from GitHub Actions via trusted publishing; do not use an `NPM_TOKEN`.
-- The workflow verifies the release tag matches `package.json`, builds standalone binaries, runs `npm publish`, uploads release assets, and dispatches `kitlangton/homebrew-tap`.
-- Homebrew tap automation uses the `HOMEBREW_TAP_TOKEN` Actions secret on `kitlangton/ghui` to dispatch `kitlangton/homebrew-tap`.
-- `HOMEBREW_TAP_TOKEN` should be a fine-grained PAT owned by `kitlangton`, scoped only to `kitlangton/homebrew-tap`, with repository `Contents: Read and write`.
-- After releases, verify both the publish workflow and the tap dispatch workflow pass.
+- Fork releases on `phall1/phui` are fully automated with release-please
+  (`.github/workflows/release-please.yml`); there are no manual version bumps
+  or `gh release create` steps.
+- Versioning is driven by Conventional Commit messages on `main`: `fix:` bumps
+  patch, `feat:` bumps minor, and breaking changes bump minor while pre-1.0
+  (`bump-minor-pre-major`). Commits like `chore:`/`refactor:` do not trigger a
+  release on their own.
+- Every push to `main` opens or updates the release PR, which accumulates the
+  pending version bump and `CHANGELOG.md` entries.
+- Merging the release PR bumps `package.json`, updates `CHANGELOG.md`, tags
+  `v<version>`, creates the GitHub release, and calls
+  `.github/workflows/fork-publish.yml` (via `workflow_call`, because releases
+  created with the workflow token do not emit a `release` event) to build
+  standalone binaries and dispatch `phall1/homebrew-tap`. The fork does not
+  publish npm.
+- Do not hand-edit the `package.json` version or `CHANGELOG.md`;
+  release-please owns both, and `.release-please-manifest.json` tracks the
+  last released version.
+- Homebrew tap automation uses the `HOMEBREW_TAP_TOKEN` Actions secret on
+  `phall1/phui`: a fine-grained PAT scoped to `phall1/homebrew-tap` with
+  repository `Contents: Read and write`.
+- After merging a release PR, verify the `Release Please` run (including the
+  called publish jobs and tap dispatch) passes.
+- The upstream npm workflow (`.github/workflows/publish.yml`) is
+  repository-gated to `kitlangton/ghui` and skips on the fork.
 
 ## Commands
 
@@ -27,21 +35,17 @@
 - Lint: `bun run lint`.
 - Test: `bun run test`.
 - Package smoke: `bun run package:smoke`.
-- Create changeset: `bun run changeset`.
-- Check changesets: `bun run changeset:status`.
-- Apply changesets: `bun run changeset:version`.
-- Create release: `gh release create vX.Y.Z --target main --title "vX.Y.Z" --notes "..."`.
-- Check publish run: `gh run list --workflow publish.yml --limit 5`.
-- Check npm version: `npm view @kitlangton/ghui version`.
-- Check tap workflow: `gh run list --repo kitlangton/homebrew-tap --workflow update-ghui.yml --limit 5`.
-- Check Homebrew formula: `brew info kitlangton/tap/ghui`.
-- Test Homebrew install: `brew reinstall kitlangton/tap/ghui && /opt/homebrew/opt/ghui/bin/ghui --version`.
+- Find the open release PR: `gh pr list --label "autorelease: pending"`.
+- Check release runs: `gh run list --workflow release-please.yml --limit 5`.
+- Check tap workflow: `gh run list --repo phall1/homebrew-tap --workflow update-phui.yml --limit 5`.
+- Check Homebrew formula: `brew info phall1/tap/phui`.
+- Test Homebrew install: `brew reinstall phall1/tap/phui && /opt/homebrew/opt/phui/bin/phui --version`.
 
 ## Commit Readiness
 
 - Before committing or pushing code changes, run `bun run format:check`, `bun run typecheck`, `bun run lint`, and `bun run test`.
-- Before release commits, also run `bun run package:smoke`.
-- Before release commits, also run `bun run build:standalone`.
+- Release commits are authored by release-please; the publish workflow runs
+  `package:smoke` and `build:standalone` before uploading assets.
 - If formatting fails, run `bunx oxfmt src/ test/ dev/` or format only the touched files, then rerun `bun run format:check`.
 - CI enforces formatting with `bun run format:check`; do not rely on manual review to catch formatting drift.
 
