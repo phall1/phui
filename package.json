@@ -1,7 +1,7 @@
 {
 	"name": "@phall/phui",
 	"version": "0.14.0",
-	"description": "Terminal UI for GitHub pull requests",
+	"description": "Terminal UI for GitHub pull requests — a fork of kitlangton/ghui",
 	"type": "module",
 	"license": "MIT",
 	"repository": {
