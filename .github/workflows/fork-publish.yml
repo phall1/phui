@@ -151,6 +151,13 @@ jobs:
 
   update-homebrew:
     needs: standalone
+    # Runs even when `standalone` failed, because npm publishing lives in that
+    # job and an npm problem must not hold Homebrew hostage. The release assets
+    # are uploaded before anything npm-related runs, so by this point they
+    # exist. If the build genuinely failed and they do not, the tap refuses the
+    # update on its own — it verifies every asset before rendering a formula —
+    # so the worst case is the formula staying where it is.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       # Just a ping. The tap re-resolves this release and recomputes every
