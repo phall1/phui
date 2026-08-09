@@ -5,14 +5,19 @@ import { colors } from "./colors.js"
 import { SelectableRow, useHoverState } from "./listSelection/SelectableRow.js"
 import { fitCell, MatchedCell, PlainLine, SectionTitle, TextLine } from "./primitives.js"
 import { pullRequestRowDisplay, repoColor, reviewIcon } from "./pullRequests.js"
+import { SKELETON_ROW_COUNT, SkeletonList, skeletonVisualLines } from "./SkeletonRows.js"
 
 export type PullRequestGroups = Array<[string, PullRequestItem[]]>
 
-const pullRequestListRowHeight = (row: PullRequestListRow) => (row._tag === "pull-request" && !row.compact ? 2 : 1)
+const pullRequestListRowHeight = (row: PullRequestListRow) => {
+	if (row._tag === "skeleton") return skeletonVisualLines(row.rowCount, row.compact)
+	return row._tag === "pull-request" && !row.compact ? 2 : 1
+}
 
 export type PullRequestListRow =
 	| { readonly _tag: "title" }
 	| { readonly _tag: "message"; readonly text: string; readonly color: string }
+	| { readonly _tag: "skeleton"; readonly rowCount: number; readonly compact: boolean }
 	| { readonly _tag: "group"; readonly repository: string; readonly pullRequests: readonly PullRequestItem[] }
 	| { readonly _tag: "pull-request"; readonly pullRequest: PullRequestItem; readonly numberWidth: number; readonly ageWidth: number; readonly compact: boolean }
 	| { readonly _tag: "load-more"; readonly text: string }
@@ -60,6 +65,7 @@ export const buildPullRequestListRows = ({
 	showTitle = true,
 	showRepositoryGroups = true,
 	compact = false,
+	skeletonRowCount = SKELETON_ROW_COUNT,
 }: {
 	readonly groups: PullRequestGroups
 	readonly status: LoadStatus
@@ -72,10 +78,13 @@ export const buildPullRequestListRows = ({
 	readonly showTitle?: boolean
 	readonly showRepositoryGroups?: boolean
 	readonly compact?: boolean
+	readonly skeletonRowCount?: number
 }): readonly PullRequestListRow[] => {
 	const itemCount = groups.reduce((count, [, pullRequests]) => count + pullRequests.length, 0)
 	const rows: PullRequestListRow[] = showTitle ? [{ _tag: "title" }] : []
-	if (status === "loading" && itemCount === 0) rows.push({ _tag: "message", text: "- Loading pull requests...", color: colors.muted })
+	// Placeholder rows, not a "Loading..." line: an empty-and-loading list would
+	// otherwise be indistinguishable from an empty result until the fetch lands.
+	if (status === "loading" && itemCount === 0) rows.push({ _tag: "skeleton", rowCount: skeletonRowCount, compact })
 	if (status === "error") rows.push({ _tag: "message", text: `- ${error ?? "Could not load pull requests."}`, color: colors.error })
 	if (status === "ready" && itemCount === 0)
 		rows.push({ _tag: "message", text: filterText.length > 0 ? "- No matching pull requests." : "- No open pull requests.", color: colors.muted })
@@ -238,6 +247,7 @@ export const PullRequestList = ({
 			{rows.map((row, index) => {
 				if (row._tag === "title") return <SectionTitle key="title" title="PULL REQUESTS" />
 				if (row._tag === "message") return <PlainLine key={`message-${index}`} text={row.text} fg={row.color} />
+				if (row._tag === "skeleton") return <SkeletonList key="skeleton" contentWidth={contentWidth} rowCount={row.rowCount} compact={row.compact} />
 				if (row._tag === "load-more")
 					return (
 						<SelectableRow key="load-more" width={contentWidth} selected={loadMoreSelected} hovered={false} onSelect={() => onSelectLoadMore?.()} onHoverChange={() => {}}>

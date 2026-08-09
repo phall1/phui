@@ -2,34 +2,58 @@ import { TextAttributes } from "@opentui/core"
 import { colors, mixHex } from "./colors.js"
 import type { DetailPlaceholderContent } from "./DetailsPane.js"
 import { centerCell, Filler, PlainLine, TextLine } from "./primitives.js"
+import { shimmerIntensity } from "./shimmer.js"
 import { SPINNER_FRAMES } from "./spinner.js"
 
 type LoadingLogoContent = Pick<DetailPlaceholderContent, "hint">
 
-const PHUI_LOGO = ["█▀▀▀ █  █ █  █ ▀█▀", "█ ▀█ █▀▀█ █  █  █ ", "▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀▀▀"] as const
+const PHUI_LOGO = ["█▀▀█ █  █ █  █ ▀█▀", "█▀▀▀ █▀▀█ █  █  █ ", "▀    ▀  ▀ ▀▀▀▀ ▀▀▀"] as const
 
-const LEFT_WORD_WIDTH = 9
 const LOGO_WIDTH = Math.max(...PHUI_LOGO.map((line) => line.length))
 const LOGO_HEIGHT = PHUI_LOGO.length
-const LOGO_BLOCK_HEIGHT = LOGO_HEIGHT + 2
+// logo rows + blank + pulse rail + blank + status line
+const LOGO_BLOCK_HEIGHT = LOGO_HEIGHT + 4
 
-const logoColor = (x: number) => (x < LEFT_WORD_WIDTH ? mixHex(colors.accent, colors.text, 0.14) : mixHex(colors.accent, colors.text, 0.52))
+const PULSE_RAIL = "─"
 
-const LOGO_COLORS = Array.from({ length: LOGO_WIDTH }, (_, index) => logoColor(index))
-const LOGO_ROWS = PHUI_LOGO.map((line) => Array.from(line.padEnd(LOGO_WIDTH, " "), (char, index) => ({ char, color: LOGO_COLORS[index]! })))
+/**
+ * Resting colour for logo column `x`: dim on the left, accent-tinted on the
+ * right. Recomputed per render rather than memoised at module scope because
+ * `colors` is mutated in place when the theme (or the terminal palette) changes.
+ */
+const logoBaseColor = (x: number) => mixHex(colors.muted, colors.accent, 0.2 + (x / Math.max(1, LOGO_WIDTH - 1)) * 0.4)
 
-const LogoRow = ({ row, left }: { row: (typeof LOGO_ROWS)[number]; left: number }) => (
+const logoColor = (x: number, frame: number) => mixHex(logoBaseColor(x), colors.text, shimmerIntensity(x, frame, LOGO_WIDTH))
+
+const LogoRow = ({ line, left, frame }: { line: string; left: number; frame: number }) => (
 	<TextLine>
 		<span fg={colors.muted}>{" ".repeat(left)}</span>
-		{row.map(({ char, color }, index) =>
+		{Array.from(line.padEnd(LOGO_WIDTH, " "), (char, index) =>
 			char === " " ? (
 				<span key={index}> </span>
 			) : (
-				<span key={index} fg={color} attributes={TextAttributes.BOLD}>
+				<span key={index} fg={logoColor(index, frame)} attributes={TextAttributes.BOLD}>
 					{char}
 				</span>
 			),
 		)}
+	</TextLine>
+)
+
+/**
+ * The rail under the wordmark. Deliberately not a progress bar: startup has no
+ * measurable percentage, and a bar that fills at an invented rate is a lie the
+ * user learns to distrust. A highlight travelling on the same beat as the logo
+ * says "still working" without claiming to know how far along it is.
+ */
+const PulseRail = ({ left, frame }: { left: number; frame: number }) => (
+	<TextLine>
+		<span fg={colors.muted}>{" ".repeat(left)}</span>
+		{Array.from({ length: LOGO_WIDTH }, (_, index) => (
+			<span key={index} fg={mixHex(colors.separator, colors.accent, shimmerIntensity(index, frame, LOGO_WIDTH))}>
+				{PULSE_RAIL}
+			</span>
+		))}
 	</TextLine>
 )
 
@@ -39,9 +63,11 @@ export const LoadingLogo = ({ content, width, frame }: { content: LoadingLogoCon
 
 	return (
 		<box flexDirection="column" width={width}>
-			{LOGO_ROWS.map((row, index) => (
-				<LogoRow key={index} row={row} left={logoLeft} />
+			{PHUI_LOGO.map((line, index) => (
+				<LogoRow key={index} line={line} left={logoLeft} frame={frame} />
 			))}
+			<box height={1} />
+			<PulseRail left={logoLeft} frame={frame} />
 			<box height={1} />
 			<PlainLine text={centerCell(`${spinner} ${content.hint}`, width)} fg={colors.muted} />
 		</box>
