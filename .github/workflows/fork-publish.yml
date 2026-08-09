@@ -3,9 +3,18 @@ name: Publish fork release
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v0.13.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
 
 jobs:
   verify:
@@ -13,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
 
       - uses: actions/setup-node@v6
         with:
@@ -29,7 +40,7 @@ jobs:
       - name: Verify release tag matches package version
         run: |
           version="$(node -p "require('./package.json').version")"
-          test "v${version}" = "${GITHUB_REF_NAME}"
+          test "v${version}" = "${RELEASE_TAG}"
 
   standalone:
     needs: verify
@@ -48,6 +59,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
 
       - uses: oven-sh/setup-bun@v2
 
@@ -58,7 +71,7 @@ jobs:
       - name: Upload standalone release assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${GITHUB_REF_NAME}" "dist/release/phui-${{ matrix.target }}.tar.gz" "dist/release/phui-${{ matrix.target }}.tar.gz.sha256" --clobber
+        run: gh release upload "${RELEASE_TAG}" "dist/release/phui-${{ matrix.target }}.tar.gz" "dist/release/phui-${{ matrix.target }}.tar.gz.sha256" --clobber
 
   update-homebrew:
     needs: standalone
@@ -69,7 +82,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p dist/release
-          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern "*.sha256" --dir dist/release
+          gh release download "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --pattern "*.sha256" --dir dist/release
 
       - name: Update phall1 Homebrew tap
         env:
@@ -82,8 +95,8 @@ jobs:
           }
           gh api --method POST repos/phall1/homebrew-tap/dispatches \
             -f event_type=phui-release \
-            -f client_payload[tag]="${GITHUB_REF_NAME}" \
-            -f client_payload[version]="${GITHUB_REF_NAME#v}" \
+            -f client_payload[tag]="${RELEASE_TAG}" \
+            -f client_payload[version]="${RELEASE_TAG#v}" \
             -f client_payload[darwin_arm64_sha256]="$(checksum phui-darwin-arm64.tar.gz)" \
             -f client_payload[darwin_x64_sha256]="$(checksum phui-darwin-x64.tar.gz)" \
             -f client_payload[linux_arm64_sha256]="$(checksum phui-linux-arm64.tar.gz)" \
