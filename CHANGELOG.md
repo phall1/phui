@@ -1,5 +1,12 @@
 # phui
 
+## [0.14.1](https://github.com/phall1/phui/compare/v0.14.0...v0.14.1) (2026-08-09)
+
+
+### Bug Fixes
+
+* **release:** publish under the [@phall](https://github.com/phall) npm scope, not [@phall1](https://github.com/phall1) ([#6](https://github.com/phall1/phui/issues/6)) ([fd2f7fa](https://github.com/phall1/phui/commit/fd2f7fa6cf9353792a412b93d4c3edfd37c35855))
+
 ## [0.14.0](https://github.com/phall1/phui/compare/v0.13.0...v0.14.0) (2026-08-09)
 
 
