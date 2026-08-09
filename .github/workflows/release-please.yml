@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  # Manual trigger. release-please only reconciles its release branch on a push
+  # to main, so an unrelated commit landing after the release PR was opened
+  # leaves that PR conflicting with main and nothing to re-run.
+  workflow_dispatch:
 
 permissions:
   contents: write
