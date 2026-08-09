@@ -1,5 +1,5 @@
 {
-	"name": "@phall1/phui",
+	"name": "@phall/phui",
 	"version": "0.14.0",
 	"description": "Terminal UI for GitHub pull requests",
 	"type": "module",
