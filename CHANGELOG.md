@@ -1,5 +1,17 @@
 # phui
 
+## [0.14.0](https://github.com/phall1/phui/compare/v0.13.0...v0.14.0) (2026-08-09)
+
+
+### Features
+
+* Inbox and Stars surfaces, loading skeletons, and npm publishing ([#3](https://github.com/phall1/phui/issues/3)) ([87ede82](https://github.com/phall1/phui/commit/87ede824ee718c89fec81e93799e9919960df091))
+
+
+### Bug Fixes
+
+* **release:** do not let an npm failure block the Homebrew update ([#5](https://github.com/phall1/phui/issues/5)) ([e60b073](https://github.com/phall1/phui/commit/e60b073090383e8dbfb3c76dd2a52cf061391d0c))
+
 ## [0.13.0](https://github.com/phall1/phui/compare/v0.12.0...v0.13.0) (2026-08-09)
 
 
