@@ -15,8 +15,7 @@
   `v<version>`, creates the GitHub release, and calls
   `.github/workflows/fork-publish.yml` (via `workflow_call`, because releases
   created with the workflow token do not emit a `release` event) to build
-  standalone binaries and dispatch `phall1/homebrew-tap`. The fork does not
-  publish npm.
+  standalone binaries, publish npm, and dispatch `phall1/homebrew-tap`.
 - Do not hand-edit the `package.json` version or `CHANGELOG.md`;
   release-please owns both, and `.release-please-manifest.json` tracks the
   last released version.
@@ -26,7 +25,41 @@
 - After merging a release PR, verify the `Release Please` run (including the
   called publish jobs and tap dispatch) passes.
 - The upstream npm workflow (`.github/workflows/publish.yml`) is
-  repository-gated to `kitlangton/ghui` and skips on the fork.
+  repository-gated to `kitlangton/ghui` and skips on the fork. Do not un-gate
+  it; fork publishing lives in `fork-publish.yml`, which is fork-owned and does
+  not conflict on merge.
+
+### npm
+
+- The fork publishes to npm as **`@phall1/phui`**. It is scoped because the
+  unscoped `phui` name belongs to an unrelated package (`phui@3.x`, a front-end
+  component library) and cannot be used. The four per-platform binary packages
+  derive from it automatically (`@phall1/phui-darwin-arm64`, ...) via
+  `binaryPackageName` in `dev/release-targets.ts`.
+- Publishing needs an `NPM_TOKEN` repository secret. Without it a release still
+  publishes binaries and Homebrew and emits a workflow warning rather than
+  failing. Provenance comes from `id-token: write` (the Actions OIDC token),
+  not from how npm is authenticated, so a token publish is still signed.
+- OIDC/trusted publishing cannot perform a package's *first* publish — npm
+  requires the package to exist before a trusted publisher can be attached. Once
+  the packages exist, configure trusted publishing per package and delete the
+  token.
+- Nothing in `dev/` should hard-code the package name; `dev/package-smoke.ts`
+  derives `node_modules` paths from `package.json`, because a scoped package
+  installs to `node_modules/@scope/name`.
+
+### Homebrew tap
+
+- `phall1/homebrew-tap` is generated: `tools/<tool>.json` plus
+  `.github/scripts/render/<tool>.sh`, driven by one `update-packages.yml`.
+- The tap update is a bare `repository_dispatch` (`tap-release`, with
+  `client_payload[tool]=phui`). Do not send checksums: the tap re-resolves the
+  release and recomputes every digest itself, so a forwarded payload would be
+  both ignored and untrustworthy.
+- The tap also polls hourly, so a failed dispatch (usually an expired
+  `HOMEBREW_TAP_TOKEN`) delays the formula by up to an hour rather than
+  stranding it. Check the tap's `Update packages` workflow before assuming a
+  release did not land.
 
 ## Commands
 
@@ -37,7 +70,8 @@
 - Package smoke: `bun run package:smoke`.
 - Find the open release PR: `gh pr list --label "autorelease: pending"`.
 - Check release runs: `gh run list --workflow release-please.yml --limit 5`.
-- Check tap workflow: `gh run list --repo phall1/homebrew-tap --workflow update-phui.yml --limit 5`.
+- Check npm version: `npm view @phall1/phui version`.
+- Check tap workflow: `gh run list --repo phall1/homebrew-tap --workflow update-packages.yml --limit 5`.
 - Check Homebrew formula: `brew info phall1/tap/phui`.
 - Test Homebrew install: `brew reinstall phall1/tap/phui && /opt/homebrew/opt/phui/bin/phui --version`.
 
