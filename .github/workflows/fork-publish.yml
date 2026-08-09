@@ -12,6 +12,10 @@ on:
 
 permissions:
   contents: write
+  # Required for npm provenance. Provenance comes from the Actions OIDC token,
+  # not from how npm is authenticated, so it works with NPM_TOKEN as well as
+  # with a trusted publisher.
+  id-token: write
 
 env:
   RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
@@ -62,6 +66,11 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.event.release.tag_name }}
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+
       - uses: oven-sh/setup-bun@v2
 
       - run: bun install --frozen-lockfile
@@ -72,6 +81,73 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${RELEASE_TAG}" "dist/release/phui-${{ matrix.target }}.tar.gz" "dist/release/phui-${{ matrix.target }}.tar.gz.sha256" --clobber
+
+      # Reuses the binary built above rather than compiling it a second time.
+      - run: bun run build:npm-packages -- ${{ matrix.target }}
+        env:
+          PHUI_REUSE_RELEASE_BINARY: "1"
+
+      - name: Publish npm binary package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::warning title=npm publish skipped::NPM_TOKEN is not set; published binaries and the Homebrew formula only."
+            exit 0
+          fi
+          package_dir="dist/npm/binaries/${{ matrix.target }}"
+          name="$(node -p "require('./${package_dir}/package.json').name")"
+          version="$(node -p "require('./${package_dir}/package.json').version")"
+          # Re-running a release must not fail on packages that already landed.
+          if npm view "${name}@${version}" version >/dev/null 2>&1; then
+            echo "${name}@${version} is already published."
+            exit 0
+          fi
+          npm publish "${package_dir}"
+
+  # The wrapper package, published last: it lists every binary package as an
+  # optionalDependency, so publishing it before they exist would leave a window
+  # where `npm i -g @phall1/phui` installs a launcher with nothing to launch.
+  npm-main:
+    needs: standalone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run build:npm-packages -- main
+
+      - run: npm pack --dry-run
+        working-directory: dist/npm/main
+
+      - name: Publish npm package
+        working-directory: dist/npm/main
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::warning title=npm publish skipped::NPM_TOKEN is not set; published binaries and the Homebrew formula only."
+            exit 0
+          fi
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          if npm view "${name}@${version}" version >/dev/null 2>&1; then
+            echo "${name}@${version} is already published."
+            exit 0
+          fi
+          npm publish
 
   update-homebrew:
     needs: standalone

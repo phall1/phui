@@ -2,7 +2,7 @@
 
 Terminal UI for keeping up with GitHub pull requests, issues, diffs, and Actions across repositories.
 
-`phui` gives you one keyboard-driven place to review PR details, inspect diffs, monitor and control Actions, leave diff comments, manage labels, toggle draft state, merge, open PRs in GitHub, and copy PR metadata without leaving the terminal.
+`phui` gives you one keyboard-driven place to triage your GitHub notifications, browse your starred repositories, review PR details, inspect diffs, monitor and control Actions, leave diff comments, manage labels, toggle draft state, merge, open PRs in GitHub, and copy PR metadata without leaving the terminal.
 
 <img width="1420" height="856" alt="image" src="https://github.com/user-attachments/assets/5e560a4a-5887-4baa-a6d4-e1f4f0410c70" />
 
@@ -20,15 +20,37 @@ Upgrade with:
 brew upgrade phui
 ```
 
-This fork publishes standalone binaries from `phall1/phui` and updates the
-`phall1/tap` formula automatically. It does not publish the upstream npm package.
-The upstream npm release remains available separately:
+Or install from npm — the package ships a prebuilt binary per platform, so
+Bun is not needed at runtime:
+
+```bash
+npm install -g @phall1/phui
+```
+
+Any npm-compatible client works, since they all install from the same registry:
+
+```bash
+pnpm add -g @phall1/phui
+bun add -g @phall1/phui
+yarn global add @phall1/phui
+```
+
+To try it without installing anything:
+
+```bash
+npx @phall1/phui
+bunx @phall1/phui
+```
+
+The package is scoped because the unscoped `phui` name on npm belongs to an
+unrelated project.
+
+This fork publishes standalone binaries and the `phall1/tap` formula from
+`phall1/phui`. The upstream npm release remains available separately:
 
 ```bash
 npm install -g @kitlangton/ghui
 ```
-
-The npm package also installs a platform-specific binary package and does not require Bun.
 
 Requirements:
 
@@ -219,6 +241,47 @@ By default worktrees live at `{{repoPath}}/.phui/worktrees/pr-{{number}}`
 }
 ```
 
+### Inbox
+
+Press `4` (or `g n`) for your GitHub notifications, grouped by what they want
+from you rather than by repository or time:
+
+- **NEEDS YOU** — review requested, approval requested, assigned, mentioned,
+  team mentioned, invited
+- **YOUR THREADS** — activity on things you opened
+- **CI** — workflow activity
+- **SECURITY** — Dependabot and advisory alerts
+- **WATCHING** — everything you are merely subscribed to
+
+`enter` opens a pull request **in phui** — the repository is scoped, the PR is
+hydrated, and you land on its detail view, exactly as `phui owner/repo#123`
+would. Issues open the repository's Issues surface; anything phui has no surface
+for (releases, discussions) falls back to your browser.
+
+- `d` marks a thread done, `m` marks it read, `shift-u` unsubscribes.
+- `shift-a` marks everything read.
+- `u` widens the list to threads you have already read; `p` narrows it to
+  threads you are participating in.
+- `r` refreshes; the surface also polls once a minute while it is visible.
+
+The workspace tab strip carries the unread count, so phui tells you a review was
+requested without you opening github.com to find out. Reading notifications
+needs a `gh` token with the `notifications` scope — `gh auth login` grants it by
+default, and the surface says so plainly if yours does not have it.
+
+### Stars
+
+Press `5` (or `g s`) to browse everything you have starred, with star count,
+language, description, and last-push age.
+
+- `/` filters as you type across name, description, language, and topics.
+- `s` cycles the sort: recently starred, recently pushed, most stars, name.
+- `enter` scopes phui to the repository, so its pull requests, issues, and
+  Actions are one keystroke away.
+- `o` opens it in a browser, `shift-u` unstars it, `r` refreshes.
+
+phui reads the first 500 stars and tells you when it stopped there.
+
 ### Workflow runs
 
 Open a repository and select its **Actions** tab to monitor recent workflow runs
@@ -241,6 +304,8 @@ Requires the GitHub CLI (`gh`) the same as the rest of phui; nothing extra to co
 - `gg` / `G`: jump to first or last pull request
 - `ctrl-u` / `ctrl-d`: page up or down
 - `tab` / `shift-tab`: switch PR queue
+- `1`–`6`: jump straight to a workspace surface
+- `g h` / `g p` / `g i` / `g n` / `g s`: go to repos, pull requests, issues, inbox, stars
 - `ctrl-p` / `cmd-k`: open the command palette
 - `/`: filter
 - `enter`: expand details; normal PR actions still work while details are expanded
