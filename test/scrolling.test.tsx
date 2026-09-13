@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test"
-import { act } from "react"
+import { act } from "../src/solid-hooks.js"
 
 // Quiet React's "update outside act" warnings from atom-driven loading frames and
 // timers we can't synchronously enclose. Real correctness is asserted via captured
@@ -35,11 +35,10 @@ process.env.PHUI_MOCK_WORKSPACE_PREFERENCES_PATH = "off"
 process.env.PHUI_PR_PAGE_SIZE = "100"
 
 const loadApp = async () => {
-	const { createTestRenderer } = await import("@opentui/core/testing")
-	const { createRoot } = await import("@opentui/react")
-	const { RegistryProvider } = await import("@effect/atom-react")
+	const { testRender } = await import("@opentui/solid")
+	const { RegistryProvider } = await import("../src/atom-solid.js")
 	const { App } = await import("../src/App.tsx")
-	return { createTestRenderer, createRoot, RegistryProvider, App }
+	return { testRender, RegistryProvider, App }
 }
 
 let cached: Awaited<ReturnType<typeof loadApp>> | null = null
@@ -66,16 +65,15 @@ const settle = async (renderOnce: () => Promise<void>, predicate: () => boolean,
 
 const setupApp = async (cols = 100, rows = 20) => {
 	if (!cached) cached = await loadApp()
-	const { createTestRenderer, createRoot, RegistryProvider, App } = cached
-	const setup = await createTestRenderer({ width: cols, height: rows })
-	const root = createRoot(setup.renderer)
-	act(() => {
-		root.render(
+	const { testRender, RegistryProvider, App } = cached
+	const setup = await testRender(
+		() => (
 			<RegistryProvider>
 				<App />
-			</RegistryProvider>,
-		)
-	})
+			</RegistryProvider>
+		),
+		{ width: cols, height: rows },
+	)
 	const ready = await settle(setup.renderOnce, () => setup.captureCharFrame().includes("#1000"))
 	if (!ready) throw new Error("App never rendered mock PRs:\n" + setup.captureCharFrame())
 	return setup

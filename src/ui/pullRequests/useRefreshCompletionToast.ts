@@ -1,4 +1,4 @@
-import { type MutableRefObject, useEffect, useState } from "react"
+import { type MutableRefObject, useEffect, useState } from "../../solid-hooks.js"
 import type { LoadStatus, PullRequestItem } from "../../domain.js"
 import type { PullRequestLoad } from "../../pullRequestLoad.js"
 

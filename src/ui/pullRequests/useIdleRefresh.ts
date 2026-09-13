@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, type MutableRefObject } from "react"
+import { useEffect, useEffectEvent, type MutableRefObject } from "../../solid-hooks.js"
 
 export interface UseIdleRefreshInput {
 	readonly enabled: boolean

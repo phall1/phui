@@ -1,4 +1,4 @@
-import { useAtom, useAtomSet } from "@effect/atom-react"
+import { useAtom, useAtomSet } from "../atom-solid.js"
 import { commentsViewActiveAtom, commentsViewSelectionAtom } from "../ui/comments/atoms.js"
 import { detailFullViewAtom, detailScrollOffsetAtom } from "../ui/detail/atoms.js"
 import { diffFullViewAtom } from "../ui/diff/atoms.js"

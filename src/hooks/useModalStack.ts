@@ -1,4 +1,4 @@
-import { useAtom } from "@effect/atom-react"
+import { useAtom } from "../atom-solid.js"
 import { activeModalAtom } from "../ui/modals/atoms.js"
 import { Modal, type ModalState, type ModalTag } from "../ui/modals/types.js"
 import {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef } from "../solid-hooks.js"
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
 import type { PullRequestComment } from "../domain.js"
 import { colors } from "./colors.js"

@@ -1,13 +1,14 @@
-import type { MutableRefObject } from "react"
+import type { MutableRefObject } from "../solid-hooks.js"
 import type * as Atom from "effect/unstable/reactivity/Atom"
-import { useAtomSet } from "@effect/atom-react"
+import { useAtomSet } from "../atom-solid.js"
 import { devLog } from "../devLog.js"
 import type { PullRequestItem } from "../domain.js"
 import { type PullRequestView, nextView, viewCacheKey, viewEquals } from "../pullRequestViews.js"
 import { issueViewForPullRequestView } from "../viewSync.js"
 import { type WorkspaceSurface, nextWorkspaceSurface } from "../workspaceSurfaces.js"
-import { queueSelectionAtom } from "../ui/pullRequests/atoms.js"
-import { recentRepositoriesAtom, workspaceScopeAtom } from "../workspace/atoms.js"
+import { activeViewAtom, queueSelectionAtom } from "../ui/pullRequests/atoms.js"
+import { filterModeAtom, filterQueryAtom } from "../ui/filter/atoms.js"
+import { recentRepositoriesAtom, selectedRepositoryAtom, workspaceScopeAtom, workspaceSurfaceAtom, workspaceTabSurfacesAtom } from "../workspace/atoms.js"
 import type { IssueView } from "../issueViews.js"
 import { workspaceScopeForRepository } from "../workspaceScope.js"
 
@@ -65,7 +66,6 @@ export interface WorkspaceNavigation {
 export const useWorkspaceNavigation = (input: UseWorkspaceNavigationInput): WorkspaceNavigation => {
 	const {
 		registry,
-		activeView,
 		activeViews,
 		currentQueueCacheKey,
 		selectedIndex,
@@ -83,13 +83,8 @@ export const useWorkspaceNavigation = (input: UseWorkspaceNavigationInput): Work
 		setFilterMode,
 		setNotice,
 		cancelRefreshToast,
-		filterQuery,
-		filterMode,
 		setRecentlyCompletedPullRequests,
 		setActiveWorkspaceSurface,
-		activeWorkspaceSurface,
-		workspaceTabSurfaces,
-		selectedRepository,
 		refreshGenerationRef,
 		resetHydration,
 		resetLoadingMore,
@@ -98,13 +93,18 @@ export const useWorkspaceNavigation = (input: UseWorkspaceNavigationInput): Work
 	const setWorkspaceScope = useAtomSet(workspaceScopeAtom)
 
 	const switchViewTo = (view: PullRequestView) => {
-		devLog("switchViewTo:enter", { from: activeView, to: view, equal: viewEquals(view, activeView) })
-		if (viewEquals(view, activeView)) {
-			if (view.repository !== selectedRepository) setWorkspaceScope(workspaceScopeForRepository(view.repository))
+		const currentView = registry.get(activeViewAtom)
+		const currentRepository = registry.get(selectedRepositoryAtom)
+		const currentSurface = registry.get(workspaceSurfaceAtom)
+		const liveFilterMode = registry.get(filterModeAtom)
+		const liveFilterQuery = registry.get(filterQueryAtom)
+		devLog("switchViewTo:enter", { from: currentView, to: view, equal: viewEquals(view, currentView) })
+		if (viewEquals(view, currentView)) {
+			if (view.repository !== currentRepository) setWorkspaceScope(workspaceScopeForRepository(view.repository))
 			return
 		}
 		refreshGenerationRef.current += 1
-		if (!filterMode && filterQuery.length === 0) setQueueSelection((current) => ({ ...current, [currentQueueCacheKey]: selectedIndex }))
+		if (!liveFilterMode && liveFilterQuery.length === 0) setQueueSelection((current) => ({ ...current, [currentQueueCacheKey]: selectedIndex }))
 		const issueView = issueViewForPullRequestView(view)
 		setActiveView(view)
 		setActiveIssueView(issueView)
@@ -118,22 +118,24 @@ export const useWorkspaceNavigation = (input: UseWorkspaceNavigationInput): Work
 		setDiffFullView(false)
 		setRunsFullView(false)
 		setDiffCommentRangeStartIndex(null)
-		setFilterDraft(filterQuery)
+		setFilterDraft(liveFilterQuery)
 		setNotice(null)
 		cancelRefreshToast()
 		if (view._tag === "Repository") {
 			setRecentRepositories((current) => [view.repository, ...current.filter((repository) => repository !== view.repository)].slice(0, 12))
-			if (activeWorkspaceSurface === "repos") setActiveWorkspaceSurface("pullRequests")
-		} else if (view.repository === null && selectedRepository !== null) {
+			if (currentSurface === "repos") setActiveWorkspaceSurface("pullRequests")
+		} else if (view.repository === null && currentRepository !== null) {
 			setActiveWorkspaceSurface("repos")
 		}
 	}
 
-	const switchQueueMode = (delta: 1 | -1) => switchViewTo(nextView(activeView, activeViews, delta))
+	const switchQueueMode = (delta: 1 | -1) => switchViewTo(nextView(registry.get(activeViewAtom), activeViews, delta))
 
 	const switchWorkspaceSurface = (surface: WorkspaceSurface) => {
-		if (!workspaceTabSurfaces.includes(surface)) return
-		if (surface === activeWorkspaceSurface) return
+		const tabs = registry.get(workspaceTabSurfacesAtom)
+		const currentSurface = registry.get(workspaceSurfaceAtom)
+		if (!tabs.includes(surface)) return
+		if (surface === currentSurface) return
 		setActiveWorkspaceSurface(surface)
 		setDetailFullView(false)
 		setDiffFullView(false)
@@ -141,7 +143,7 @@ export const useWorkspaceNavigation = (input: UseWorkspaceNavigationInput): Work
 		setCommentsViewActive(false)
 		setDiffCommentRangeStartIndex(null)
 		setFilterMode(false)
-		setFilterDraft(filterQuery)
+		setFilterDraft(registry.get(filterQueryAtom))
 		setNotice(null)
 		// Previously this unconditionally synced the issue view to whatever
 		// the current PR view projects to — but a tab toggle should not
@@ -156,10 +158,10 @@ export const useWorkspaceNavigation = (input: UseWorkspaceNavigationInput): Work
 		// shrunk in the meantime.
 	}
 
-	const cycleWorkspaceSurface = (delta: 1 | -1) => switchWorkspaceSurface(nextWorkspaceSurface(activeWorkspaceSurface, delta, workspaceTabSurfaces))
+	const cycleWorkspaceSurface = (delta: 1 | -1) => switchWorkspaceSurface(nextWorkspaceSurface(registry.get(workspaceSurfaceAtom), delta, registry.get(workspaceTabSurfacesAtom)))
 
 	const goUpWorkspaceScope = (): boolean => {
-		if (!selectedRepository) return false
+		if (!registry.get(selectedRepositoryAtom)) return false
 		// Route through `switchViewTo` so the activeView atom write propagates
 		// cleanly through the same atom-graph path as every other nav action.
 		// Earlier attempt to call `setActiveView`/`setActiveIssueView`/

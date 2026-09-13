@@ -15,10 +15,10 @@ const resolveCachePath = () => {
 }
 
 const appConfig = Config.all({
-	prFetchLimit: Config.int("PHUI_PR_FETCH_LIMIT").pipe(Config.withDefault(500), Config.map(positiveIntOr(500))),
-	prPageSize: Config.int("PHUI_PR_PAGE_SIZE").pipe(Config.withDefault(50), Config.map(pageSizeOr(50))),
-	commandTimeoutMs: Config.int("PHUI_COMMAND_TIMEOUT_MS").pipe(Config.withDefault(15_000), Config.map(positiveIntOr(15_000))),
-	runFetchLimit: Config.int("PHUI_RUN_FETCH_LIMIT").pipe(Config.withDefault(20), Config.map(positiveIntOr(20))),
+	prFetchLimit: Config.Int("PHUI_PR_FETCH_LIMIT").pipe(Config.withDefault(500), Config.map(positiveIntOr(500))),
+	prPageSize: Config.Int("PHUI_PR_PAGE_SIZE").pipe(Config.withDefault(50), Config.map(pageSizeOr(50))),
+	commandTimeoutMs: Config.Int("PHUI_COMMAND_TIMEOUT_MS").pipe(Config.withDefault(15_000), Config.map(positiveIntOr(15_000))),
+	runFetchLimit: Config.Int("PHUI_RUN_FETCH_LIMIT").pipe(Config.withDefault(20), Config.map(positiveIntOr(20))),
 	cachePath: Config.succeed(resolveCachePath()),
 })
 

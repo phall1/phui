@@ -1,8 +1,10 @@
-import { RegistryContext, useAtom, useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { RegistryContext, useAtom, useAtomRefresh, useAtomSet, useAtomValue } from "../../atom-solid.js"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { createEffect } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
 import { Cause } from "effect"
-import { type MutableRefObject, useCallback, useContext, useLayoutEffect, useMemo, useRef } from "react"
+import { type MutableRefObject, useCallback, useContext, useMemo, useRef } from "../../solid-hooks.js"
 import type { LoadStatus, PullRequestItem } from "../../domain.js"
 import { errorMessage } from "../../errors.js"
 import { type PullRequestView, viewCacheKey } from "../../pullRequestViews.js"
@@ -39,6 +41,7 @@ import { buildPullRequestListRows, pullRequestListRowIndex, type PullRequestGrou
 import { useScrollFollowSelected } from "../../ui/useScrollFollowSelected.js"
 import { useScrollPersistence } from "../../ui/useScrollPersistence.js"
 import { AUTO_REFRESH_JITTER_MS, FOCUS_RETURN_REFRESH_MIN_MS, FOCUSED_IDLE_REFRESH_MS } from "../../workspace/placeholders.js"
+import { selectedIndexAtom } from "../../ui/listSelection/atoms.js"
 import { selectedRepositoryAtom } from "../../workspace/atoms.js"
 import type { WorkspaceSurface } from "../../workspaceSurfaces.js"
 
@@ -201,25 +204,28 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 	const loadMoreRowSelected = useAtomValue(loadMoreRowSelectedAtom)
 	const loadMoreSlotAvailable = useAtomValue(pullRequestLoadMoreSlotAvailableAtom)
 	const groupStarts = useAtomValue(groupStartsAtom)
-	const selectedUrlRef = useRef<{ readonly cacheKey: string; readonly url: string } | null>(null)
 	const previousSelectionStateRef = useRef({ cacheKey: currentQueueCacheKey, visiblePullRequests, filterActive })
+	const filterQueryLive = useAtomValueSolid(() => effectiveFilterQueryAtom)
+	const visiblePullRequestsLive = useAtomValueSolid(() => visiblePullRequestsAtom)
+	const selectedIndexLive = useAtomValueSolid(() => selectedIndexAtom)
+	const rememberedIndexRef = useRef(0)
 
-	useLayoutEffect(() => {
+	createEffect(() => {
+		const filterActiveNow = filterQueryLive().length > 0
+		const selectedIndexNow = selectedIndexLive()
 		const previous = previousSelectionStateRef.current
-		const listChanged = previous.cacheKey !== currentQueueCacheKey || previous.visiblePullRequests !== visiblePullRequests
-		const filterEnded = previous.cacheKey === currentQueueCacheKey && previous.filterActive && !filterActive
-		const rememberedUrl = selectedUrlRef.current?.cacheKey === currentQueueCacheKey ? selectedUrlRef.current.url : null
-		if (!filterActive && rememberedUrl && (listChanged || filterEnded)) {
-			const rememberedIndex = visiblePullRequests.findIndex((pullRequest) => pullRequest.url === rememberedUrl)
-			if (rememberedIndex >= 0 && rememberedIndex !== selectedIndex) {
-				setSelectedIndex(rememberedIndex)
-				previousSelectionStateRef.current = { cacheKey: currentQueueCacheKey, visiblePullRequests, filterActive }
-				return
-			}
+		const filterEnded = previous.filterActive && !filterActiveNow
+		if (filterEnded) {
+			const remembered = rememberedIndexRef.current
+			const visibleNow = visiblePullRequestsLive()
+			const next = Math.max(0, Math.min(remembered, Math.max(0, visibleNow.length - 1)))
+			if (next !== selectedIndexNow) setSelectedIndex(next)
+			previousSelectionStateRef.current = { ...previous, filterActive: false }
+			return
 		}
-		if (!filterActive && selectedPullRequest) selectedUrlRef.current = { cacheKey: currentQueueCacheKey, url: selectedPullRequest.url }
-		previousSelectionStateRef.current = { cacheKey: currentQueueCacheKey, visiblePullRequests, filterActive }
-	}, [currentQueueCacheKey, filterActive, selectedIndex, selectedPullRequest, setSelectedIndex, visiblePullRequests])
+		if (!filterActiveNow) rememberedIndexRef.current = selectedIndexNow
+		previousSelectionStateRef.current = { ...previous, filterActive: filterActiveNow }
+	})
 
 	pullRequestStatusRef.current = pullRequestStatus
 
@@ -310,7 +316,25 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 		refreshPullRequestsAtom,
 	})
 
-	useScrollFollowSelected(prListScrollRef, selectedPullRequestRowIndex)
+	const selectedPullRequestLive = useAtomValueSolid(() => selectedPullRequestAtom)
+	const loadMoreRowSelectedLive = useAtomValueSolid(() => loadMoreRowSelectedAtom)
+	const visibleGroupsLive = useAtomValueSolid(() => visibleGroupsAtom)
+	useScrollFollowSelected(prListScrollRef, () =>
+		pullRequestListRowIndex(
+			buildPullRequestListRows({
+				groups: visibleGroupsLive(),
+				status: pullRequestStatus,
+				error: pullRequestError,
+				filterText: filterQueryLive(),
+				loadedCount: loadedPullRequestCount,
+				hasMore: loadMoreSlotAvailable,
+				isLoadingMore: isLoadingMorePullRequests,
+				compact: compactPullRequestRows,
+			}),
+			selectedPullRequestLive()?.url ?? null,
+			loadMoreRowSelectedLive(),
+		),
+	)
 	useScrollPersistence(prListScrollRef, prListScrollPersistedRef, activeWorkspaceSurface === "pullRequests" && !detailFullView && !diffFullView && !commentsViewActive)
 
 	const selectPullRequestByUrl = (url: string) => {

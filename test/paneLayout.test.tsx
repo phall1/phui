@@ -1,12 +1,7 @@
 import { describe, expect, test } from "bun:test"
-import { createTestRenderer } from "@opentui/core/testing"
-import { createRoot } from "@opentui/react"
-import { act } from "react"
+import { testRender } from "@opentui/solid"
 import { SplitPane, normalizeJunctionRows, paneContentWidth } from "../src/ui/paneLayout.tsx"
 import { PlainLine } from "../src/ui/primitives.tsx"
-
-// @ts-expect-error — globalThis.IS_REACT_ACT_ENVIRONMENT
-globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 describe("normalizeJunctionRows", () => {
 	test("deduplicates, sorts, and drops rows outside the pane height", () => {
@@ -24,11 +19,8 @@ describe("paneContentWidth", () => {
 
 describe("SplitPane", () => {
 	test("normalizes junction rows before rendering the separator column", async () => {
-		const setup = await createTestRenderer({ width: 12, height: 4 })
-		const root = createRoot(setup.renderer)
-
-		act(() => {
-			root.render(
+		const setup = await testRender(
+			() => (
 				<SplitPane
 					height={4}
 					leftWidth={3}
@@ -50,13 +42,11 @@ describe("SplitPane", () => {
 							<PlainLine text="R3" />
 						</>
 					}
-				/>,
-			)
-		})
-
-		await act(async () => {
-			await setup.renderOnce()
-		})
+				/>
+			),
+			{ width: 12, height: 4 },
+		)
+		await setup.renderOnce()
 
 		const separatorColumn = setup
 			.captureCharFrame()
@@ -65,10 +55,6 @@ describe("SplitPane", () => {
 			.map((line) => line[3])
 
 		expect(separatorColumn).toEqual(["│", "├", "├", "│"])
-
-		act(() => {
-			root.unmount()
-		})
 		setup.renderer.destroy()
 	})
 })

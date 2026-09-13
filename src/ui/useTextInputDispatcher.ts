@@ -1,4 +1,5 @@
-import { useKeyboard } from "@opentui/react"
+import { useKeyboard } from "@opentui/solid"
+import { useRef } from "../solid-hooks.js"
 import type { WorkspaceSurface } from "../workspaceSurfaces.js"
 import { type CommentEditorValue, insertText } from "./commentEditor.js"
 import type { ChangedFilesModalState, CommandPaletteState, LabelModalState, OpenRepositoryModalState, PromptModalState, SubmitReviewModalState, ThemeModalState } from "./modals.js"
@@ -57,7 +58,10 @@ export interface UseTextInputDispatcherInput {
  * accumulation into a query/body string.
  */
 export const useTextInputDispatcher = (input: UseTextInputDispatcherInput): void => {
+	const inputRef = useRef(input)
+	inputRef.current = input
 	useKeyboard((key) => {
+		const input = inputRef.current
 		if (input.disabled) return
 
 		if (input.commandPaletteActive) {

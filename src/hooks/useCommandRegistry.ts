@@ -1,5 +1,5 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useEffect, useMemo, useRef } from "react"
+import { useAtomSet, useAtomValue } from "../atom-solid.js"
+import { useEffect, useMemo, useRef, type MutableRefObject } from "../solid-hooks.js"
 import type { AppCommand } from "../commands.js"
 import { clampCommandIndex, type CommandScope, commandEnabled, defineCommand, filterCommands, sortCommandsByActiveScope } from "../commands.js"
 import { commandSnapshotsAtom } from "../commands/atoms.js"
@@ -43,7 +43,7 @@ export interface CommandRegistry {
 	readonly selectedCommand: AppCommand | null
 	readonly runCommand: (command: AppCommand, options?: { readonly notifyDisabled?: boolean; readonly closePalette?: boolean }) => boolean
 	readonly runCommandById: (id: string, options?: { readonly notifyDisabled?: boolean }) => boolean
-	readonly runCommandByIdRef: React.MutableRefObject<(id: string, options?: { readonly notifyDisabled?: boolean }) => boolean>
+	readonly runCommandByIdRef: MutableRefObject<(id: string, options?: { readonly notifyDisabled?: boolean }) => boolean>
 }
 
 export interface UseCommandRegistryFlow extends CommandRegistry {

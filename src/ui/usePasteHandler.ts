@@ -1,5 +1,5 @@
 import type { PasteEvent } from "@opentui/core"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef } from "../solid-hooks.js"
 
 interface KeyInputPasteEvents {
 	on: (event: "paste", handler: (event: PasteEvent) => void) => void

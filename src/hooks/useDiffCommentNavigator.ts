@@ -1,10 +1,14 @@
-import { useEffect, type MutableRefObject } from "react"
+import { useContext, useEffect, type MutableRefObject } from "../solid-hooks.js"
+import { RegistryContext } from "../atom-solid.js"
 import type { ScrollBoxRenderable } from "@opentui/core"
+import { diffCommentAnchorIndexAtom, diffPreferredSideAtom, diffRenderViewAtom, diffWrapModeAtom, readyDiffFilesAtom } from "../ui/diff/atoms.js"
 import type { DiffCommentSide, PullRequestItem } from "../domain.js"
 import type { DiffFilePatch, StackedDiffCommentAnchor, StackedDiffFilePatch } from "../ui/diff.js"
 import {
+	buildStackedDiffFiles,
 	diffAnchorOnSide,
 	diffCommentLocationKey,
+	getStackedDiffCommentAnchors,
 	pullRequestDiffKey,
 	safeDiffFileIndex,
 	scrollTopForVisibleLine,
@@ -37,6 +41,7 @@ export interface DiffCommentNavigatorInput {
 	readonly stackedDiffFiles: readonly StackedDiffFilePatch[]
 	readonly readyDiffFiles: readonly DiffFilePatch[]
 	readonly wideBodyHeight: number
+	readonly diffPaneWidth: number
 	readonly diffScrollRef: MutableRefObject<ScrollBoxRenderable | null>
 	readonly suppressNextDiffCommentScrollRef: MutableRefObject<boolean>
 	readonly selectedPullRequest: PullRequestItem | null
@@ -78,6 +83,7 @@ export interface DiffCommentNavigator {
  * free of ~150 LOC of tightly-coupled handlers.
  */
 export const useDiffCommentNavigator = (input: DiffCommentNavigatorInput): DiffCommentNavigator => {
+	const registry = useContext(RegistryContext)
 	const {
 		diffFullView,
 		diffFileIndex,
@@ -97,6 +103,7 @@ export const useDiffCommentNavigator = (input: DiffCommentNavigatorInput): DiffC
 		stackedDiffFiles,
 		readyDiffFiles,
 		wideBodyHeight,
+		diffPaneWidth,
 		diffScrollRef,
 		suppressNextDiffCommentScrollRef,
 		selectedPullRequest,
@@ -109,6 +116,14 @@ export const useDiffCommentNavigator = (input: DiffCommentNavigatorInput): DiffC
 		initialCommentModalState,
 		flashNotice,
 	} = input
+
+	const liveAnchors = (): readonly StackedDiffCommentAnchor[] => {
+		const files = registry.get(readyDiffFilesAtom)
+		const view = registry.get(diffRenderViewAtom)
+		const wrap = registry.get(diffWrapModeAtom)
+		const stacked = buildStackedDiffFiles(files, view, wrap, diffPaneWidth)
+		return getStackedDiffCommentAnchors(stacked, view, wrap, diffPaneWidth)
+	}
 
 	const syncDiffScrollState = () => {
 		const scrollTop = diffScrollRef.current?.scrollTop
@@ -174,14 +189,17 @@ export const useDiffCommentNavigator = (input: DiffCommentNavigatorInput): DiffC
 		selectDiffFile(entry.index)
 	}
 
-	const navigableDiffCommentAnchors = (): readonly StackedDiffCommentAnchor[] =>
-		diffCommentRangeStartAnchor ? diffCommentAnchors.filter((anchor) => sameDiffCommentTarget(anchor, diffCommentRangeStartAnchor)) : diffCommentAnchors
+	const navigableDiffCommentAnchors = (): readonly StackedDiffCommentAnchor[] => {
+		const anchors = liveAnchors()
+		return diffCommentRangeStartAnchor ? anchors.filter((anchor) => sameDiffCommentTarget(anchor, diffCommentRangeStartAnchor)) : anchors
+	}
 
 	const moveDiffCommentAnchor = (delta: number, options: { readonly preserveViewportRow?: boolean } = {}) => {
 		const anchors = navigableDiffCommentAnchors()
 		if (anchors.length === 0) return
-		const currentAnchor = selectedDiffCommentAnchor && anchors.includes(selectedDiffCommentAnchor) ? selectedDiffCommentAnchor : anchors[0]
-		const nextAnchor = verticalDiffAnchor(anchors, currentAnchor ?? null, delta, diffPreferredSide)
+		const currentIndex = registry.get(diffCommentAnchorIndexAtom)
+		const currentAnchor = anchors[currentIndex] ?? anchors[0]
+		const nextAnchor = verticalDiffAnchor(anchors, currentAnchor ?? null, delta, registry.get(diffPreferredSideAtom) ?? diffPreferredSide)
 		if (!nextAnchor) return
 		if (options.preserveViewportRow) {
 			const scroll = diffScrollRef.current
@@ -195,14 +213,14 @@ export const useDiffCommentNavigator = (input: DiffCommentNavigatorInput): DiffC
 				syncDiffScrollState()
 			}
 		}
-		setDiffCommentAnchorIndex(diffCommentAnchors.indexOf(nextAnchor))
+		setDiffCommentAnchorIndex(anchors.indexOf(nextAnchor))
 	}
 
 	const moveDiffCommentToBoundary = (boundary: "first" | "last") => {
 		const anchors = navigableDiffCommentAnchors()
 		const nextAnchor = boundary === "first" ? anchors[0] : anchors[anchors.length - 1]
 		if (!nextAnchor) return
-		setDiffCommentAnchorIndex(diffCommentAnchors.indexOf(nextAnchor))
+		setDiffCommentAnchorIndex(anchors.indexOf(nextAnchor))
 		setDiffFileIndex(nextAnchor.fileIndex)
 	}
 
@@ -225,11 +243,14 @@ export const useDiffCommentNavigator = (input: DiffCommentNavigatorInput): DiffC
 
 	const selectDiffCommentSide = (side: DiffCommentSide) => {
 		setDiffPreferredSide(side)
-		if (!selectedDiffCommentAnchor) return
-		const nextAnchor = diffAnchorOnSide(diffCommentAnchors, selectedDiffCommentAnchor, side)
+		const anchors = liveAnchors()
+		const currentIndex = registry.get(diffCommentAnchorIndexAtom)
+		const currentAnchor = anchors[currentIndex] ?? anchors[0]
+		if (!currentAnchor) return
+		const nextAnchor = diffAnchorOnSide(anchors, currentAnchor, side)
 		if (!nextAnchor) return
 		setDiffCommentRangeStartIndex(null)
-		setDiffCommentAnchorIndex(diffCommentAnchors.indexOf(nextAnchor))
+		setDiffCommentAnchorIndex(anchors.indexOf(nextAnchor))
 	}
 
 	const selectDiffCommentLine = (renderLine: number, side: DiffCommentSide | null) => {

@@ -1,5 +1,5 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useEffect } from "react"
+import { useAtomSet, useAtomValue } from "../../atom-solid.js"
+import { useEffect } from "../../solid-hooks.js"
 import type { RepositoryDetails } from "../../domain.js"
 import { fetchRepositoryDetailsAtom, readCachedRepositoryDetailsAtom, repositoryDetailsCacheAtom, writeRepositoryDetailsAtom } from "./atoms.js"
 

@@ -10,20 +10,20 @@ export interface ActionsSurfaceProps {
 	readonly showScrollbar: boolean
 }
 
-export const ActionsSurface = ({ repository, runsView, contentWidth, height, loadingIndicator, showScrollbar }: ActionsSurfaceProps) => (
+export const ActionsSurface = (props: ActionsSurfaceProps) => (
 	<RepositoryRunsPane
-		repository={repository}
-		inDetail={runsView.inDetail}
-		runsState={runsView.runsState}
-		detailState={runsView.detailState}
-		runsSelection={runsView.runsSelection}
-		detailSelection={runsView.detailSelection}
-		detailRows={runsView.detailRows}
-		onSelectRow={runsView.selectRow}
-		onActivateRow={runsView.activateRow}
-		contentWidth={contentWidth}
-		height={height}
-		loadingIndicator={loadingIndicator}
-		showScrollbar={showScrollbar}
+		repository={props.repository}
+		inDetail={props.runsView.inDetail}
+		runsState={props.runsView.runsState}
+		detailState={props.runsView.detailState}
+		runsSelection={props.runsView.runsSelection}
+		detailSelection={props.runsView.detailSelection}
+		detailRows={props.runsView.detailRows}
+		onSelectRow={props.runsView.selectRow}
+		onActivateRow={props.runsView.activateRow}
+		contentWidth={props.contentWidth}
+		height={props.height}
+		loadingIndicator={props.loadingIndicator}
+		showScrollbar={props.showScrollbar}
 	/>
 )

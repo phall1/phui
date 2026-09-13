@@ -150,7 +150,7 @@ export const saveStoredThemeId = (theme: ThemeId): Effect.Effect<void> =>
 		if (config.themeMode !== "system" && config.theme === theme) return
 
 		await writeStoredConfig({ ...config, themeMode: "fixed", theme })
-	})
+	}).pipe(Effect.orDie)
 
 export const saveStoredThemeConfig = (themeConfig: ThemeConfig): Effect.Effect<void> =>
 	Effect.tryPromise(async () => {
@@ -166,7 +166,7 @@ export const saveStoredThemeConfig = (themeConfig: ThemeConfig): Effect.Effect<v
 					}
 
 		await writeStoredConfig(nextConfig)
-	})
+	}).pipe(Effect.orDie)
 
 export const saveStoredDiffWhitespaceMode = (diffWhitespaceMode: DiffWhitespaceMode): Effect.Effect<void> =>
 	Effect.tryPromise(async () => {
@@ -174,4 +174,4 @@ export const saveStoredDiffWhitespaceMode = (diffWhitespaceMode: DiffWhitespaceM
 		if (config.diffWhitespaceMode === diffWhitespaceMode) return
 
 		await writeStoredConfig({ ...config, diffWhitespaceMode })
-	})
+	}).pipe(Effect.orDie)

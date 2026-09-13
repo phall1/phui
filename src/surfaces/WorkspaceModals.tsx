@@ -57,43 +57,46 @@ const layoutToProps = (layout: ModalLayout) => ({
 	offsetTop: layout.top,
 })
 
-export const WorkspaceModals = (props: WorkspaceModalsProps) =>
-	Modal.$match(props.activeModal, {
-		None: () => null,
-		Label: (state) => <LabelModal state={state} currentLabels={props.selectedItemLabels} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.Label)} />,
-		Close: (state) => <CloseModal state={state} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.Close)} />,
-		PullRequestState: (state) => <PullRequestStateModal state={state} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.PullRequestState)} />,
-		Merge: (state) => <MergeModal state={state} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.Merge)} />,
-		Comment: (state) => (
-			<CommentModal
-				state={state}
-				anchorLabel={props.commentAnchorLabel}
-				onChange={props.onCommentChange}
-				onSubmit={props.onCommentSubmit}
-				{...layoutToProps(props.layouts.Comment)}
-			/>
-		),
-		DeleteComment: (state) => <DeleteCommentModal state={state} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.DeleteComment)} />,
-		CommentThread: (state) => (
-			<CommentThreadModal state={state} anchorLabel={props.commentAnchorLabel} comments={props.selectedDiffCommentThread} {...layoutToProps(props.layouts.CommentThread)} />
-		),
-		ChangedFiles: (state) =>
-			props.suppressChangedFilesModal ? null : (
-				<ChangedFilesModal state={state} results={props.changedFileResults} totalCount={props.readyDiffFileCount} {...layoutToProps(props.layouts.ChangedFiles)} />
+export const WorkspaceModals = (props: WorkspaceModalsProps) => (
+	<>
+		{Modal.$match(props.activeModal, {
+			None: () => null,
+			Label: (state) => <LabelModal state={state} currentLabels={props.selectedItemLabels} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.Label)} />,
+			Close: (state) => <CloseModal state={state} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.Close)} />,
+			PullRequestState: (state) => <PullRequestStateModal state={state} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.PullRequestState)} />,
+			Merge: (state) => <MergeModal state={state} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.Merge)} />,
+			Comment: (state) => (
+				<CommentModal
+					state={state}
+					anchorLabel={props.commentAnchorLabel}
+					onChange={props.onCommentChange}
+					onSubmit={props.onCommentSubmit}
+					{...layoutToProps(props.layouts.Comment)}
+				/>
 			),
-		Filter: (state) => <FilterModal state={state} {...layoutToProps(props.layouts.Filter)} />,
-		SubmitReview: (state) => <SubmitReviewModal state={state} {...layoutToProps(props.layouts.SubmitReview)} />,
-		Theme: (state) => <ThemeModal state={state} {...layoutToProps(props.layouts.Theme)} />,
-		OpenRepository: (state) => <OpenRepositoryModal state={state} {...layoutToProps(props.layouts.OpenRepository)} />,
-		CommandPalette: (state) => (
-			<CommandPalette
-				commands={props.commandPaletteCommands}
-				query={state.query}
-				selectedIndex={props.selectedCommandIndex}
-				onSelectCommandIndex={props.onSelectCommandIndex}
-				onRunCommand={props.onRunCommand}
-				{...layoutToProps(props.layouts.CommandPalette)}
-			/>
-		),
-		Prompt: (state) => <PromptModal state={state} {...layoutToProps(props.layouts.Prompt)} />,
-	})
+			DeleteComment: (state) => <DeleteCommentModal state={state} loadingIndicator={props.loadingIndicator} {...layoutToProps(props.layouts.DeleteComment)} />,
+			CommentThread: (state) => (
+				<CommentThreadModal state={state} anchorLabel={props.commentAnchorLabel} comments={props.selectedDiffCommentThread} {...layoutToProps(props.layouts.CommentThread)} />
+			),
+			ChangedFiles: (state) =>
+				props.suppressChangedFilesModal ? null : (
+					<ChangedFilesModal state={state} results={props.changedFileResults} totalCount={props.readyDiffFileCount} {...layoutToProps(props.layouts.ChangedFiles)} />
+				),
+			Filter: (state) => <FilterModal state={state} {...layoutToProps(props.layouts.Filter)} />,
+			SubmitReview: (state) => <SubmitReviewModal state={state} {...layoutToProps(props.layouts.SubmitReview)} />,
+			Theme: (state) => <ThemeModal state={state} {...layoutToProps(props.layouts.Theme)} />,
+			OpenRepository: (state) => <OpenRepositoryModal state={state} {...layoutToProps(props.layouts.OpenRepository)} />,
+			CommandPalette: (state) => (
+				<CommandPalette
+					commands={props.commandPaletteCommands}
+					query={state.query}
+					selectedIndex={props.selectedCommandIndex}
+					onSelectCommandIndex={props.onSelectCommandIndex}
+					onRunCommand={props.onRunCommand}
+					{...layoutToProps(props.layouts.CommandPalette)}
+				/>
+			),
+			Prompt: (state) => <PromptModal state={state} {...layoutToProps(props.layouts.Prompt)} />,
+		})}
+	</>
+)

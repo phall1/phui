@@ -1,5 +1,6 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
-import { useLayoutEffect, type MutableRefObject } from "react"
+import { createEffect, onCleanup } from "solid-js"
+import type { MutableRefObject } from "../solid-hooks.js"
 import { scrollTopForVisibleLine } from "./diff.js"
 
 const DEFAULT_STICKY_HEADER = 2
@@ -14,12 +15,13 @@ const DEFAULT_STICKY_HEADER = 2
  */
 export const useScrollFollowSelected = (
 	scrollRef: MutableRefObject<ScrollBoxRenderable | null>,
-	selectedLine: number | null,
+	selectedLine: number | null | (() => number | null),
 	stickyHeader: number = DEFAULT_STICKY_HEADER,
 ): void => {
-	useLayoutEffect(() => {
+	createEffect(() => {
+		const line = typeof selectedLine === "function" ? selectedLine() : selectedLine
 		const scroll = scrollRef.current
-		if (!scroll || selectedLine === null) return
+		if (!scroll || line === null) return
 		let cancelled = false
 		let attempts = 0
 		const apply = () => {
@@ -29,13 +31,12 @@ export const useScrollFollowSelected = (
 				if (attempts++ < 20) globalThis.setTimeout(apply, 16)
 				return
 			}
-			const nextTop = scrollTopForVisibleLine(scroll.scrollTop, viewportHeight, selectedLine, stickyHeader)
+			const nextTop = scrollTopForVisibleLine(scroll.scrollTop, viewportHeight, line, stickyHeader)
 			if (nextTop !== scroll.scrollTop) scroll.scrollTo({ x: 0, y: nextTop })
 		}
 		apply()
-		return () => {
+		onCleanup(() => {
 			cancelled = true
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selectedLine])
+		})
+	})
 }

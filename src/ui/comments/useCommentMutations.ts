@@ -13,7 +13,7 @@ import {
 	pendingReviewKey,
 	replyToReviewCommentAtom,
 } from "./atoms.js"
-import { useAtomSet } from "@effect/atom-react"
+import { useAtomSet } from "../../atom-solid.js"
 import type { CommentModalState, DeleteCommentModalState, FrozenCommentSubject } from "../modals.js"
 import { initialCommentModalState } from "../modals.js"
 

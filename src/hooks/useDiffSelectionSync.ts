@@ -1,4 +1,4 @@
-import { useEffect, type MutableRefObject } from "react"
+import { useEffect, type MutableRefObject } from "../solid-hooks.js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import type { DiffCommentSide } from "../domain.js"
 import type { DiffFilePatch, StackedDiffCommentAnchor } from "../ui/diff.js"

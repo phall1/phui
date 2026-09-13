@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MutableRefObject } from "react"
+import { useEffect, useRef, useState, type MutableRefObject } from "../solid-hooks.js"
 
 interface RendererFocusEvents {
 	on: (event: "focus" | "blur", handler: () => void) => void

@@ -3,11 +3,11 @@ import { FetchHttpClient } from "effect/unstable/http"
 import { OtlpLogger, OtlpSerialization, OtlpTracer } from "effect/unstable/observability"
 
 const observabilityConfig = Config.all({
-	endpoint: Config.string("PHUI_OTLP_ENDPOINT").pipe(
+	endpoint: Config.String("PHUI_OTLP_ENDPOINT").pipe(
 		Config.withDefault(""),
 		Config.map((value) => value.trim()),
 	),
-	motelPort: Config.string("PHUI_MOTEL_PORT").pipe(
+	motelPort: Config.String("PHUI_MOTEL_PORT").pipe(
 		Config.withDefault(""),
 		Config.map((value) => value.trim()),
 	),

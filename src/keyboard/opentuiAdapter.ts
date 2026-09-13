@@ -1,8 +1,8 @@
 import type { KeyEvent } from "@opentui/core"
-import { useKeyboard } from "@opentui/react"
+import { useKeyboard } from "@opentui/solid"
 import type { ParsedStroke } from "@phui/keymap"
-import type { KeySubscribe } from "@phui/keymap/react"
-import { useMemo, useRef } from "react"
+import type { KeySubscribe } from "@phui/keymap/solid"
+import { useMemo, useRef } from "../solid-hooks.js"
 
 const normalizeKeyName = (name: string) => {
 	const key = name.toLowerCase()
@@ -31,17 +31,17 @@ export const normalizeOpenTuiKey = (event: KeyEvent): ParsedStroke => ({
  */
 export const useOpenTuiSubscribe = (): KeySubscribe => {
 	const handlersRef = useRef<Set<(stroke: ParsedStroke) => boolean | void>>(new Set())
-
-	useKeyboard((event) => {
-		const keyEvent = event as KeyEvent
-		if (keyEvent.defaultPrevented) return
-		const stroke = normalizeOpenTuiKey(keyEvent)
+	const onKey = useRef((event: KeyEvent) => {
+		if (event.defaultPrevented) return
+		const stroke = normalizeOpenTuiKey(event)
 		let handled = false
 		for (const handler of handlersRef.current) {
 			if (handler(stroke)) handled = true
 		}
-		if (handled) keyEvent.preventDefault()
+		if (handled) event.preventDefault()
 	})
+
+	useKeyboard((event) => onKey.current(event as KeyEvent))
 
 	return useMemo<KeySubscribe>(
 		() => (handler) => {

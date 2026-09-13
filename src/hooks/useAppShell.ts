@@ -1,7 +1,7 @@
-import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useRenderer, useTerminalDimensions } from "@opentui/react"
+import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "../atom-solid.js"
+import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
-import { useCallback, useContext, useEffect, useRef, useState } from "react"
+import { useCallback, useContext, useEffect, useRef, useState } from "../solid-hooks.js"
 import type { AppCommand } from "../commands.js"
 import type { PhuiLaunchIntent, PhuiLaunchView } from "../launchIntent.js"
 import { applyLaunchIntent, findLaunchPullRequestIndex, pullRequestLaunchViewState } from "../launchBootstrap.js"
@@ -22,6 +22,8 @@ import { computeFooterProps } from "../workspace/footerProps.js"
 import { computeHeaderDerivations, groupIndexAt } from "../workspace/headerDerivations.js"
 import { useWorkspacePreferencesPersistence } from "../workspace/useWorkspacePreferencesPersistence.js"
 import { commentsRowCountAtom, orderedCommentsAtom, pullRequestCommentsAtom, pullRequestCommentsLoadedAtom, selectedOrderedCommentAtom } from "../ui/comments/atoms.js"
+import { groupStartsAtom, pullRequestLoadMoreSlotAvailableAtom, visiblePullRequestsAtom } from "../ui/pullRequests/atoms.js"
+import { issueListAtom, issueLoadMoreSlotAvailableAtom } from "../ui/issues/atoms.js"
 import { useIssueSurface } from "../surfaces/issue/useIssueSurface.js"
 import { filterDraftAtom, filterModeAtom, filterQueryAtom } from "../ui/filter/atoms.js"
 import { selectedIndexAtom } from "../ui/listSelection/atoms.js"
@@ -29,7 +31,7 @@ import { noticeAtom } from "../ui/notice/atoms.js"
 import { expireNotice, NOTICE_TIMEOUT_MS, visibleNoticeAfterInitialLoading } from "../ui/notice/lifecycle.js"
 import { useFlashNotice } from "../ui/notice/useFlashNotice.js"
 import { useCommentMutations } from "../ui/comments/useCommentMutations.js"
-import { pullRequestDetailKey, queueSelectionAtom, usernameAtom, visiblePullRequestsAtom } from "../ui/pullRequests/atoms.js"
+import { pullRequestDetailKey, queueSelectionAtom, usernameAtom } from "../ui/pullRequests/atoms.js"
 
 import { useGitHubActions } from "./useGitHubActions.js"
 import { useImperativeActions } from "./useImperativeActions.js"
@@ -79,7 +81,8 @@ export interface UseAppShellInput {
 
 export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShellInput) => {
 	const renderer = useRenderer()
-	const { width, height } = useTerminalDimensions()
+	const dimensions = useTerminalDimensions()
+	const { width, height } = dimensions()
 	const registry = useContext(RegistryContext)
 
 	const setQueueSelection = useAtomSet(queueSelectionAtom)
@@ -291,7 +294,6 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		pullRequests,
 		visiblePullRequests,
 		visibleGroups,
-		groupStarts,
 		selectedPullRequest,
 		selectedRepository,
 		pullRequestActiveFilterLabel,
@@ -445,7 +447,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		selectedDiffKey,
 		diffCommentThreads,
 	})
-	const getCurrentGroupIndex = (current: number) => groupIndexAt(groupStarts, current)
+	const getCurrentGroupIndex = (current: number) => groupIndexAt(registry.get(groupStartsAtom), current)
 	const { headerRight, headerLeftWidth, footerNotice, homeCrumb, breadcrumbSeparatorText, headerRepoWidth } = computeHeaderDerivations({
 		username,
 		notice,
@@ -525,7 +527,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// cache first, so the user sees the previous list instantly while the new
 	// view's fetch lands.
 
-	useClampedIndex(visiblePullRequests.length + (loadMoreSlotAvailable ? 1 : 0), setSelectedIndex)
+	useClampedIndex(() => registry.get(visiblePullRequestsAtom).length + (registry.get(pullRequestLoadMoreSlotAvailableAtom) ? 1 : 0), setSelectedIndex)
 
 	useWorkspacePreferencesPersistence({
 		username,
@@ -712,6 +714,29 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	})
 	const workflowRunsActive = runsView.runsFullView || activeWorkspaceSurface === "actions"
 	const activeRunsView = activeWorkspaceSurface === "actions" ? actionsRunsView : runsView
+	const runsViewCtx = {
+		get halfPage() {
+			return halfPage
+		},
+		get inDetail() {
+			return (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.inDetail
+		},
+		handleEscape: () => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.handleEscape(),
+		moveSelection: (delta: number) => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.moveSelection(delta),
+		moveSelectionToBoundary: (boundary: "first" | "last") => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.moveSelectionToBoundary(boundary),
+		openSelected: () => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.openSelected(),
+		nextFailure: () => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.nextFailure(),
+		previousFailure: () => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.previousFailure(),
+		refresh: () => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.refresh(),
+		rerun: (failedOnly: boolean) => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.rerun(failedOnly),
+		cancel: () => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.cancel(),
+		openInBrowser: () => (registry.get(workspaceSurfaceAtom) === "actions" ? actionsRunsView : runsView).ctx.openInBrowser(),
+		get repositorySurface() {
+			return registry.get(workspaceSurfaceAtom) === "actions"
+		},
+		switchWorkspaceSurface,
+		cycleWorkspaceSurface,
+	}
 
 	const { loadPullRequestDiff } = useDiffLoader({
 		registry,
@@ -722,8 +747,6 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	})
 
 	useDiffPrefetch({
-		pullRequest: selectedPullRequest,
-		skip: diffFullView,
 		onPrefetch: (pr) => loadPullRequestDiff(pr),
 	})
 
@@ -777,6 +800,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		stackedDiffFiles,
 		readyDiffFiles,
 		wideBodyHeight,
+		diffPaneWidth: diffFilePanelVisible ? diffPaneWidth : contentWidth,
 		diffScrollRef,
 		suppressNextDiffCommentScrollRef,
 		selectedPullRequest,
@@ -1055,15 +1079,17 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	const runCommandPaletteCommand = (command: AppCommand) => {
 		runCommand(command, { notifyDisabled: true, closePalette: true })
 	}
+	const repositoryItemsRef = useRef(repositoryItems)
+	repositoryItemsRef.current = repositoryItems
 	const { stepSelected, stepSelectedDown, stepSelectedUp, stepSelectedDownWithLoadMore, stepSelectedUpWrap, moveSelectedToPreviousGroup, moveSelectedToNextGroup } =
 		useListSelectionStepping({
-			activeWorkspaceSurface,
-			visiblePullRequests,
-			issues,
-			repositoryItems,
-			loadMoreSlotAvailable,
-			issueLoadMoreSlotAvailable,
-			groupStarts,
+			getActiveWorkspaceSurface: () => registry.get(workspaceSurfaceAtom),
+			getVisiblePullRequests: () => registry.get(visiblePullRequestsAtom),
+			getIssues: () => registry.get(issueListAtom),
+			getRepositoryItems: () => repositoryItemsRef.current,
+			getLoadMoreSlotAvailable: () => registry.get(pullRequestLoadMoreSlotAvailableAtom),
+			getIssueLoadMoreSlotAvailable: () => registry.get(issueLoadMoreSlotAvailableAtom),
+			getGroupStarts: () => registry.get(groupStartsAtom),
 			getCurrentGroupIndex,
 			setSelectedIndex,
 			setSelectedIssueIndex,
@@ -1083,6 +1109,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 
 	useAppKeymap({
 		disabled: terminalTooSmall,
+		registry,
 		closeModalActive,
 		pullRequestStateModalActive,
 		mergeModalActive,
@@ -1100,7 +1127,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		filterMode,
 		diffFullView,
 		runsFullView: workflowRunsActive,
-		runsViewCtx: activeRunsView.ctx,
+		runsViewCtx,
 		detailFullView,
 		commentsViewActive,
 		themeModal,
@@ -1205,10 +1232,6 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		setLabelModal,
 		editThemeQuery,
 	})
-
-	if (isInitialLoading) {
-		return { isInitialLoading: true as const, terminalTooSmall, terminalWidth, terminalHeight, contentWidth, detailPlaceholderContent, loadingFrame }
-	}
 
 	const derivations = computeWorkspaceDerivations({
 		contentWidth,
@@ -1324,6 +1347,8 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	})
 	return {
 		isInitialLoading: false as const,
+		detailPlaceholderContent,
+		loadingFrame,
 		terminalTooSmall,
 		terminalWidth,
 		terminalHeight,

@@ -1,5 +1,5 @@
-import { useAtomSet } from "@effect/atom-react"
-import { useEffect, useRef } from "react"
+import { useAtomSet } from "../../atom-solid.js"
+import { useEffect, useRef } from "../../solid-hooks.js"
 import { noticeAtom } from "./atoms.js"
 
 const NOTICE_TIMEOUT_MS = 2500

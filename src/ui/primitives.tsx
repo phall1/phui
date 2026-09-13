@@ -1,5 +1,5 @@
 import { TextAttributes, type MouseEvent } from "@opentui/core"
-import type React from "react"
+import type { ReactNode } from "../solid-hooks.js"
 import { colors } from "./colors.js"
 
 export const fitCell = (text: string, width: number, align: "left" | "right" = "left") => {
@@ -30,7 +30,7 @@ export const PlainLine = ({ text, fg = colors.text, bold = false }: { text: stri
 )
 
 type TextLineProps = {
-	children: React.ReactNode
+	children: ReactNode
 	fg?: string
 	bg?: string | undefined
 	width?: number
@@ -133,7 +133,7 @@ export const Filler = ({ rows, prefix }: { rows: number; prefix: string }) => (
 	</>
 )
 
-export const PaddedRow = ({ children, backgroundColor }: { children: React.ReactNode; backgroundColor?: string }) => (
+export const PaddedRow = ({ children, backgroundColor }: { children: ReactNode; backgroundColor?: string }) => (
 	<box height={1} paddingLeft={1} paddingRight={1} {...(backgroundColor ? { backgroundColor } : {})}>
 		{children}
 	</box>
@@ -265,11 +265,11 @@ export const StandardModal = ({
 	title: string
 	titleFg?: string
 	headerRight?: { readonly text: string; readonly pending?: boolean }
-	subtitle: React.ReactNode
-	middleRow?: React.ReactNode
-	footer: React.ReactNode
+	subtitle: ReactNode
+	middleRow?: ReactNode
+	footer: ReactNode
 	bodyPadding?: number
-	children: React.ReactNode
+	children: ReactNode
 }) => {
 	const hasMiddleRow = middleRow !== undefined && middleRow !== null && middleRow !== false
 	const { innerWidth, contentWidth, bodyHeight } = standardModalDims(width, height, hasMiddleRow)
@@ -402,10 +402,10 @@ export const SearchModalFrame = ({
 	query: string
 	placeholder: string
 	countText?: string
-	footer: React.ReactNode
+	footer: ReactNode
 	bodyPadding?: number
 	onBodyMouseScroll?: (event: MouseEvent) => void
-	children: React.ReactNode
+	children: ReactNode
 }) => {
 	const { innerWidth, contentWidth, bodyHeight } = searchModalDims(width, height)
 	const titleText = searchModalTitleText(title, contentWidth, countText)
@@ -435,7 +435,7 @@ export const ModalFrame = ({
 	topJunctionColumns = [],
 	backgroundColor = colors.modalBackground,
 }: {
-	children: React.ReactNode
+	children: ReactNode
 	left: number
 	top: number
 	width: number

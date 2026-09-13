@@ -1,5 +1,9 @@
 import { TextAttributes } from "@opentui/core"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import type { LoadStatus, PullRequestItem } from "../domain.js"
+import { loadMoreRowSelectedAtom, selectedPullRequestAtom, visibleGroupsAtom } from "./pullRequests/atoms.js"
+import { effectiveFilterQueryAtom } from "./filter/atoms.js"
+import { selectedRepositoryAtom } from "../workspace/atoms.js"
 import { daysOpen } from "../date.js"
 import { colors } from "./colors.js"
 import { SelectableRow, useHoverState } from "./listSelection/SelectableRow.js"
@@ -116,20 +120,8 @@ export const pullRequestListRowIndex = (rows: readonly PullRequestListRow[], url
 
 export const pullRequestListVisualLineCount = (rows: readonly PullRequestListRow[]) => rows.reduce((count, row) => count + pullRequestListRowHeight(row), 0)
 
-const PullRequestRow = ({
-	pullRequest,
-	selected,
-	hovered,
-	contentWidth,
-	numWidth,
-	ageColWidth,
-	filterText,
-	compact,
-	onSelect,
-	onHoverChange,
-}: {
+const PullRequestRow = (props: {
 	pullRequest: PullRequestItem
-	selected: boolean
 	hovered: boolean
 	contentWidth: number
 	numWidth: number
@@ -139,9 +131,14 @@ const PullRequestRow = ({
 	onSelect: () => void
 	onHoverChange: (hovered: boolean) => void
 }) => {
+	const selectedPullRequest = useAtomValueSolid(() => selectedPullRequestAtom)
+	const pullRequest = props.pullRequest
+	const contentWidth = props.contentWidth
+	const filterText = props.filterText
+	const compact = props.compact
 	const ageText = `${daysOpen(pullRequest.updatedAt)}d`
 	const title = pullRequest.title.trim()
-	const { reviewWidth, checkWidth, ageWidth, numberWidth, titleWidth } = getRowLayout(contentWidth, numWidth, ageColWidth)
+	const { reviewWidth, checkWidth, ageWidth, numberWidth, titleWidth } = getRowLayout(contentWidth, props.numWidth, props.ageColWidth)
 	const rowWidth = reviewWidth + 1 + numberWidth + 1 + titleWidth + checkWidth + ageWidth
 	const fillerWidth = Math.max(0, contentWidth - rowWidth)
 	const metaIndentWidth = reviewWidth + 1
@@ -154,16 +151,17 @@ const PullRequestRow = ({
 				: `${pullRequest.headRefName} → ${pullRequest.baseRefName}`
 	const authorText = `@${pullRequest.author}`
 	const branchWidth = branchText ? Math.max(0, metaWidth - authorText.length - 1) : 0
-	const display = pullRequestRowDisplay(pullRequest, selected)
+	const selected = () => pullRequest.url === selectedPullRequest()?.url
+	const display = () => pullRequestRowDisplay(pullRequest, selected())
 
 	return (
-		<SelectableRow width={contentWidth} selected={selected} hovered={hovered} onSelect={onSelect} onHoverChange={onHoverChange}>
+		<SelectableRow width={contentWidth} selected={selected()} hovered={props.hovered} onSelect={props.onSelect} onHoverChange={props.onHoverChange}>
 			{(rowBg) => (
 				<>
-					<TextLine width={contentWidth} fg={display.rowFg} bg={rowBg}>
-						<span fg={display.indicatorFg}>{fitCell(reviewIcon(pullRequest), reviewWidth)}</span>
+					<TextLine width={contentWidth} fg={display().rowFg} bg={rowBg}>
+						<span fg={display().indicatorFg}>{fitCell(reviewIcon(pullRequest), reviewWidth)}</span>
 						<span> </span>
-						<span fg={display.numberFg}>
+						<span fg={display().numberFg}>
 							<MatchedCell text={`#${pullRequest.number}`} width={numberWidth} query={filterText} align="right" />
 						</span>
 						<span> </span>
@@ -171,7 +169,7 @@ const PullRequestRow = ({
 							<MatchedCell text={title} width={titleWidth} query={filterText} />
 						</span>
 						<span fg={colors.muted}>{fitCell(ageText, ageWidth, "right")}</span>
-						<span fg={display.checkFg}>{fitCell(display.checkText, checkWidth, "right")}</span>
+						<span fg={display().checkFg}>{fitCell(display().checkText, checkWidth, "right")}</span>
 						{fillerWidth > 0 ? <span>{" ".repeat(fillerWidth)}</span> : null}
 					</TextLine>
 					{compact ? null : (
@@ -192,24 +190,7 @@ const PullRequestRow = ({
 	)
 }
 
-export const PullRequestList = ({
-	groups,
-	selectedUrl,
-	loadMoreSelected = false,
-	status,
-	error,
-	contentWidth,
-	filterText,
-	loadedCount,
-	hasMore,
-	isLoadingMore,
-	loadingIndicator,
-	onSelectPullRequest,
-	onSelectLoadMore,
-	showTitle = true,
-	showRepositoryGroups = true,
-	compact = false,
-}: {
+export const PullRequestList = (props: {
 	groups: PullRequestGroups
 	selectedUrl: string | null
 	loadMoreSelected?: boolean
@@ -227,56 +208,68 @@ export const PullRequestList = ({
 	showRepositoryGroups?: boolean
 	compact?: boolean
 }) => {
-	const rows = buildPullRequestListRows({
-		groups,
-		status,
-		error,
-		filterText,
-		loadedCount,
-		hasMore,
-		isLoadingMore,
-		loadingIndicator,
-		showTitle,
-		showRepositoryGroups,
-		compact,
-	})
 	const { isHovered, onHoverChange } = useHoverState<string>()
+	const groups = useAtomValueSolid(() => visibleGroupsAtom)
+	const filterText = useAtomValueSolid(() => effectiveFilterQueryAtom)
+	const loadMoreSelected = useAtomValueSolid(() => loadMoreRowSelectedAtom)
+	const selectedRepository = useAtomValueSolid(() => selectedRepositoryAtom)
 
 	return (
-		<box width={contentWidth} flexDirection="column">
-			{rows.map((row, index) => {
-				if (row._tag === "title") return <SectionTitle key="title" title="PULL REQUESTS" />
-				if (row._tag === "message") return <PlainLine key={`message-${index}`} text={row.text} fg={row.color} />
-				if (row._tag === "skeleton") return <SkeletonList key="skeleton" contentWidth={contentWidth} rowCount={row.rowCount} compact={row.compact} />
-				if (row._tag === "load-more")
-					return (
-						<SelectableRow key="load-more" width={contentWidth} selected={loadMoreSelected} hovered={false} onSelect={() => onSelectLoadMore?.()} onHoverChange={() => {}}>
-							{(rowBg) => (
-								<TextLine width={contentWidth} fg={colors.muted} bg={rowBg}>
-									<span>{row.text}</span>
-								</TextLine>
-							)}
-						</SelectableRow>
-					)
-				if (row._tag === "group") return <GroupTitle key={`group-${row.repository}`} label={row.repository} color={repoColor(row.repository)} filterText={filterText} />
+		<box width={props.contentWidth} flexDirection="column">
+			{(() => {
+				const rows = buildPullRequestListRows({
+					groups: groups(),
+					status: props.status,
+					error: props.error,
+					filterText: filterText(),
+					loadedCount: props.loadedCount,
+					hasMore: props.hasMore,
+					isLoadingMore: props.isLoadingMore,
+					loadingIndicator: props.loadingIndicator,
+					showTitle: props.showTitle ?? true,
+					showRepositoryGroups: selectedRepository() === null,
+					compact: props.compact ?? false,
+				})
+				return rows.map((row, index) => {
+					if (row._tag === "title") return <SectionTitle key="title" title="PULL REQUESTS" />
+					if (row._tag === "message") return <PlainLine key={`message-${index}`} text={row.text} fg={row.color} />
+					if (row._tag === "skeleton") return <SkeletonList key="skeleton" contentWidth={props.contentWidth} rowCount={row.rowCount} compact={row.compact} />
+					if (row._tag === "load-more")
+						return (
+							<SelectableRow
+								key="load-more"
+								width={props.contentWidth}
+								selected={loadMoreSelected()}
+								hovered={false}
+								onSelect={() => props.onSelectLoadMore?.()}
+								onHoverChange={() => {}}
+							>
+								{(rowBg) => (
+									<TextLine width={props.contentWidth} fg={colors.muted} bg={rowBg}>
+										<span>{row.text}</span>
+									</TextLine>
+								)}
+							</SelectableRow>
+						)
+					if (row._tag === "group") return <GroupTitle key={`group-${row.repository}`} label={row.repository} color={repoColor(row.repository)} filterText={filterText()} />
 
-				const pullRequestUrl = row.pullRequest.url
-				return (
-					<PullRequestRow
-						key={pullRequestUrl}
-						pullRequest={row.pullRequest}
-						selected={pullRequestUrl === selectedUrl}
-						hovered={isHovered(pullRequestUrl)}
-						contentWidth={contentWidth}
-						numWidth={row.numberWidth}
-						ageColWidth={row.ageWidth}
-						filterText={filterText}
-						compact={row.compact}
-						onSelect={() => onSelectPullRequest(pullRequestUrl)}
-						onHoverChange={onHoverChange(pullRequestUrl)}
-					/>
-				)
-			})}
+					const pullRequestUrl = row.pullRequest.url
+					return (
+						<PullRequestRow
+							key={pullRequestUrl}
+							pullRequest={row.pullRequest}
+							hovered={isHovered(pullRequestUrl)}
+							contentWidth={props.contentWidth}
+							numWidth={row.numberWidth}
+							ageColWidth={row.ageWidth}
+							filterText={filterText()}
+							compact={row.compact}
+							onSelect={() => props.onSelectPullRequest(pullRequestUrl)}
+							onHoverChange={onHoverChange(pullRequestUrl)}
+						/>
+					)
+				})
+			})()}
 		</box>
 	)
 }

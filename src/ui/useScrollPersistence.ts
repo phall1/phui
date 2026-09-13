@@ -1,5 +1,5 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
-import { useEffect, useLayoutEffect, type MutableRefObject } from "react"
+import { useEffect, useLayoutEffect, type MutableRefObject } from "../solid-hooks.js"
 
 /**
  * Persists a scrollbox's scrollTop across mount/unmount cycles by polling

@@ -1,5 +1,5 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
-import type { ComponentProps, MutableRefObject } from "react"
+import type { ComponentProps, MutableRefObject } from "../solid-hooks.js"
 import type { IssueItem } from "../domain.js"
 import { ActiveFilterBar, ACTIVE_FILTER_BAR_HEIGHT } from "../ui/ActiveFilterBar.js"
 import { DETAIL_BODY_SCROLL_LIMIT } from "../ui/DetailsPane.js"

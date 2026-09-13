@@ -1,5 +1,9 @@
-import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { RegistryContext, useAtom, useAtomSet } from "../atom-solid.js"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { createEffect, onCleanup } from "solid-js"
+import { useContext, useState } from "../solid-hooks.js"
+import { selectedPullRequestAtom } from "../ui/pullRequests/atoms.js"
+import { selectedRepositoryAtom, workspaceSurfaceAtom } from "../workspace/atoms.js"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
 import * as Cause from "effect/Cause"
 import type { PullRequestItem, WorkflowRun, WorkflowRunDetails } from "../domain.js"
@@ -71,179 +75,187 @@ export const useRunsView = (
 ): RunsViewModel => {
 	const registry = useContext(RegistryContext)
 	const repositoryMode = repositoryOptions !== undefined
-	const repositoryActive = repositoryOptions?.active ?? false
 	const closeRepositoryView = repositoryOptions?.onClose
 	const switchRepositorySurface = repositoryOptions?.switchWorkspaceSurface
 	const cycleRepositorySurface = repositoryOptions?.cycleWorkspaceSurface
 	const [pullRequestRunsFullView, setPullRequestRunsFullView] = useAtom(runsFullViewAtom)
-	const [selectedRunId, setSelectedRunId] = useAtom(repositoryMode ? repositorySelectedRunIdAtom : selectedRunIdAtom)
-	const [runsSelection, setRunsSelection] = useAtom(repositoryMode ? repositoryRunsListSelectionAtom : runsListSelectionAtom)
-	const [detailSelection, setDetailSelection] = useAtom(repositoryMode ? repositoryRunDetailSelectionAtom : runDetailSelectionAtom)
+	const [, setSelectedRunId] = useAtom(repositoryMode ? repositorySelectedRunIdAtom : selectedRunIdAtom)
+	const [, setRunsSelection] = useAtom(repositoryMode ? repositoryRunsListSelectionAtom : runsListSelectionAtom)
+	const [, setDetailSelection] = useAtom(repositoryMode ? repositoryRunDetailSelectionAtom : runDetailSelectionAtom)
 	const openUrl = useAtomSet(openUrlAtom, { mode: "promise" })
 	const rerunWorkflowRun = useAtomSet(rerunWorkflowRunAtom, { mode: "promise" })
 	const cancelWorkflowRun = useAtomSet(cancelWorkflowRunAtom, { mode: "promise" })
 	const [actionPending, setActionPending] = useState(false)
+	const selectedRepositoryLive = useAtomValueSolid(() => selectedRepositoryAtom)
+	const selectedPullRequestLive = useAtomValueSolid(() => selectedPullRequestAtom)
+	const workspaceSurfaceLive = useAtomValueSolid(() => workspaceSurfaceAtom)
+	const selectedRunIdLive = useAtomValueSolid(() => (repositoryMode ? repositorySelectedRunIdAtom : selectedRunIdAtom))
+	const runsSelectionLive = useAtomValueSolid(() => (repositoryMode ? repositoryRunsListSelectionAtom : runsListSelectionAtom))
+	const detailSelectionLive = useAtomValueSolid(() => (repositoryMode ? repositoryRunDetailSelectionAtom : runDetailSelectionAtom))
+	const pullRequestRunsResultLive = useAtomValueSolid(() => {
+		const pullRequest = selectedPullRequestLive()
+		return pullRequestRunsFor(!repositoryMode && pullRequest ? runsKey(pullRequest) : "\u0000\u0000")
+	})
+	const repositoryRunsResultLive = useAtomValueSolid(() => repositoryWorkflowRunsFor(repositoryMode ? (selectedRepositoryLive() ?? "") : ""))
+	const detailResultLive = useAtomValueSolid(() => {
+		const repository = repositoryMode ? selectedRepositoryLive() : (selectedPullRequestLive()?.repository ?? null)
+		const runId = selectedRunIdLive()
+		return workflowRunDetailsFor(repository && runId !== null ? runDetailKey(repository, runId) : "\u0000\u0000")
+	})
 
-	const repository = repositoryMode ? repositoryOptions.repository : (selectedPullRequest?.repository ?? null)
-	const runsListKey = !repositoryMode && selectedPullRequest ? runsKey(selectedPullRequest) : null
-	const pullRequestRunsResult = useAtomValue(pullRequestRunsFor(runsListKey ?? "\u0000\u0000"))
-	const repositoryRunsResult = useAtomValue(repositoryWorkflowRunsFor(repositoryMode ? (repository ?? "") : ""))
-	const runsResult = repositoryMode ? repositoryRunsResult : pullRequestRunsResult
-	const runsState = useMemo<ResultState<readonly WorkflowRun[]>>(() => toState(runsResult), [runsResult])
-	const runs: readonly WorkflowRun[] = runsState.status === "ready" ? runsState.value : []
+	const repository = () => (repositoryMode ? selectedRepositoryLive() : (selectedPullRequestLive()?.repository ?? null))
+	const runsResultLive = () => (repositoryMode ? repositoryRunsResultLive() : pullRequestRunsResultLive())
+	const runsStateLive = () => toState(runsResultLive())
+	const runsLive = () => {
+		const state = runsStateLive()
+		return state.status === "ready" ? state.value : []
+	}
+	const inDetailLive = () => selectedRunIdLive() !== null
+	const detailStateLive = () => {
+		const repositoryName = repository()
+		const runId = selectedRunIdLive()
+		return repositoryName && runId !== null ? toState(detailResultLive()) : null
+	}
+	const detailRowsLive = () => {
+		const state = detailStateLive()
+		const detailRun = state?.status === "ready" ? state.value : null
+		return detailRun ? flattenRunRows(detailRun) : []
+	}
 
-	const inDetail = selectedRunId !== null
-	const detailAtomKey = repository && selectedRunId !== null ? runDetailKey(repository, selectedRunId) : null
-	const detailResult = useAtomValue(workflowRunDetailsFor(detailAtomKey ?? "\u0000\u0000"))
-	const detailState = detailAtomKey ? toState(detailResult) : null
-	const detailRun = detailState?.status === "ready" ? detailState.value : null
-	const detailRows = useMemo(() => (detailRun ? flattenRunRows(detailRun) : []), [detailRun])
-
-	useEffect(() => {
+	createEffect(() => {
 		if (!repositoryMode) return
+		selectedRepositoryLive()
 		setSelectedRunId(null)
 		setRunsSelection(0)
 		setDetailSelection(0)
-	}, [repositoryMode, repository, setSelectedRunId, setRunsSelection, setDetailSelection])
+	})
 
-	const closeRunsView = useCallback(() => {
+	const closeRunsView = () => {
 		if (repositoryMode) closeRepositoryView?.()
 		else setPullRequestRunsFullView(false)
 		setSelectedRunId(null)
-	}, [repositoryMode, closeRepositoryView, setPullRequestRunsFullView, setSelectedRunId])
+	}
 
-	const backToList = useCallback(() => {
-		if (selectedRunId !== null) {
-			const selectedIndex = runs.findIndex((run) => run.id === selectedRunId)
+	const backToList = () => {
+		const runId = selectedRunIdLive()
+		if (runId !== null) {
+			const selectedIndex = runsLive().findIndex((run) => run.id === runId)
 			if (selectedIndex >= 0) setRunsSelection(selectedIndex)
 		}
 		setSelectedRunId(null)
 		setDetailSelection(0)
-	}, [selectedRunId, runs, setRunsSelection, setSelectedRunId, setDetailSelection])
+	}
 
-	const handleEscape = useCallback(() => {
-		if (inDetail) backToList()
+	const handleEscape = () => {
+		if (inDetailLive()) backToList()
 		else closeRunsView()
-	}, [inDetail, backToList, closeRunsView])
+	}
 
-	const moveSelection = useCallback(
-		(delta: number) => {
-			if (inDetail) setDetailSelection((current) => clamp(current + delta, detailRows.length - 1))
-			else setRunsSelection((current) => clamp(current + delta, runs.length - 1))
-		},
-		[inDetail, detailRows.length, runs.length, setDetailSelection, setRunsSelection],
-	)
+	const moveSelection = (delta: number) => {
+		if (inDetailLive()) setDetailSelection((current) => clamp(current + delta, detailRowsLive().length - 1))
+		else setRunsSelection((current) => clamp(current + delta, runsLive().length - 1))
+	}
 
-	const moveSelectionToBoundary = useCallback(
-		(boundary: "first" | "last") => {
-			if (inDetail) setDetailSelection(boundary === "first" ? 0 : Math.max(0, detailRows.length - 1))
-			else setRunsSelection(boundary === "first" ? 0 : Math.max(0, runs.length - 1))
-		},
-		[inDetail, detailRows.length, runs.length, setDetailSelection, setRunsSelection],
-	)
+	const moveSelectionToBoundary = (boundary: "first" | "last") => {
+		if (inDetailLive()) setDetailSelection(boundary === "first" ? 0 : Math.max(0, detailRowsLive().length - 1))
+		else setRunsSelection(boundary === "first" ? 0 : Math.max(0, runsLive().length - 1))
+	}
 
-	const openRunAt = useCallback(
-		(index: number) => {
-			const run = runs[index]
-			if (!run) return
-			setSelectedRunId(run.id)
-			setDetailSelection(0)
-		},
-		[runs, setSelectedRunId, setDetailSelection],
-	)
+	const openRunAt = (index: number) => {
+		const run = runsLive()[index]
+		if (!run) return
+		setSelectedRunId(run.id)
+		setDetailSelection(0)
+	}
 
-	const openStepLogAt = useCallback(
-		(index: number) => {
-			const row = detailRows[index]
-			const url = row?.kind === "step" ? row.job.url : detailRun?.url
-			if (url) void openUrl(url)
-		},
-		[detailRows, detailRun, openUrl],
-	)
-
-	// `enter` (or click-activate): open the focused run, or open the focused
-	// step's job log in the browser. There's no inline log expansion in slice 1.
-	const openSelected = useCallback(() => {
-		if (inDetail) openStepLogAt(detailSelection)
-		else openRunAt(runsSelection)
-	}, [inDetail, openStepLogAt, openRunAt, detailSelection, runsSelection])
-
-	const jumpFailure = useCallback(
-		(direction: 1 | -1) => {
-			if (!inDetail) return
-			const failures = failureRowIndices(detailRows)
-			if (failures.length === 0) return
-			const current = detailSelection
-			const next =
-				direction === 1 ? (failures.find((index) => index > current) ?? failures[0]!) : ([...failures].reverse().find((index) => index < current) ?? failures[failures.length - 1]!)
-			setDetailSelection(next)
-		},
-		[inDetail, detailRows, detailSelection, setDetailSelection],
-	)
-
-	const openInBrowser = useCallback(() => {
-		const url = inDetail ? detailRun?.url : runs[runsSelection]?.url
+	const openStepLogAt = (index: number) => {
+		const row = detailRowsLive()[index]
+		const state = detailStateLive()
+		const detailRun = state?.status === "ready" ? state.value : null
+		const url = row?.kind === "step" ? row.job.url : detailRun?.url
 		if (url) void openUrl(url)
-	}, [inDetail, detailRun, runs, runsSelection, openUrl])
+	}
 
-	// Mouse: first click selects the row, second (or click on the already-selected
-	// row) activates it — opening a run, or a step's log in the browser.
-	const selectRow = useCallback(
-		(index: number) => {
-			if (inDetail) setDetailSelection(clamp(index, detailRows.length - 1))
-			else setRunsSelection(clamp(index, runs.length - 1))
-		},
-		[inDetail, detailRows.length, runs.length, setDetailSelection, setRunsSelection],
-	)
+	const openSelected = () => {
+		if (inDetailLive()) openStepLogAt(detailSelectionLive())
+		else openRunAt(runsSelectionLive())
+	}
 
-	const activateRow = useCallback(
-		(index: number) => {
-			if (inDetail) openStepLogAt(index)
-			else openRunAt(index)
-		},
-		[inDetail, openStepLogAt, openRunAt],
-	)
+	const jumpFailure = (direction: 1 | -1) => {
+		if (!inDetailLive()) return
+		const failures = failureRowIndices(detailRowsLive())
+		if (failures.length === 0) return
+		const current = detailSelectionLive()
+		const next =
+			direction === 1 ? (failures.find((index) => index > current) ?? failures[0]!) : ([...failures].reverse().find((index) => index < current) ?? failures[failures.length - 1]!)
+		setDetailSelection(next)
+	}
 
-	const refresh = useCallback(() => {
-		if (repositoryMode && repository) registry.refresh(repositoryWorkflowRunsFor(repository))
-		else if (runsListKey) registry.refresh(pullRequestRunsFor(runsListKey))
-		if (detailAtomKey) registry.refresh(workflowRunDetailsFor(detailAtomKey))
-	}, [registry, repositoryMode, repository, runsListKey, detailAtomKey])
+	const openInBrowser = () => {
+		const state = detailStateLive()
+		const detailRun = state?.status === "ready" ? state.value : null
+		const url = inDetailLive() ? detailRun?.url : runsLive()[runsSelectionLive()]?.url
+		if (url) void openUrl(url)
+	}
 
-	useEffect(() => {
-		const active = repositoryMode ? repositoryActive : pullRequestRunsFullView
-		if (!active || runsState.status !== "ready" || !runs.some((run) => run.status !== "completed")) return
+	const selectRow = (index: number) => {
+		if (inDetailLive()) setDetailSelection(clamp(index, detailRowsLive().length - 1))
+		else setRunsSelection(clamp(index, runsLive().length - 1))
+	}
+
+	const activateRow = (index: number) => {
+		if (inDetailLive()) openStepLogAt(index)
+		else openRunAt(index)
+	}
+
+	const refresh = () => {
+		const repositoryName = repository()
+		const pullRequest = selectedPullRequestLive()
+		const runId = selectedRunIdLive()
+		if (repositoryMode && repositoryName) registry.refresh(repositoryWorkflowRunsFor(repositoryName))
+		else if (pullRequest) registry.refresh(pullRequestRunsFor(runsKey(pullRequest)))
+		if (repositoryName && runId !== null) registry.refresh(workflowRunDetailsFor(runDetailKey(repositoryName, runId)))
+	}
+
+	createEffect(() => {
+		const active = repositoryMode ? workspaceSurfaceLive() === "actions" : pullRequestRunsFullView
+		const state = runsStateLive()
+		const runs = runsLive()
+		if (!active || state.status !== "ready" || !runs.some((run) => run.status !== "completed")) return
 		const timeout = globalThis.setTimeout(refresh, 5_000)
-		return () => globalThis.clearTimeout(timeout)
-	}, [repositoryMode, repositoryActive, pullRequestRunsFullView, runsState.status, runs, refresh])
+		onCleanup(() => globalThis.clearTimeout(timeout))
+	})
 
-	const rerun = useCallback(
-		(failedOnly: boolean) => {
-			if (!repository || !detailRun || actionPending) return
-			if (!canRerunRun(detailRun)) {
-				flashNotice("Only completed workflow runs can be rerun")
-				return
-			}
-			if (failedOnly && !canRerunFailedJobs(detailRun)) {
-				flashNotice("This run has no failed jobs to rerun")
-				return
-			}
+	const rerun = (failedOnly: boolean) => {
+		const repositoryName = repository()
+		const state = detailStateLive()
+		const detailRun = state?.status === "ready" ? state.value : null
+		if (!repositoryName || !detailRun || actionPending) return
+		if (!canRerunRun(detailRun)) {
+			flashNotice("Only completed workflow runs can be rerun")
+			return
+		}
+		if (failedOnly && !canRerunFailedJobs(detailRun)) {
+			flashNotice("This run has no failed jobs to rerun")
+			return
+		}
 
-			setActionPending(true)
-			flashNotice(failedOnly ? "Rerunning failed jobs" : "Rerunning workflow")
-			void rerunWorkflowRun({ repository, runId: detailRun.id, failedOnly })
-				.then(() => {
-					refresh()
-					flashNotice(failedOnly ? "Failed jobs queued" : "Workflow rerun queued")
-				})
-				.catch((error) => flashNotice(errorMessage(error)))
-				.finally(() => setActionPending(false))
-		},
-		[repository, detailRun, actionPending, flashNotice, rerunWorkflowRun, refresh],
-	)
+		setActionPending(true)
+		flashNotice(failedOnly ? "Rerunning failed jobs" : "Rerunning workflow")
+		void rerunWorkflowRun({ repository: repositoryName, runId: detailRun.id, failedOnly })
+			.then(() => {
+				refresh()
+				flashNotice(failedOnly ? "Failed jobs queued" : "Workflow rerun queued")
+			})
+			.catch((error) => flashNotice(errorMessage(error)))
+			.finally(() => setActionPending(false))
+	}
 
-	const cancel = useCallback(() => {
-		if (!repository || !detailRun || actionPending) return
+	const cancel = () => {
+		const repositoryName = repository()
+		const state = detailStateLive()
+		const detailRun = state?.status === "ready" ? state.value : null
+		if (!repositoryName || !detailRun || actionPending) return
 		if (!canCancelRun(detailRun)) {
 			flashNotice("Only queued or in-progress workflow runs can be cancelled")
 			return
@@ -251,60 +263,58 @@ export const useRunsView = (
 
 		setActionPending(true)
 		flashNotice("Cancelling workflow run")
-		void cancelWorkflowRun({ repository, runId: detailRun.id })
+		void cancelWorkflowRun({ repository: repositoryName, runId: detailRun.id })
 			.then(() => {
 				refresh()
 				flashNotice("Workflow run cancelled")
 			})
 			.catch((error) => flashNotice(errorMessage(error)))
 			.finally(() => setActionPending(false))
-	}, [repository, detailRun, actionPending, flashNotice, cancelWorkflowRun, refresh])
+	}
 
-	const ctx: RunsViewCtx = useMemo(
-		() => ({
-			halfPage,
-			inDetail,
-			handleEscape,
-			moveSelection,
-			moveSelectionToBoundary,
-			openSelected,
-			nextFailure: () => jumpFailure(1),
-			previousFailure: () => jumpFailure(-1),
-			refresh,
-			rerun,
-			cancel,
-			openInBrowser,
-			repositorySurface: repositoryMode,
-			switchWorkspaceSurface: repositoryMode && switchRepositorySurface ? switchRepositorySurface : () => undefined,
-			cycleWorkspaceSurface: repositoryMode && cycleRepositorySurface ? cycleRepositorySurface : () => undefined,
-		}),
-		[
-			halfPage,
-			inDetail,
-			handleEscape,
-			moveSelection,
-			moveSelectionToBoundary,
-			openSelected,
-			jumpFailure,
-			refresh,
-			rerun,
-			cancel,
-			openInBrowser,
-			repositoryMode,
-			switchRepositorySurface,
-			cycleRepositorySurface,
-		],
-	)
+	const ctx: RunsViewCtx = {
+		halfPage,
+		get inDetail() {
+			return inDetailLive()
+		},
+		handleEscape,
+		moveSelection,
+		moveSelectionToBoundary,
+		openSelected,
+		nextFailure: () => jumpFailure(1),
+		previousFailure: () => jumpFailure(-1),
+		refresh,
+		rerun,
+		cancel,
+		openInBrowser,
+		repositorySurface: repositoryMode,
+		switchWorkspaceSurface: repositoryMode && switchRepositorySurface ? switchRepositorySurface : () => undefined,
+		cycleWorkspaceSurface: repositoryMode && cycleRepositorySurface ? cycleRepositorySurface : () => undefined,
+	}
 
 	return {
 		ctx,
-		runsFullView: repositoryMode ? repositoryActive : pullRequestRunsFullView,
-		inDetail,
-		runsState,
-		detailState,
-		runsSelection: clamp(runsSelection, runs.length - 1),
-		detailSelection: clamp(detailSelection, detailRows.length - 1),
-		detailRows,
+		get runsFullView() {
+			return repositoryMode ? workspaceSurfaceLive() === "actions" : pullRequestRunsFullView
+		},
+		get inDetail() {
+			return inDetailLive()
+		},
+		get runsState() {
+			return runsStateLive()
+		},
+		get detailState() {
+			return detailStateLive()
+		},
+		get runsSelection() {
+			return clamp(runsSelectionLive(), runsLive().length - 1)
+		},
+		get detailSelection() {
+			return clamp(detailSelectionLive(), detailRowsLive().length - 1)
+		},
+		get detailRows() {
+			return detailRowsLive()
+		},
 		selectRow,
 		activateRow,
 	}

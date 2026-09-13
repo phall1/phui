@@ -1,5 +1,5 @@
-import { RegistryContext, useAtomSet } from "@effect/atom-react"
-import { useCallback, useContext } from "react"
+import { RegistryContext, useAtomSet } from "../atom-solid.js"
+import { useCallback, useContext } from "../solid-hooks.js"
 import {
 	addPullRequestLabelAtom,
 	closePullRequestAtom,

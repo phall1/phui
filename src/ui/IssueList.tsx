@@ -1,6 +1,6 @@
 import { TextAttributes, type BoxRenderable, type MouseEvent } from "@opentui/core"
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { useRenderer } from "@opentui/react"
+import { useEffect, useMemo, useState, type ReactNode } from "../solid-hooks.js"
+import { useRenderer } from "@opentui/solid"
 import { daysOpen, formatRelativeDate } from "../date.js"
 import type { IssueItem, LoadStatus } from "../domain.js"
 import { colors } from "./colors.js"

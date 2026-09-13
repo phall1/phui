@@ -6,13 +6,19 @@
 	"description": "Experimental keymap library — bindings as data, state as input.",
 	"exports": {
 		".": "./src/index.ts",
-		"./react": "./src/react.ts"
+		"./react": "./src/react.ts",
+		"./solid": "./src/solid.ts"
 	},
 	"scripts": {
 		"test": "bun test test",
 		"typecheck": "tsc --noEmit"
 	},
 	"peerDependencies": {
-		"react": "*"
+		"react": "*",
+		"solid-js": "*"
+	},
+	"peerDependenciesMeta": {
+		"react": { "optional": true },
+		"solid-js": { "optional": true }
 	}
 }

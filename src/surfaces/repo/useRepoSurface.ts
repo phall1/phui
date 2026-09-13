@@ -1,5 +1,5 @@
-import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useMemo } from "react"
+import { useAtom, useAtomSet, useAtomValue } from "../../atom-solid.js"
+import { useMemo } from "../../solid-hooks.js"
 import type { IssueItem, PullRequestItem, RepositoryDetails } from "../../domain.js"
 import { repositoryFilterScore } from "../../ui/filter/scoring.js"
 import { useRepositoryDetails } from "../../ui/pullRequests/useRepositoryDetails.js"

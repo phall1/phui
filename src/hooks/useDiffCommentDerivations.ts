@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo } from "../solid-hooks.js"
 import type { PullRequestReviewComment } from "../domain.js"
 import {
 	buildStackedDiffFiles,

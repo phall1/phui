@@ -1,5 +1,4 @@
 import { beforeAll, describe, expect, test } from "bun:test"
-import { act } from "react"
 
 beforeAll(() => {
 	// @ts-expect-error — globalThis.IS_REACT_ACT_ENVIRONMENT
@@ -86,18 +85,11 @@ describe("buildPullRequestListRows", () => {
 
 describe("skeleton rendering", () => {
 	test("draws placeholder bars across the pane", async () => {
-		const { createTestRenderer } = await import("@opentui/core/testing")
-		const { createRoot } = await import("@opentui/react")
+		const { testRender } = await import("@opentui/solid")
 		const { SkeletonList } = await import("../src/ui/SkeletonRows.tsx")
 
-		const setup = await createTestRenderer({ width: 60, height: 10 })
-		const root = createRoot(setup.renderer)
-		act(() => {
-			root.render(<SkeletonList contentWidth={58} rowCount={3} compact />)
-		})
-		await act(async () => {
-			await setup.renderOnce()
-		})
+		const setup = await testRender(() => <SkeletonList contentWidth={58} rowCount={3} compact />, { width: 60, height: 10 })
+		await setup.renderOnce()
 
 		const frame = setup.captureCharFrame()
 		// One group line plus three item lines, each carrying bars.

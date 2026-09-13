@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "../solid-hooks.js"
 import { SPINNER_INTERVAL_MS } from "./spinner.js"
 
 export interface UseSpinnerFrameInput {

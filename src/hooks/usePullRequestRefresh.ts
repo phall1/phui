@@ -1,4 +1,4 @@
-import { useEffect, type MutableRefObject } from "react"
+import { useEffect, type MutableRefObject } from "../solid-hooks.js"
 import type { PullRequestComment, PullRequestItem } from "../domain.js"
 import type { LoadStatus } from "../domain.js"
 import type { StoredCommentLoadState } from "../ui/comments/loadState.js"

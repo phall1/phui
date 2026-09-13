@@ -1,3 +1,6 @@
+import { Show } from "solid-js"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { useTerminalDimensions } from "@opentui/solid"
 import type { PhuiLaunchIntent } from "./launchIntent.js"
 import { colors } from "./ui/colors.js"
 import { LoadingLogoPane } from "./ui/LoadingLogo.js"
@@ -8,6 +11,16 @@ import { WorkspaceFooter } from "./surfaces/WorkspaceFooter.js"
 import { WorkspaceHeader } from "./surfaces/WorkspaceHeader.js"
 import { WorkspaceModals } from "./surfaces/WorkspaceModals.js"
 import { useAppShell } from "./hooks/useAppShell.js"
+import { isTerminalTooSmall } from "./workspace/layout.js"
+import { commentsViewActiveAtom, selectedCommentsAtom, selectedCommentsStatusAtom } from "./ui/comments/atoms.js"
+import { detailFullViewAtom } from "./ui/detail/atoms.js"
+import { diffFullViewAtom, readyDiffFilesAtom, selectedDiffStateAtom } from "./ui/diff/atoms.js"
+import { buildStackedDiffFiles, PullRequestDiffState } from "./ui/diff.js"
+import { filterDraftAtom, filterModeAtom, filterQueryAtom } from "./ui/filter/atoms.js"
+import { activeModalAtom } from "./ui/modals/atoms.js"
+import { displayedPullRequestsAtom, pullRequestsAtom, selectedPullRequestAtom, visibleGroupsAtom } from "./ui/pullRequests/atoms.js"
+import { runsFullViewAtom } from "./ui/runs/atoms.js"
+import { selectedRepositoryAtom, workspaceSurfaceAtom, workspaceTabSurfacesAtom } from "./workspace/atoms.js"
 
 const defaultLaunchIntent: PhuiLaunchIntent = { _tag: "Default" }
 
@@ -23,60 +36,123 @@ interface AppProps {
  * consumes the shell bundle.
  */
 export const App = ({ systemThemeGeneration = 0, launchIntent = defaultLaunchIntent }: AppProps) => {
+	const dimensions = useTerminalDimensions()
 	const shell = useAppShell({ systemThemeGeneration, launchIntent })
-
-	if (shell.terminalTooSmall) {
-		const lines = ["Terminal too small", `Need 60x16; current ${shell.terminalWidth}x${shell.terminalHeight}`, "Resize to continue"]
-		return (
-			<box width={shell.terminalWidth} height={shell.terminalHeight} flexDirection="column" justifyContent="center" backgroundColor={colors.background}>
-				{lines.map((line) => (
-					<TextLine key={line} width={shell.terminalWidth}>
-						{centerCell(line, shell.terminalWidth)}
-					</TextLine>
-				))}
-			</box>
-		)
-	}
-
-	if (shell.isInitialLoading) {
-		return (
-			<box width={shell.terminalWidth} height={shell.terminalHeight} flexDirection="column" backgroundColor={colors.background}>
-				<LoadingLogoPane content={shell.detailPlaceholderContent} width={shell.contentWidth} height={shell.terminalHeight} frame={shell.loadingFrame} />
-			</box>
-		)
-	}
+	const selectedPullRequest = useAtomValueSolid(() => selectedPullRequestAtom)
+	const activeWorkspaceSurface = useAtomValueSolid(() => workspaceSurfaceAtom)
+	const selectedRepository = useAtomValueSolid(() => selectedRepositoryAtom)
+	const workspaceTabSurfaces = useAtomValueSolid(() => workspaceTabSurfacesAtom)
+	const activeModal = useAtomValueSolid(() => activeModalAtom)
+	const commentsViewActive = useAtomValueSolid(() => commentsViewActiveAtom)
+	const selectedComments = useAtomValueSolid(() => selectedCommentsAtom)
+	const selectedCommentsStatus = useAtomValueSolid(() => selectedCommentsStatusAtom)
+	const detailFullView = useAtomValueSolid(() => detailFullViewAtom)
+	const diffFullView = useAtomValueSolid(() => diffFullViewAtom)
+	const runsFullView = useAtomValueSolid(() => runsFullViewAtom)
+	const selectedDiffState = useAtomValueSolid(() => selectedDiffStateAtom)
+	const readyDiffFiles = useAtomValueSolid(() => readyDiffFilesAtom)
+	const visibleGroups = useAtomValueSolid(() => visibleGroupsAtom)
+	const filterMode = useAtomValueSolid(() => filterModeAtom)
+	const filterQuery = useAtomValueSolid(() => filterQueryAtom)
+	const filterDraft = useAtomValueSolid(() => filterDraftAtom)
+	const displayedPullRequests = useAtomValueSolid(() => displayedPullRequestsAtom)
+	const pullRequestResult = useAtomValueSolid(() => pullRequestsAtom)
+	const showWorkspaceTabs = () => !detailFullView() && !diffFullView() && !runsFullView() && !commentsViewActive()
+	const isInitialLoading = () => displayedPullRequests().length === 0 && pullRequestResult().waiting
 
 	return (
-		<box width={shell.terminalWidth} height={shell.terminalHeight} flexDirection="column" backgroundColor={colors.background}>
-			<box paddingLeft={1} paddingRight={1} flexDirection="column" backgroundColor={colors.background}>
-				<box width={shell.headerFooterWidth} height={1} flexDirection="row">
-					<WorkspaceHeader {...shell.headerProps} />
-					{shell.headerRight ? (
-						<TextLine width={shell.headerRight.length}>
-							<span fg={colors.muted}>{shell.headerRight}</span>
-						</TextLine>
-					) : null}
+		<Show
+			when={!isTerminalTooSmall(dimensions().width, dimensions().height)}
+			fallback={
+				<box width={dimensions().width} height={dimensions().height} flexDirection="column" justifyContent="center" backgroundColor={colors.background}>
+					<TextLine width={dimensions().width}>{centerCell("Terminal too small", dimensions().width)}</TextLine>
+					<TextLine width={dimensions().width}>{centerCell(`Need 60x16; current ${dimensions().width}x${dimensions().height}`, dimensions().width)}</TextLine>
+					<TextLine width={dimensions().width}>{centerCell("Resize to continue", dimensions().width)}</TextLine>
 				</box>
-			</box>
-			<Divider width={shell.contentWidth} junctions={shell.workspaceTopDividerJunctions} />
-			{shell.showWorkspaceTabs ? (
-				<>
-					<box paddingRight={1} backgroundColor={colors.background}>
-						<WorkspaceTabs
-							activeSurface={shell.activeWorkspaceSurface}
-							width={Math.max(24, shell.contentWidth - 1)}
-							surfaces={shell.workspaceTabSurfaces}
-							counts={shell.workspaceTabCounts}
-							onSelect={shell.switchWorkspaceSurface}
-						/>
+			}
+		>
+			<Show
+				when={!isInitialLoading()}
+				fallback={
+					<box width={shell.terminalWidth} height={shell.terminalHeight} flexDirection="column" backgroundColor={colors.background}>
+						<LoadingLogoPane content={shell.detailPlaceholderContent} width={shell.contentWidth} height={shell.terminalHeight} frame={shell.loadingFrame} />
 					</box>
-					<Divider width={shell.contentWidth} junctions={shell.workspaceBottomDividerJunctions} />
-				</>
-			) : null}
-			<WorkspaceContent {...shell.contentProps} />
-			<Divider width={shell.contentWidth} junctions={shell.preFooterDividerJunctions} />
-			<WorkspaceFooter {...shell.footerProps} />
-			<WorkspaceModals {...shell.modalsProps} />
-		</box>
+				}
+			>
+				<box width={dimensions().width} height={dimensions().height} flexDirection="column" backgroundColor={colors.background}>
+					<box paddingLeft={1} paddingRight={1} flexDirection="column" backgroundColor={colors.background}>
+						<box width={shell.headerFooterWidth} height={1} flexDirection="row">
+							<WorkspaceHeader {...shell.headerProps} />
+							{shell.headerRight ? (
+								<TextLine width={shell.headerRight.length}>
+									<span fg={colors.muted}>{shell.headerRight}</span>
+								</TextLine>
+							) : null}
+						</box>
+					</box>
+					<Divider width={shell.contentWidth} junctions={shell.workspaceTopDividerJunctions} />
+					{showWorkspaceTabs() ? (
+						<>
+							<box paddingRight={1} backgroundColor={colors.background}>
+								<WorkspaceTabs
+									activeSurface={activeWorkspaceSurface()}
+									width={Math.max(24, shell.contentWidth - 1)}
+									surfaces={workspaceTabSurfaces()}
+									counts={shell.workspaceTabCounts}
+									onSelect={shell.switchWorkspaceSurface}
+								/>
+							</box>
+							<Divider width={shell.contentWidth} junctions={shell.workspaceBottomDividerJunctions} />
+						</>
+					) : null}
+					<WorkspaceContent
+						{...shell.contentProps}
+						activeWorkspaceSurface={activeWorkspaceSurface()}
+						selectedRepository={selectedRepository()}
+						selectedPullRequest={selectedPullRequest()}
+						commentsViewActive={commentsViewActive()}
+						diffFullView={diffFullView()}
+						detailFullView={detailFullView()}
+						selectedComments={selectedComments()}
+						selectedCommentsStatus={selectedCommentsStatus()}
+						displayedDiffState={
+							selectedDiffState()?._tag === "Ready"
+								? PullRequestDiffState.Ready({
+										patch: readyDiffFiles()
+											.map((file) => file.patch)
+											.join("\n"),
+										files: readyDiffFiles(),
+									})
+								: selectedDiffState()
+						}
+						stackedDiffFiles={buildStackedDiffFiles(
+							readyDiffFiles(),
+							shell.contentProps.effectiveDiffRenderView,
+							shell.contentProps.diffWrapMode,
+							shell.contentProps.diffFilePanel.visible ? shell.contentProps.diffFilePanel.diffPaneWidth : shell.contentWidth,
+						)}
+						derivations={{
+							...shell.contentProps.derivations,
+							prListProps: {
+								...shell.contentProps.derivations.prListProps,
+								groups: visibleGroups(),
+								selectedUrl: selectedPullRequest()?.url ?? shell.contentProps.derivations.prListProps.selectedUrl,
+								filterText: filterMode() ? filterDraft() : filterQuery(),
+								showRepositoryGroups: selectedRepository() === null,
+							},
+						}}
+					/>
+					<Divider width={shell.contentWidth} junctions={shell.preFooterDividerJunctions} />
+					<WorkspaceFooter
+						{...shell.footerProps}
+						filterMode={filterMode()}
+						visibleFilterText={filterMode() ? filterDraft() : filterQuery()}
+						detailFullView={detailFullView()}
+						diffFullView={diffFullView()}
+					/>
+					<WorkspaceModals {...shell.modalsProps} activeModal={activeModal()} />
+				</box>
+			</Show>
+		</Show>
 	)
 }

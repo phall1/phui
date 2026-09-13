@@ -1,6 +1,6 @@
 const result = await Bun.build({
 	entrypoints: ["src/index.tsx"],
-	external: ["@effect/atom-react", "@opentui/core", "@opentui/react", "@opentui/react/jsx-dev-runtime", "@opentui/react/jsx-runtime", "effect", "react", "scheduler"],
+	external: ["@effect/atom-solid", "@opentui/core", "@opentui/solid", "@opentui/solid/jsx-dev-runtime", "@opentui/solid/jsx-runtime", "effect", "solid-js"],
 	format: "esm",
 	outdir: "dist",
 	target: "bun",

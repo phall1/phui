@@ -1,5 +1,5 @@
-import { useAtomValue } from "@effect/atom-react"
-import { useMemo } from "react"
+import { useAtomValue } from "../atom-solid.js"
+import { useMemo } from "../solid-hooks.js"
 import type { IssueItem, PullRequestComment, PullRequestItem, PullRequestLabel } from "../domain.js"
 import type { DetailCommentsStatus } from "../ui/DetailsPane.js"
 import {

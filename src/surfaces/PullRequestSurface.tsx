@@ -1,12 +1,19 @@
 import type { DiffRenderable, ScrollBoxRenderable } from "@opentui/core"
-import type { ComponentProps, MutableRefObject } from "react"
+import { Match, Switch } from "solid-js"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import type { ComponentProps, MutableRefObject } from "../solid-hooks.js"
+import { runsFullViewAtom } from "../ui/runs/atoms.js"
+import { diffCommentAnchorIndexAtom, readyDiffFilesAtom, selectedDiffStateAtom } from "../ui/diff/atoms.js"
 import type { DiffCommentSide, IssueItem, PullRequestComment, PullRequestItem, PullRequestReviewComment } from "../domain.js"
 import {
+	buildStackedDiffFiles,
+	diffCommentAnchorLabel,
+	getStackedDiffCommentAnchors,
+	PullRequestDiffState,
 	stackedDiffFileIndexAtLine,
 	type DiffView,
 	type DiffWhitespaceMode,
 	type DiffWrapMode,
-	type PullRequestDiffState,
 	type StackedDiffCommentAnchor,
 	type StackedDiffFilePatch,
 } from "../ui/diff.js"
@@ -91,6 +98,198 @@ export interface PullRequestSurfaceProps {
 }
 
 export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
+	const runsFullView = useAtomValueSolid(() => runsFullViewAtom)
+	return (
+		<Switch>
+			<Match when={props.commentsViewActive && props.commentSubject}>
+				<CommentsPane
+					item={props.commentSubject!}
+					comments={props.selectedComments}
+					orderedComments={props.orderedComments}
+					loadState={props.selectedCommentsLoadState}
+					selectedIndex={props.commentsViewSelection}
+					contentWidth={props.fullscreenContentWidth}
+					paneWidth={props.contentWidth}
+					height={props.wideBodyHeight}
+					loadingIndicator={props.loadingIndicator}
+					themeGeneration={props.systemThemeGeneration}
+					showScrollbar={props.showScrollbars}
+				/>
+			</Match>
+			<Match when={runsFullView() && props.selectedPullRequest}>
+				<PullRequestRunsPane
+					pullRequest={props.selectedPullRequest!}
+					inDetail={props.runsView.inDetail}
+					runsState={props.runsView.runsState}
+					detailState={props.runsView.detailState}
+					runsSelection={props.runsView.runsSelection}
+					detailSelection={props.runsView.detailSelection}
+					detailRows={props.runsView.detailRows}
+					onSelectRow={props.runsView.selectRow}
+					onActivateRow={props.runsView.activateRow}
+					contentWidth={props.fullscreenContentWidth}
+					height={props.wideBodyHeight}
+					loadingIndicator={props.loadingIndicator}
+					showScrollbar={props.showScrollbars}
+				/>
+			</Match>
+			<Match when={props.diffFullView}>
+				<DiffSurfaceGate {...props} />
+			</Match>
+			<Match when={true}>
+				<PullRequestListDetail {...props} />
+			</Match>
+		</Switch>
+	)
+}
+
+const DiffSurfaceGate = (props: PullRequestSurfaceProps) => {
+	const selectedDiffState = useAtomValueSolid(() => selectedDiffStateAtom)
+	return (
+		<Switch>
+			<Match when={selectedDiffState()?._tag === "Ready"}>
+				<DiffSurface {...props} />
+			</Match>
+			<Match when={true}>
+				<box height={props.wideBodyHeight} width={props.contentWidth}>
+					<text>Loading diff</text>
+				</box>
+			</Match>
+		</Switch>
+	)
+}
+
+const DiffSurface = (props: PullRequestSurfaceProps) => {
+	const selectedDiffState = useAtomValueSolid(() => selectedDiffStateAtom)
+	const readyDiffFiles = useAtomValueSolid(() => readyDiffFilesAtom)
+	const files = readyDiffFiles()
+	const displayedDiffState = selectedDiffState()?._tag === "Ready" ? PullRequestDiffState.Ready({ patch: files.map((file) => file.patch).join("\n"), files }) : selectedDiffState()
+	const stackedDiffFiles = buildStackedDiffFiles(
+		files,
+		props.effectiveDiffRenderView,
+		props.diffWrapMode,
+		props.diffFilePanel.visible ? props.diffFilePanel.diffPaneWidth : props.contentWidth,
+	)
+	const commentAnchors = getStackedDiffCommentAnchors(
+		stackedDiffFiles,
+		props.effectiveDiffRenderView,
+		props.diffWrapMode,
+		props.diffFilePanel.visible ? props.diffFilePanel.diffPaneWidth : props.contentWidth,
+	)
+	const commentAnchorIndex = useAtomValueSolid(() => diffCommentAnchorIndexAtom)
+	const {
+		showScrollbars,
+		contentWidth,
+		wideBodyHeight,
+		diffScrollTop,
+		effectiveDiffRenderView,
+		diffWhitespaceMode,
+		diffWrapMode,
+		selectedDiffCommentThread,
+		selectDiffCommentLine,
+		setDiffRenderableRef,
+		loadingIndicator,
+		themeId,
+		systemThemeGeneration,
+		diffScrollRef,
+	} = props
+
+	const panel = props.diffFilePanel
+	const diffPaneWidth = panel.visible ? panel.diffPaneWidth : contentWidth
+	const DiffPaneView = () => (
+		<PullRequestDiffPane
+			pullRequest={props.selectedPullRequest}
+			diffState={displayedDiffState}
+			stackedFiles={stackedDiffFiles}
+			scrollTop={diffScrollTop}
+			view={effectiveDiffRenderView}
+			whitespaceMode={diffWhitespaceMode}
+			wrapMode={diffWrapMode}
+			paneWidth={diffPaneWidth}
+			height={wideBodyHeight}
+			loadingIndicator={loadingIndicator}
+			scrollRef={diffScrollRef}
+			setDiffRef={setDiffRenderableRef}
+			selectedCommentAnchor={commentAnchors[commentAnchorIndex()] ?? commentAnchors[0] ?? null}
+			selectedCommentLabel={(() => {
+				const anchor = commentAnchors[commentAnchorIndex()] ?? commentAnchors[0]
+				return anchor ? diffCommentAnchorLabel(anchor) : null
+			})()}
+			selectedCommentThread={selectedDiffCommentThread}
+			onSelectCommentLine={selectDiffCommentLine}
+			themeId={themeId}
+			themeGeneration={systemThemeGeneration}
+			showScrollbar={showScrollbars}
+		/>
+	)
+	if (!panel.visible) return <DiffPaneView />
+	// The vertical rail's junctions come from three sources: the panel's
+	// internal dividers (rows 1 and, in picker mode, 3), the diff pane's
+	// chrome divider (row 1, below its header), and the dynamic file-
+	// separator dividers inside the diff's scrollbox (which scroll with
+	// the user's position). At each row we combine: `┼` for both sides,
+	// `┤` panel-only, `├` diff-only.
+	const panelRows = diffFilePanelDividerRows(panel.pickerActive)
+	const diffChromeRows = [1] as const
+	// Two chrome rows above the scrollbox: header + divider. Content line 0
+	// of the scrollbox sits at viewport row 2.
+	const diffChromeOffset = 2
+	const scrollLine = Math.floor(diffScrollTop)
+	const fileDividerRailRows: number[] = []
+	for (const file of stackedDiffFiles) {
+		// Separator above the file header (only for files after the first).
+		if (file.index > 0) {
+			const railRow = diffChromeOffset + (file.headerLine - 1) - scrollLine
+			if (railRow >= diffChromeOffset && railRow < wideBodyHeight) fileDividerRailRows.push(railRow)
+		}
+		// Divider below the file header (always rendered, just before the diff body).
+		const railRowBelow = diffChromeOffset + (file.headerLine + 1) - scrollLine
+		if (railRowBelow >= diffChromeOffset && railRowBelow < wideBodyHeight) fileDividerRailRows.push(railRowBelow)
+	}
+	// The diff pane overlays a "sticky" file header at viewport rows 2-3
+	// once any content has scrolled. The sticky always paints one divider
+	// — at row 3 normally (header above), or at row 2 when the next file
+	// is exactly one line below the scroll (divider above the incoming
+	// header). Mirror that here so the rail joins it even after the
+	// non-sticky divider for the current file has scrolled off-screen.
+	const stickyRailRow =
+		stackedDiffFiles.length > 0
+			? (() => {
+					const idx = stackedDiffFileIndexAtLine(stackedDiffFiles, scrollLine)
+					const safe = idx >= 0 ? idx : 0
+					const incoming = stackedDiffFiles[safe + 1]
+					const incomingDistance = incoming ? incoming.headerLine - scrollLine : Number.POSITIVE_INFINITY
+					return incomingDistance === 1 ? 2 : 3
+				})()
+			: null
+	if (stickyRailRow !== null && stickyRailRow >= diffChromeOffset && stickyRailRow < wideBodyHeight) fileDividerRailRows.push(stickyRailRow)
+	const rightSideRows = new Set<number>([...diffChromeRows, ...fileDividerRailRows])
+	const allRailRows = new Set<number>([...panelRows, ...rightSideRows])
+	const railJunctions = Array.from(allRailRows).map((row) => {
+		const fromPanel = panelRows.includes(row)
+		const fromRight = rightSideRows.has(row)
+		return { row, char: fromPanel && fromRight ? "┼" : fromPanel ? "┤" : "├" }
+	})
+	return (
+		<box flexDirection="row" height={wideBodyHeight} width={contentWidth}>
+			<DiffFilePanel
+				files={panel.files}
+				currentFileIndex={panel.currentFileIndex}
+				width={panel.width}
+				height={wideBodyHeight}
+				pickerActive={panel.pickerActive}
+				pickerQuery={panel.pickerQuery}
+				pickerSelectedIndex={panel.pickerSelectedIndex}
+				pickerResults={panel.pickerResults}
+				onSelectFile={panel.onSelectFile}
+			/>
+			<SeparatorColumn height={wideBodyHeight} junctions={railJunctions} />
+			<DiffPaneView />
+		</box>
+	)
+}
+
+const PullRequestListDetail = (props: PullRequestSurfaceProps) => {
 	const {
 		showScrollbars,
 		isWideLayout,
@@ -118,32 +317,12 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 		narrowPreviewBodyScrollable,
 		activeFilterLabel,
 		detailJunctions,
-		prListProps,
-		selectedPullRequest,
 		selectedComments,
 		selectedCommentsStatus,
-		selectedCommentsLoadState,
 		detailPlaceholderContent,
 		isSelectedPullRequestDetailLoading,
 		isSelectedPullRequestDetailError,
 		selectedPullRequestDetailError,
-		commentsViewActive,
-		commentsViewSelection,
-		orderedComments,
-		commentSubject,
-		diffFullView,
-		runsView,
-		displayedDiffState,
-		stackedDiffFiles,
-		diffScrollTop,
-		effectiveDiffRenderView,
-		diffWhitespaceMode,
-		diffWrapMode,
-		selectedDiffCommentAnchor,
-		selectedDiffCommentLabel,
-		selectedDiffCommentThread,
-		selectDiffCommentLine,
-		setDiffRenderableRef,
 		detailFullView,
 		loadingIndicator,
 		themeId,
@@ -151,146 +330,14 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 		prListScrollRef,
 		detailScrollRef,
 		detailPreviewScrollRef,
-		diffScrollRef,
 		onLinkOpen,
 	} = props
 
-	if (commentsViewActive && commentSubject) {
-		return (
-			<CommentsPane
-				item={commentSubject}
-				comments={selectedComments}
-				orderedComments={orderedComments}
-				loadState={selectedCommentsLoadState}
-				selectedIndex={commentsViewSelection}
-				contentWidth={fullscreenContentWidth}
-				paneWidth={contentWidth}
-				height={wideBodyHeight}
-				loadingIndicator={loadingIndicator}
-				themeGeneration={systemThemeGeneration}
-				showScrollbar={showScrollbars}
-			/>
-		)
-	}
-
-	if (runsView.runsFullView && selectedPullRequest) {
-		return (
-			<PullRequestRunsPane
-				pullRequest={selectedPullRequest}
-				inDetail={runsView.inDetail}
-				runsState={runsView.runsState}
-				detailState={runsView.detailState}
-				runsSelection={runsView.runsSelection}
-				detailSelection={runsView.detailSelection}
-				detailRows={runsView.detailRows}
-				onSelectRow={runsView.selectRow}
-				onActivateRow={runsView.activateRow}
-				contentWidth={fullscreenContentWidth}
-				height={wideBodyHeight}
-				loadingIndicator={loadingIndicator}
-				showScrollbar={showScrollbars}
-			/>
-		)
-	}
-
-	if (diffFullView) {
-		const panel = props.diffFilePanel
-		const diffPaneWidth = panel.visible ? panel.diffPaneWidth : contentWidth
-		const diffPane = (
-			<PullRequestDiffPane
-				pullRequest={selectedPullRequest}
-				diffState={displayedDiffState}
-				stackedFiles={stackedDiffFiles}
-				scrollTop={diffScrollTop}
-				view={effectiveDiffRenderView}
-				whitespaceMode={diffWhitespaceMode}
-				wrapMode={diffWrapMode}
-				paneWidth={diffPaneWidth}
-				height={wideBodyHeight}
-				loadingIndicator={loadingIndicator}
-				scrollRef={diffScrollRef}
-				setDiffRef={setDiffRenderableRef}
-				selectedCommentAnchor={selectedDiffCommentAnchor}
-				selectedCommentLabel={selectedDiffCommentLabel}
-				selectedCommentThread={selectedDiffCommentThread}
-				onSelectCommentLine={selectDiffCommentLine}
-				themeId={themeId}
-				themeGeneration={systemThemeGeneration}
-				showScrollbar={showScrollbars}
-			/>
-		)
-		if (!panel.visible) return diffPane
-		// The vertical rail's junctions come from three sources: the panel's
-		// internal dividers (rows 1 and, in picker mode, 3), the diff pane's
-		// chrome divider (row 1, below its header), and the dynamic file-
-		// separator dividers inside the diff's scrollbox (which scroll with
-		// the user's position). At each row we combine: `┼` for both sides,
-		// `┤` panel-only, `├` diff-only.
-		const panelRows = diffFilePanelDividerRows(panel.pickerActive)
-		const diffChromeRows = [1] as const
-		// Two chrome rows above the scrollbox: header + divider. Content line 0
-		// of the scrollbox sits at viewport row 2.
-		const diffChromeOffset = 2
-		const scrollLine = Math.floor(diffScrollTop)
-		const fileDividerRailRows: number[] = []
-		for (const file of stackedDiffFiles) {
-			// Separator above the file header (only for files after the first).
-			if (file.index > 0) {
-				const railRow = diffChromeOffset + (file.headerLine - 1) - scrollLine
-				if (railRow >= diffChromeOffset && railRow < wideBodyHeight) fileDividerRailRows.push(railRow)
-			}
-			// Divider below the file header (always rendered, just before the diff body).
-			const railRowBelow = diffChromeOffset + (file.headerLine + 1) - scrollLine
-			if (railRowBelow >= diffChromeOffset && railRowBelow < wideBodyHeight) fileDividerRailRows.push(railRowBelow)
-		}
-		// The diff pane overlays a "sticky" file header at viewport rows 2-3
-		// once any content has scrolled. The sticky always paints one divider
-		// — at row 3 normally (header above), or at row 2 when the next file
-		// is exactly one line below the scroll (divider above the incoming
-		// header). Mirror that here so the rail joins it even after the
-		// non-sticky divider for the current file has scrolled off-screen.
-		const stickyRailRow =
-			stackedDiffFiles.length > 0
-				? (() => {
-						const idx = stackedDiffFileIndexAtLine(stackedDiffFiles, scrollLine)
-						const safe = idx >= 0 ? idx : 0
-						const incoming = stackedDiffFiles[safe + 1]
-						const incomingDistance = incoming ? incoming.headerLine - scrollLine : Number.POSITIVE_INFINITY
-						return incomingDistance === 1 ? 2 : 3
-					})()
-				: null
-		if (stickyRailRow !== null && stickyRailRow >= diffChromeOffset && stickyRailRow < wideBodyHeight) fileDividerRailRows.push(stickyRailRow)
-		const rightSideRows = new Set<number>([...diffChromeRows, ...fileDividerRailRows])
-		const allRailRows = new Set<number>([...panelRows, ...rightSideRows])
-		const railJunctions = Array.from(allRailRows).map((row) => {
-			const fromPanel = panelRows.includes(row)
-			const fromRight = rightSideRows.has(row)
-			return { row, char: fromPanel && fromRight ? "┼" : fromPanel ? "┤" : "├" }
-		})
-		return (
-			<box flexDirection="row" height={wideBodyHeight} width={contentWidth}>
-				<DiffFilePanel
-					files={panel.files}
-					currentFileIndex={panel.currentFileIndex}
-					width={panel.width}
-					height={wideBodyHeight}
-					pickerActive={panel.pickerActive}
-					pickerQuery={panel.pickerQuery}
-					pickerSelectedIndex={panel.pickerSelectedIndex}
-					pickerResults={panel.pickerResults}
-					onSelectFile={panel.onSelectFile}
-				/>
-				<SeparatorColumn height={wideBodyHeight} junctions={railJunctions} />
-				{diffPane}
-			</box>
-		)
-	}
-
-	if (detailFullView && isSelectedPullRequestDetailError && selectedPullRequest) {
+	if (detailFullView && isSelectedPullRequestDetailError && props.selectedPullRequest) {
 		return (
 			<box flexGrow={1} flexDirection="column">
 				<DetailHeader
-					pullRequest={selectedPullRequest}
+					pullRequest={props.selectedPullRequest}
 					contentWidth={fullscreenContentWidth}
 					paneWidth={contentWidth}
 					loadingIndicator={loadingIndicator}
@@ -305,11 +352,11 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 		)
 	}
 
-	if (detailFullView && isSelectedPullRequestDetailLoading && selectedPullRequest) {
+	if (detailFullView && isSelectedPullRequestDetailLoading && props.selectedPullRequest) {
 		return (
 			<box flexGrow={1} flexDirection="column">
 				<DetailHeader
-					pullRequest={selectedPullRequest}
+					pullRequest={props.selectedPullRequest}
 					contentWidth={fullscreenContentWidth}
 					paneWidth={contentWidth}
 					loadingIndicator={loadingIndicator}
@@ -318,7 +365,7 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 					commentsStatus={selectedCommentsStatus}
 				/>
 				<DetailBody
-					pullRequest={selectedPullRequest}
+					pullRequest={props.selectedPullRequest}
 					contentWidth={fullscreenContentWidth}
 					bodyLines={Math.max(1, wideBodyHeight - fullscreenDetailHeaderHeight)}
 					loadingIndicator={loadingIndicator}
@@ -332,10 +379,10 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 	if (isWideLayout && detailFullView) {
 		return (
 			<box flexGrow={1} flexDirection="column">
-				{selectedPullRequest ? (
+				{props.selectedPullRequest ? (
 					<>
 						<DetailHeader
-							pullRequest={selectedPullRequest}
+							pullRequest={props.selectedPullRequest}
 							contentWidth={fullscreenContentWidth}
 							paneWidth={contentWidth}
 							loadingIndicator={loadingIndicator}
@@ -345,7 +392,7 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 						/>
 						<scrollbox ref={detailScrollRef} focusable={false} flexGrow={1} verticalScrollbarOptions={{ visible: showScrollbars && fullscreenDetailBodyScrollable }}>
 							<DetailBody
-								pullRequest={selectedPullRequest}
+								pullRequest={props.selectedPullRequest}
 								contentWidth={fullscreenContentWidth}
 								bodyLines={fullscreenBodyLines}
 								bodyLineLimit={DETAIL_BODY_SCROLL_LIMIT}
@@ -390,12 +437,12 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 	) : null
 	const widePullRequestList = (
 		<box paddingLeft={sectionPadding} paddingRight={0}>
-			<PullRequestList key={`wide-${leftContentWidth}`} {...prListProps} contentWidth={leftContentWidth} />
+			<PullRequestList key={`wide-${leftContentWidth}`} {...props.prListProps} contentWidth={leftContentWidth} />
 		</box>
 	)
 	const narrowPullRequestList = (
 		<box paddingLeft={sectionPadding} paddingRight={sectionPadding}>
-			<PullRequestList key={`narrow-${fullscreenContentWidth}`} {...prListProps} contentWidth={fullscreenContentWidth} />
+			<PullRequestList key={`narrow-${fullscreenContentWidth}`} {...props.prListProps} contentWidth={fullscreenContentWidth} />
 		</box>
 	)
 
@@ -421,10 +468,10 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 					</box>
 				}
 				right={
-					isSelectedPullRequestDetailError && selectedPullRequest ? (
+					isSelectedPullRequestDetailError && props.selectedPullRequest ? (
 						<>
 							<DetailHeader
-								pullRequest={selectedPullRequest}
+								pullRequest={props.selectedPullRequest}
 								contentWidth={rightContentWidth}
 								paneWidth={rightPaneWidth}
 								loadingIndicator={loadingIndicator}
@@ -436,10 +483,10 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 							<PlainLine text={`- ${selectedPullRequestDetailError ?? ""}`} fg={colors.muted} />
 							<Filler rows={Math.max(0, wideBodyHeight - wideDetailHeaderHeight - 2)} prefix="detail-error-preview" />
 						</>
-					) : isSelectedPullRequestDetailLoading && selectedPullRequest ? (
+					) : isSelectedPullRequestDetailLoading && props.selectedPullRequest ? (
 						<>
 							<DetailHeader
-								pullRequest={selectedPullRequest}
+								pullRequest={props.selectedPullRequest}
 								contentWidth={rightContentWidth}
 								paneWidth={rightPaneWidth}
 								loadingIndicator={loadingIndicator}
@@ -448,7 +495,7 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 								commentsStatus={selectedCommentsStatus}
 							/>
 							<DetailBody
-								pullRequest={selectedPullRequest}
+								pullRequest={props.selectedPullRequest}
 								contentWidth={rightContentWidth}
 								bodyLines={Math.max(1, wideBodyHeight - wideDetailHeaderHeight)}
 								loadingIndicator={loadingIndicator}
@@ -456,10 +503,10 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 								themeGeneration={systemThemeGeneration}
 							/>
 						</>
-					) : selectedPullRequest ? (
+					) : props.selectedPullRequest ? (
 						<>
 							<DetailHeader
-								pullRequest={selectedPullRequest}
+								pullRequest={props.selectedPullRequest}
 								contentWidth={rightContentWidth}
 								paneWidth={rightPaneWidth}
 								loadingIndicator={loadingIndicator}
@@ -467,9 +514,9 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 								comments={selectedComments}
 								commentsStatus={selectedCommentsStatus}
 							/>
-							<scrollbox ref={detailPreviewScrollRef} flexGrow={1} verticalScrollbarOptions={{ visible: showScrollbars && wideDetailBodyScrollable }}>
+							<scrollbox ref={detailPreviewScrollRef} focusable={false} flexGrow={1} verticalScrollbarOptions={{ visible: showScrollbars && wideDetailBodyScrollable }}>
 								<DetailBody
-									pullRequest={selectedPullRequest}
+									pullRequest={props.selectedPullRequest}
 									contentWidth={rightContentWidth}
 									bodyLines={wideDetailLines}
 									bodyLineLimit={DETAIL_BODY_SCROLL_LIMIT}
@@ -491,10 +538,10 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 	if (detailFullView) {
 		return (
 			<box flexGrow={1} flexDirection="column">
-				{isSelectedPullRequestDetailError && selectedPullRequest ? (
+				{isSelectedPullRequestDetailError && props.selectedPullRequest ? (
 					<>
 						<DetailHeader
-							pullRequest={selectedPullRequest}
+							pullRequest={props.selectedPullRequest}
 							contentWidth={fullscreenContentWidth}
 							paneWidth={contentWidth}
 							loadingIndicator={loadingIndicator}
@@ -506,10 +553,10 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 						<PlainLine text={`- ${selectedPullRequestDetailError ?? ""}`} fg={colors.muted} />
 						<Filler rows={Math.max(0, wideBodyHeight - fullscreenDetailHeaderHeight - 2)} prefix="detail-error-full-narrow" />
 					</>
-				) : selectedPullRequest ? (
+				) : props.selectedPullRequest ? (
 					<>
 						<DetailHeader
-							pullRequest={selectedPullRequest}
+							pullRequest={props.selectedPullRequest}
 							contentWidth={fullscreenContentWidth}
 							paneWidth={contentWidth}
 							loadingIndicator={loadingIndicator}
@@ -518,7 +565,7 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 						/>
 						<scrollbox ref={detailScrollRef} focusable={false} flexGrow={1} verticalScrollbarOptions={{ visible: showScrollbars && fullscreenDetailBodyScrollable }}>
 							<DetailBody
-								pullRequest={selectedPullRequest}
+								pullRequest={props.selectedPullRequest}
 								contentWidth={fullscreenContentWidth}
 								bodyLines={fullscreenBodyLines}
 								bodyLineLimit={DETAIL_BODY_SCROLL_LIMIT}
@@ -561,10 +608,10 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 			</box>
 			<Divider width={contentWidth} />
 			<box height={narrowDetailsPaneHeight} flexDirection="column">
-				{isSelectedPullRequestDetailError && selectedPullRequest ? (
+				{isSelectedPullRequestDetailError && props.selectedPullRequest ? (
 					<box flexDirection="column">
 						<DetailHeader
-							pullRequest={selectedPullRequest}
+							pullRequest={props.selectedPullRequest}
 							contentWidth={fullscreenContentWidth}
 							paneWidth={contentWidth}
 							loadingIndicator={loadingIndicator}
@@ -575,10 +622,10 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 						<PlainLine text="- Could not load pull request details." fg={colors.error} />
 						<PlainLine text={`- ${selectedPullRequestDetailError ?? ""}`} fg={colors.muted} />
 					</box>
-				) : selectedPullRequest ? (
+				) : props.selectedPullRequest ? (
 					<>
 						<DetailHeader
-							pullRequest={selectedPullRequest}
+							pullRequest={props.selectedPullRequest}
 							contentWidth={fullscreenContentWidth}
 							paneWidth={contentWidth}
 							loadingIndicator={loadingIndicator}
@@ -593,7 +640,7 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 							verticalScrollbarOptions={{ visible: showScrollbars && narrowPreviewBodyScrollable }}
 						>
 							<DetailBody
-								pullRequest={selectedPullRequest}
+								pullRequest={props.selectedPullRequest}
 								contentWidth={fullscreenContentWidth}
 								bodyLines={narrowPreviewBodyHeight}
 								bodyLineLimit={DETAIL_BODY_SCROLL_LIMIT}

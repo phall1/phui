@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useState } from "../../solid-hooks.js"
 import { colors, rowHoverBackground } from "../colors.js"
 
 // Row background formula used by every selectable list — selection beats
@@ -22,22 +22,19 @@ export interface SelectableRowProps {
  * receiving the resolved `rowBg` so inner `<TextLine bg={rowBg}>` lines stay
  * in sync with the wrapper.
  */
-export const SelectableRow = ({ width, height, selected, hovered, onSelect, onHoverChange, children }: SelectableRowProps) => {
-	const rowBg = computeRowBg(selected, hovered)
-	return (
-		<box
-			width={width}
-			{...(height !== undefined ? { height } : {})}
-			flexDirection="column"
-			{...(rowBg ? { backgroundColor: rowBg } : {})}
-			onMouseDown={onSelect}
-			onMouseOver={() => onHoverChange(true)}
-			onMouseOut={() => onHoverChange(false)}
-		>
-			{children(rowBg)}
-		</box>
-	)
-}
+export const SelectableRow = (props: SelectableRowProps) => (
+	<box
+		width={props.width}
+		{...(props.height !== undefined ? { height: props.height } : {})}
+		flexDirection="column"
+		backgroundColor={computeRowBg(props.selected, props.hovered) ?? colors.background}
+		onMouseDown={props.onSelect}
+		onMouseOver={() => props.onHoverChange(true)}
+		onMouseOut={() => props.onHoverChange(false)}
+	>
+		{props.children(computeRowBg(props.selected, props.hovered))}
+	</box>
+)
 
 /**
  * Single-source hover-state hook for a selectable list. Returns predicates

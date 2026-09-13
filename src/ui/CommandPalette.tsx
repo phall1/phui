@@ -1,5 +1,5 @@
 import { TextAttributes, type MouseEvent } from "@opentui/core"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "../solid-hooks.js"
 import type { AppCommand } from "../commands.js"
 import { clampCommandIndex } from "../commands.js"
 import { colors } from "./colors.js"

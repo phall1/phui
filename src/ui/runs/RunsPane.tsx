@@ -1,5 +1,6 @@
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
-import { useEffect, useRef } from "react"
+import { createEffect, Match, Switch } from "solid-js"
+import { useRef, type ReactNode } from "../../solid-hooks.js"
 import type { PullRequestItem, WorkflowRun, WorkflowRunDetails } from "../../domain.js"
 import { colors } from "../colors.js"
 import { centerCell, Divider, fitCell, Filler, PaddedRow, PlainLine, TextLine } from "../primitives.js"
@@ -9,19 +10,7 @@ import { conclusionLabel, formatDuration, type RunDetailRow, type RunGlyphKind, 
 // A selectable, clickable row whose background spans the full pane width (the
 // box carries the width + bg; the inner TextLine adopts the same bg so text and
 // fill match). Mouse-down selects; a second handler activates on the App side.
-const RunRow = ({
-	selected,
-	width,
-	onSelect,
-	onActivate,
-	children,
-}: {
-	selected: boolean
-	width: number
-	onSelect: () => void
-	onActivate: () => void
-	children: React.ReactNode
-}) => (
+const RunRow = ({ selected, width, onSelect, onActivate, children }: { selected: boolean; width: number; onSelect: () => void; onActivate: () => void; children: ReactNode }) => (
 	<box width={width} flexDirection="column" {...(selected ? { backgroundColor: colors.selectedBg } : {})} onMouseDown={selected ? onActivate : onSelect}>
 		<TextLine width={width} bg={selected ? colors.selectedBg : undefined}>
 			{children}
@@ -186,46 +175,16 @@ const RunDetail = ({
 	)
 }
 
-const WorkflowRunsPane = ({
-	repository,
-	listTitle,
-	listRight,
-	listSubline,
-	inDetail,
-	runsState,
-	detailState,
-	runsSelection,
-	detailSelection,
-	detailRows,
-	onSelectRow,
-	onActivateRow,
-	contentWidth,
-	height,
-	loadingIndicator,
-	showScrollbar,
-}: WorkflowRunsPaneProps) => {
+const WorkflowRunsPane = (props: WorkflowRunsPaneProps) => {
 	const now = new Date()
-	// Chrome above the body: header row + subline row + divider row = 3.
-	const bodyHeight = Math.max(1, height - 3)
-	// `contentWidth` is the padded text width (used inside PaddedRow); rows and the
-	// divider span the full pane so the selected-row highlight reaches the border.
-	const paneWidth = contentWidth + 2
-	const detailRun = inDetail && detailState?.status === "ready" ? detailState.value : null
-	const title = detailRun ? `${detailRun.workflowName} #${detailRun.number}` : listTitle
-
-	const headerRight = detailRun ? `${detailRun.event} → ${detailRun.headBranch}` : listRight
-
-	const subline = detailRun ? `${detailRun.headSha.slice(0, 7)} · ${detailRun.displayTitle || repository}` : listSubline
-
-	// Every row is height 1, so row offset === selection index. Keep the focused
-	// row inside the viewport on keyboard moves (j/k, ctrl-d/u, gg/G) — matching
-	// the diff/comments panes.
-	const rowCount = inDetail ? detailRows.length : runsState.status === "ready" ? runsState.value.length : 0
-	const selection = inDetail ? detailSelection : runsSelection
-	const needsScroll = rowCount > bodyHeight
+	const bodyHeight = Math.max(1, props.height - 3)
+	const paneWidth = props.contentWidth + 2
 	const scrollboxRef = useRef<ScrollBoxRenderable | null>(null)
-	useEffect(() => {
-		if (!needsScroll) return
+	createEffect(() => {
+		const inDetail = props.inDetail
+		const rowCount = inDetail ? props.detailRows.length : props.runsState.status === "ready" ? props.runsState.value.length : 0
+		const selection = inDetail ? props.detailSelection : props.runsSelection
+		if (rowCount <= bodyHeight) return
 		const scrollbox = scrollboxRef.current
 		if (!scrollbox) return
 		const top = selection
@@ -233,56 +192,118 @@ const WorkflowRunsPane = ({
 		const viewportTop = scrollbox.scrollTop
 		if (top < viewportTop) scrollbox.scrollTo({ x: 0, y: top })
 		else if (bottom > viewportTop + bodyHeight) scrollbox.scrollTo({ x: 0, y: Math.max(0, bottom - bodyHeight) })
-	}, [selection, needsScroll, bodyHeight, rowCount])
-
-	const body = (() => {
-		if (!inDetail) {
-			if (runsState.status === "loading") return centeredMessage(`${loadingIndicator} Loading runs`, colors.muted, contentWidth, bodyHeight, "runs-loading")
-			if (runsState.status === "error") return centeredMessage(runsState.message, colors.error, contentWidth, bodyHeight, "runs-error")
-			if (runsState.value.length === 0) return centeredMessage("No workflow runs for this commit", colors.muted, contentWidth, bodyHeight, "no-runs")
-			return <RunsList runs={runsState.value} selection={runsSelection} paneWidth={paneWidth} now={now} onSelectRow={onSelectRow} onActivateRow={onActivateRow} />
-		}
-		if (!detailState || detailState.status === "loading") return centeredMessage(`${loadingIndicator} Loading run`, colors.muted, contentWidth, bodyHeight, "run-loading")
-		if (detailState.status === "error") return centeredMessage(detailState.message, colors.error, contentWidth, bodyHeight, "run-error")
-		return <RunDetail rows={detailRows} selection={detailSelection} paneWidth={paneWidth} now={now} onSelectRow={onSelectRow} onActivateRow={onActivateRow} />
-	})()
+	})
 
 	return (
-		<box flexDirection="column" height={height} backgroundColor={colors.background}>
+		<box flexDirection="column" height={props.height} backgroundColor={colors.background}>
 			<PaddedRow>
-				<HeaderLine left={title} right={headerRight} width={contentWidth} />
+				<HeaderLine
+					left={(() => {
+						const detailRun = props.inDetail && props.detailState?.status === "ready" ? props.detailState.value : null
+						return detailRun ? `${detailRun.workflowName} #${detailRun.number}` : props.listTitle
+					})()}
+					right={(() => {
+						const detailRun = props.inDetail && props.detailState?.status === "ready" ? props.detailState.value : null
+						return detailRun ? `${detailRun.event} → ${detailRun.headBranch}` : props.listRight
+					})()}
+					width={props.contentWidth}
+				/>
 			</PaddedRow>
 			<PaddedRow>
 				<TextLine>
-					<span fg={colors.muted}>{fitCell(subline, contentWidth)}</span>
+					<span fg={colors.muted}>
+						{fitCell(
+							(() => {
+								const detailRun = props.inDetail && props.detailState?.status === "ready" ? props.detailState.value : null
+								return detailRun ? `${detailRun.headSha.slice(0, 7)} · ${detailRun.displayTitle || props.repository}` : props.listSubline
+							})(),
+							props.contentWidth,
+						)}
+					</span>
 				</TextLine>
 			</PaddedRow>
 			<Divider width={paneWidth} />
 			<box height={bodyHeight} flexDirection="column">
-				{needsScroll ? (
-					<scrollbox ref={scrollboxRef} focusable={false} flexGrow={1} verticalScrollbarOptions={{ visible: showScrollbar }}>
-						{body}
-					</scrollbox>
-				) : (
-					<box flexGrow={1} flexDirection="column">
-						{body}
-					</box>
-				)}
+				<Switch>
+					<Match when={props.inDetail && props.detailState?.status === "error"}>
+						{centeredMessage(props.detailState?.status === "error" ? props.detailState.message : "", colors.error, props.contentWidth, bodyHeight, "run-error")}
+					</Match>
+					<Match when={props.inDetail && (!props.detailState || props.detailState.status === "loading")}>
+						{centeredMessage(`${props.loadingIndicator} Loading run`, colors.muted, props.contentWidth, bodyHeight, "run-loading")}
+					</Match>
+					<Match when={props.inDetail}>
+						<RunDetail
+							rows={props.detailRows}
+							selection={props.detailSelection}
+							paneWidth={paneWidth}
+							now={now}
+							onSelectRow={props.onSelectRow}
+							onActivateRow={props.onActivateRow}
+						/>
+					</Match>
+					<Match when={props.runsState.status === "loading"}>
+						{centeredMessage(`${props.loadingIndicator} Loading runs`, colors.muted, props.contentWidth, bodyHeight, "runs-loading")}
+					</Match>
+					<Match when={props.runsState.status === "error"}>
+						{centeredMessage(props.runsState.status === "error" ? props.runsState.message : "", colors.error, props.contentWidth, bodyHeight, "runs-error")}
+					</Match>
+					<Match when={props.runsState.status === "ready" && props.runsState.value.length === 0}>
+						{centeredMessage("No workflow runs for this commit", colors.muted, props.contentWidth, bodyHeight, "no-runs")}
+					</Match>
+					<Match when={props.runsState.status === "ready"}>
+						<RunsList
+							runs={props.runsState.status === "ready" ? props.runsState.value : []}
+							selection={props.runsSelection}
+							paneWidth={paneWidth}
+							now={now}
+							onSelectRow={props.onSelectRow}
+							onActivateRow={props.onActivateRow}
+						/>
+					</Match>
+				</Switch>
 			</box>
 		</box>
 	)
 }
 
-export const PullRequestRunsPane = ({ pullRequest, ...props }: RunsPaneProps) => (
+export const PullRequestRunsPane = (props: RunsPaneProps) => (
 	<WorkflowRunsPane
-		{...props}
-		repository={pullRequest.repository}
-		listTitle={`${shortRepoName(pullRequest.repository)} #${pullRequest.number}`}
-		listRight={`${pullRequest.headRefName} → ${pullRequest.baseRefName}`}
-		listSubline={`runs for ${pullRequest.headRefOid.slice(0, 7)} · ${pullRequest.author}`}
+		repository={props.pullRequest.repository}
+		listTitle={`${shortRepoName(props.pullRequest.repository)} #${props.pullRequest.number}`}
+		listRight={`${props.pullRequest.headRefName} → ${props.pullRequest.baseRefName}`}
+		listSubline={`runs for ${props.pullRequest.headRefOid.slice(0, 7)} · ${props.pullRequest.author}`}
+		inDetail={props.inDetail}
+		runsState={props.runsState}
+		detailState={props.detailState}
+		runsSelection={props.runsSelection}
+		detailSelection={props.detailSelection}
+		detailRows={props.detailRows}
+		onSelectRow={props.onSelectRow}
+		onActivateRow={props.onActivateRow}
+		contentWidth={props.contentWidth}
+		height={props.height}
+		loadingIndicator={props.loadingIndicator}
+		showScrollbar={props.showScrollbar}
 	/>
 )
 
-export const RepositoryRunsPane = ({ repository, ...props }: Omit<WorkflowRunsPaneProps, "listTitle" | "listRight" | "listSubline">) => (
-	<WorkflowRunsPane {...props} repository={repository} listTitle="Actions" listRight={repository} listSubline="recent workflow runs · watching active runs" />
+export const RepositoryRunsPane = (props: Omit<WorkflowRunsPaneProps, "listTitle" | "listRight" | "listSubline">) => (
+	<WorkflowRunsPane
+		repository={props.repository}
+		listTitle="Actions"
+		listRight={props.repository}
+		listSubline="recent workflow runs · watching active runs"
+		inDetail={props.inDetail}
+		runsState={props.runsState}
+		detailState={props.detailState}
+		runsSelection={props.runsSelection}
+		detailSelection={props.detailSelection}
+		detailRows={props.detailRows}
+		onSelectRow={props.onSelectRow}
+		onActivateRow={props.onActivateRow}
+		contentWidth={props.contentWidth}
+		height={props.height}
+		loadingIndicator={props.loadingIndicator}
+		showScrollbar={props.showScrollbar}
+	/>
 )

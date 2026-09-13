@@ -1,5 +1,5 @@
-import { RegistryContext, useAtomSet } from "@effect/atom-react"
-import { useContext } from "react"
+import { RegistryContext, useAtomSet } from "../../atom-solid.js"
+import { useContext } from "../../solid-hooks.js"
 import { allowedMergeMethodList, type PullRequestItem, type PullRequestMergeAction, type PullRequestMergeMethod, type RepositoryMergeMethods } from "../../domain.js"
 import { pullRequestMergeMethods } from "../../domain.js"
 import { errorMessage } from "../../errors.js"

@@ -1,5 +1,5 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
-import { useRef, type MutableRefObject } from "react"
+import { useRef, type MutableRefObject } from "../solid-hooks.js"
 
 export interface ScrollRefs {
 	readonly detailScrollRef: MutableRefObject<ScrollBoxRenderable | null>

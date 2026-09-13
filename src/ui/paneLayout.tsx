@@ -1,4 +1,4 @@
-import type React from "react"
+import type { ReactNode } from "../solid-hooks.js"
 import { Divider, fitCell, SeparatorColumn, TextLine } from "./primitives.js"
 
 export const normalizeJunctionRows = (height: number, rows: readonly number[] = []): readonly number[] => {
@@ -24,8 +24,8 @@ export const SplitPane = ({
 	height: number
 	leftWidth: number
 	rightWidth: number
-	left: React.ReactNode
-	right: React.ReactNode
+	left: ReactNode
+	right: ReactNode
 	junctionRows?: readonly number[]
 	junctions?: readonly { readonly row: number; readonly char: string }[]
 }) => (
@@ -40,7 +40,7 @@ export const SplitPane = ({
 	</box>
 )
 
-export const PaneInsetLine = ({ width, inset = 1, children }: { width: number; inset?: number; children: React.ReactNode }) => (
+export const PaneInsetLine = ({ width, inset = 1, children }: { width: number; inset?: number; children: ReactNode }) => (
 	<TextLine width={width}>
 		{inset > 0 ? <span>{fitCell("", inset)}</span> : null}
 		{children}

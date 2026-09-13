@@ -1,4 +1,4 @@
-import { type MutableRefObject, useRef } from "react"
+import { type MutableRefObject, useRef } from "../solid-hooks.js"
 import { errorMessage } from "../errors.js"
 
 type LoadMoreLoad = {

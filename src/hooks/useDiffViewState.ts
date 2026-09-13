@@ -1,4 +1,4 @@
-import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { useAtom, useAtomSet, useAtomValue } from "../atom-solid.js"
 import {
 	diffCommentAnchorIndexAtom,
 	diffCommentRangeStartIndexAtom,

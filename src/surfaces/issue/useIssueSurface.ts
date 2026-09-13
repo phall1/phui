@@ -1,8 +1,8 @@
-import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { useAtom, useAtomSet, useAtomValue } from "../../atom-solid.js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { Cause } from "effect"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
-import type { MutableRefObject } from "react"
+import type { MutableRefObject } from "../../solid-hooks.js"
 import type { IssueItem, LoadStatus } from "../../domain.js"
 import { errorMessage } from "../../errors.js"
 import type { IssueView } from "../../issueViews.js"
@@ -28,7 +28,7 @@ import {
 	showIssueRepositoryGroupsAtom,
 } from "../../ui/issues/atoms.js"
 import type { RetryProgress } from "../../ui/FooterHints.js"
-import { useMemo } from "react"
+import { useMemo } from "../../solid-hooks.js"
 import { issueListRowIndex } from "../../ui/IssueList.js"
 import { selectedIssueIndexAtom } from "../../ui/listSelection/atoms.js"
 import { useClampedIndex } from "../../ui/useClampedIndex.js"
@@ -133,7 +133,7 @@ export const useIssueSurface = (input: UseIssueSurfaceInput): IssueSurfaceShell 
 	})
 
 	useClampedIndex(issues.length + (issueLoadMoreSlotAvailable ? 1 : 0), setSelectedIssueIndex)
-	useScrollFollowSelected(issueListScrollRef, issues.length === 0 ? null : selectedIssueRowIndex)
+	useScrollFollowSelected(issueListScrollRef, () => (issues.length === 0 ? null : selectedIssueRowIndex))
 	useScrollPersistence(issueListScrollRef, issueListScrollPersistedRef, activeWorkspaceSurface === "issues" && !detailFullView && !diffFullView && !commentsViewActive)
 
 	return {

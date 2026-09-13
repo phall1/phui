@@ -1,5 +1,5 @@
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
-import { type RefObject } from "react"
+import { type RefObject } from "../solid-hooks.js"
 import { daysOpen } from "../date.js"
 import type { RepositoryDetails } from "../domain.js"
 import { colors } from "./colors.js"

@@ -1,5 +1,5 @@
 import type { TextareaOptions, TextareaRenderable } from "@opentui/core"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef } from "../../solid-hooks.js"
 import { colors } from "../colors.js"
 import { fitCell, HintRow, PlainLine, standardModalDims, StandardModal } from "../primitives.js"
 import type { CommentModalState } from "./types.js"

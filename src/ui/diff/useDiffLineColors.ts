@@ -1,5 +1,5 @@
 import type { DiffRenderable } from "@opentui/core"
-import { type MutableRefObject, useEffect, useRef } from "react"
+import { type MutableRefObject, useEffect, useRef } from "../../solid-hooks.js"
 import { colors, mixHex } from "../colors.js"
 import { type DiffCommentAnchor, type DiffCommentKind, type DiffView, type StackedDiffCommentAnchor } from "../diff.js"
 

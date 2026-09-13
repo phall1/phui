@@ -1,6 +1,10 @@
+import type * as Atom from "effect/unstable/reactivity/Atom"
 import type { AppCommand } from "../commands.js"
 import type { DiffCommentSide } from "../domain.js"
 import type { PullRequestComment } from "../domain.js"
+import { loadMoreIssueRowSelectedAtom } from "../ui/issues/atoms.js"
+import { loadMoreRowSelectedAtom } from "../ui/pullRequests/atoms.js"
+import { workspaceSurfaceAtom } from "../workspace/atoms.js"
 import type {
 	ChangedFilesModalState,
 	CommandPaletteState,
@@ -17,8 +21,13 @@ import type { WorkspaceSurface } from "../workspaceSurfaces.js"
 import { useKeymapWiring } from "./useKeymapWiring.js"
 import type { CommentEditorValue } from "../ui/commentEditor.js"
 
+interface AtomRegistryShape {
+	get<T>(atom: Atom.Atom<T>): T
+}
+
 export interface UseAppKeymapInput {
 	readonly disabled: boolean
+	readonly registry: AtomRegistryShape
 
 	// Active flags
 	readonly closeModalActive: boolean
@@ -318,9 +327,10 @@ export const useAppKeymap = (i: UseAppKeymapInput): void => {
 					(i.activeWorkspaceSurface === "repos" && !i.isWideLayout && i.selectedRepositoryItem !== null),
 				runCommandById: i.runCommandById,
 				openSelection: () => {
-					if (i.activeWorkspaceSurface === "repos") i.openSelectedRepository()
-					else if (i.activeWorkspaceSurface === "pullRequests" && i.loadMoreRowSelected) i.loadMorePullRequests()
-					else if (i.activeWorkspaceSurface === "issues" && i.loadMoreIssueRowSelected) i.loadMoreIssues()
+					const surface = i.registry.get(workspaceSurfaceAtom)
+					if (surface === "repos") i.openSelectedRepository()
+					else if (surface === "pullRequests" && i.registry.get(loadMoreRowSelectedAtom)) i.loadMorePullRequests()
+					else if (surface === "issues" && i.registry.get(loadMoreIssueRowSelectedAtom)) i.loadMoreIssues()
 					else i.runCommandById("detail.open")
 				},
 				openRepositoryPicker: i.openRepositoryPicker,
@@ -342,12 +352,12 @@ export const useAppKeymap = (i: UseAppKeymapInput): void => {
 				stepSelectedDownWithLoadMore: i.stepSelectedDownWithLoadMore,
 				moveSelectedToPreviousGroup: i.moveSelectedToPreviousGroup,
 				moveSelectedToNextGroup: i.moveSelectedToNextGroup,
-				setSelected: (index) =>
-					i.activeWorkspaceSurface === "repos"
-						? i.setSelectedRepositoryIndex(index)
-						: i.activeWorkspaceSurface === "issues"
-							? i.setSelectedIssueIndex(index)
-							: i.setSelectedIndex(index),
+				setSelected: (index) => {
+					const surface = i.registry.get(workspaceSurfaceAtom)
+					if (surface === "repos") i.setSelectedRepositoryIndex(index)
+					else if (surface === "issues") i.setSelectedIssueIndex(index)
+					else i.setSelectedIndex(index)
+				},
 			},
 			openCommandPalette: () => i.runCommandById("command.open"),
 			handleQuitOrClose: i.handleQuitOrClose,

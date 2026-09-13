@@ -1,5 +1,6 @@
+import { Match, Switch } from "solid-js"
 import type { ScrollBoxRenderable, DiffRenderable } from "@opentui/core"
-import type { MutableRefObject } from "react"
+import type { MutableRefObject } from "../solid-hooks.js"
 import type { DiffCommentSide, IssueItem, PullRequestComment, PullRequestItem, PullRequestReviewComment, RepositoryDetails } from "../domain.js"
 import type { ThemeId } from "../ui/colors.js"
 import type { DetailCommentsStatus, DetailPlaceholderContent } from "../ui/DetailsPane.js"
@@ -86,162 +87,156 @@ export interface DiffFilePanelBundle {
 	readonly onSelectFile: (index: number) => void
 }
 
-export const WorkspaceContent = (props: WorkspaceContentProps) => {
-	const { activeWorkspaceSurface, commentsViewActive, diffFullView, detailFullView, layout, derivations } = props
-	if (activeWorkspaceSurface === "repos" && !commentsViewActive && !diffFullView && !detailFullView) {
-		return (
+export const WorkspaceContent = (props: WorkspaceContentProps) => (
+	<Switch>
+		<Match when={props.activeWorkspaceSurface === "repos" && !props.commentsViewActive && !props.diffFullView && !props.detailFullView}>
 			<RepoSurface
 				showScrollbars={props.showScrollbars}
-				isWideLayout={layout.isWideLayout}
-				wideBodyHeight={layout.wideBodyHeight}
-				contentWidth={layout.contentWidth}
-				leftPaneWidth={layout.leftPaneWidth}
-				rightPaneWidth={layout.rightPaneWidth}
-				leftContentWidth={layout.leftContentWidth}
-				fullscreenContentWidth={layout.fullscreenContentWidth}
-				sectionPadding={layout.sectionPadding}
-				narrowRepoListHeight={derivations.narrowRepoListHeight}
-				narrowRepoDetailHeight={derivations.narrowRepoDetailHeight}
-				repoListNeedsScroll={derivations.repoListNeedsScroll}
-				narrowRepoListNeedsScroll={derivations.narrowRepoListNeedsScroll}
-				repoListProps={derivations.repoListProps}
+				isWideLayout={props.layout.isWideLayout}
+				wideBodyHeight={props.layout.wideBodyHeight}
+				contentWidth={props.layout.contentWidth}
+				leftPaneWidth={props.layout.leftPaneWidth}
+				rightPaneWidth={props.layout.rightPaneWidth}
+				leftContentWidth={props.layout.leftContentWidth}
+				fullscreenContentWidth={props.layout.fullscreenContentWidth}
+				sectionPadding={props.layout.sectionPadding}
+				narrowRepoListHeight={props.derivations.narrowRepoListHeight}
+				narrowRepoDetailHeight={props.derivations.narrowRepoDetailHeight}
+				repoListNeedsScroll={props.derivations.repoListNeedsScroll}
+				narrowRepoListNeedsScroll={props.derivations.narrowRepoListNeedsScroll}
+				repoListProps={props.derivations.repoListProps}
 				selectedRepositoryItem={props.selectedRepositoryItem}
 				selectedRepositoryDetails={props.selectedRepositoryDetails}
 				detailPreviewScrollRef={props.scrollRefs.detailPreviewScrollRef}
 			/>
-		)
-	}
-	if (activeWorkspaceSurface === "issues" && !commentsViewActive && !diffFullView) {
-		return (
+		</Match>
+		<Match when={props.activeWorkspaceSurface === "issues" && !props.commentsViewActive && !props.diffFullView}>
 			<IssueSurface
 				showScrollbars={props.showScrollbars}
-				isWideLayout={layout.isWideLayout}
-				wideBodyHeight={layout.wideBodyHeight}
-				contentWidth={layout.contentWidth}
-				leftPaneWidth={layout.leftPaneWidth}
-				rightPaneWidth={layout.rightPaneWidth}
-				leftContentWidth={layout.leftContentWidth}
-				fullscreenContentWidth={layout.fullscreenContentWidth}
-				sectionPadding={layout.sectionPadding}
-				narrowIssueListHeight={derivations.narrowIssueListHeight}
-				narrowIssueDetailHeight={derivations.narrowIssueDetailHeight}
-				issueListNeedsScroll={derivations.issueListNeedsScroll}
-				narrowIssueListNeedsScroll={derivations.narrowIssueListNeedsScroll}
+				isWideLayout={props.layout.isWideLayout}
+				wideBodyHeight={props.layout.wideBodyHeight}
+				contentWidth={props.layout.contentWidth}
+				leftPaneWidth={props.layout.leftPaneWidth}
+				rightPaneWidth={props.layout.rightPaneWidth}
+				leftContentWidth={props.layout.leftContentWidth}
+				fullscreenContentWidth={props.layout.fullscreenContentWidth}
+				sectionPadding={props.layout.sectionPadding}
+				narrowIssueListHeight={props.derivations.narrowIssueListHeight}
+				narrowIssueDetailHeight={props.derivations.narrowIssueDetailHeight}
+				issueListNeedsScroll={props.derivations.issueListNeedsScroll}
+				narrowIssueListNeedsScroll={props.derivations.narrowIssueListNeedsScroll}
 				activeFilterLabel={props.issueActiveFilterLabel}
-				issueJunctions={derivations.issueJunctions}
-				issueListProps={derivations.issueListProps}
+				issueJunctions={props.derivations.issueJunctions}
+				issueListProps={props.derivations.issueListProps}
 				selectedIssue={props.selectedIssue}
 				issueListScrollRef={props.scrollRefs.issueListScrollRef}
 				detailScrollRef={props.scrollRefs.detailScrollRef}
 				detailPreviewScrollRef={props.scrollRefs.detailPreviewScrollRef}
-				detailFullView={detailFullView}
+				detailFullView={props.detailFullView}
 				onLinkOpen={props.openInlineLink}
 			/>
-		)
-	}
-	if (activeWorkspaceSurface === "projects") {
-		return (
-			<ProjectsView contentWidth={layout.fullscreenContentWidth} height={layout.wideBodyHeight} loadingIndicator={props.loadingIndicator} showScrollbar={props.showScrollbars} />
-		)
-	}
-	if (activeWorkspaceSurface === "notifications") {
-		return (
+		</Match>
+		<Match when={props.activeWorkspaceSurface === "projects"}>
+			<ProjectsView
+				contentWidth={props.layout.fullscreenContentWidth}
+				height={props.layout.wideBodyHeight}
+				loadingIndicator={props.loadingIndicator}
+				showScrollbar={props.showScrollbars}
+			/>
+		</Match>
+		<Match when={props.activeWorkspaceSurface === "notifications"}>
 			<NotificationsView
-				contentWidth={layout.fullscreenContentWidth}
-				height={layout.wideBodyHeight}
+				contentWidth={props.layout.fullscreenContentWidth}
+				height={props.layout.wideBodyHeight}
 				loadingIndicator={props.loadingIndicator}
 				showScrollbar={props.showScrollbars}
 				onNotice={props.showNotice}
 			/>
-		)
-	}
-	if (activeWorkspaceSurface === "stars") {
-		return (
+		</Match>
+		<Match when={props.activeWorkspaceSurface === "stars"}>
 			<StarsView
-				contentWidth={layout.fullscreenContentWidth}
-				height={layout.wideBodyHeight}
+				contentWidth={props.layout.fullscreenContentWidth}
+				height={props.layout.wideBodyHeight}
 				loadingIndicator={props.loadingIndicator}
 				showScrollbar={props.showScrollbars}
 				onNotice={props.showNotice}
 			/>
-		)
-	}
-	if (activeWorkspaceSurface === "actions" && props.selectedRepository) {
-		return (
+		</Match>
+		<Match when={props.activeWorkspaceSurface === "actions" && props.selectedRepository}>
 			<ActionsSurface
-				repository={props.selectedRepository}
+				repository={props.selectedRepository ?? ""}
 				runsView={props.actionsRunsView}
-				contentWidth={layout.fullscreenContentWidth}
-				height={layout.wideBodyHeight}
+				contentWidth={props.layout.fullscreenContentWidth}
+				height={props.layout.wideBodyHeight}
 				loadingIndicator={props.loadingIndicator}
 				showScrollbar={props.showScrollbars}
 			/>
-		)
-	}
-	return (
-		<PullRequestSurface
-			showScrollbars={props.showScrollbars}
-			isWideLayout={layout.isWideLayout}
-			contentWidth={layout.contentWidth}
-			leftPaneWidth={layout.leftPaneWidth}
-			rightPaneWidth={layout.rightPaneWidth}
-			leftContentWidth={layout.leftContentWidth}
-			rightContentWidth={layout.rightContentWidth}
-			fullscreenContentWidth={layout.fullscreenContentWidth}
-			sectionPadding={layout.sectionPadding}
-			wideBodyHeight={layout.wideBodyHeight}
-			wideDetailHeaderHeight={derivations.wideDetailHeaderHeight}
-			wideDetailBodyScrollable={derivations.wideDetailBodyScrollable}
-			wideDetailLines={layout.wideDetailLines}
-			fullscreenDetailHeaderHeight={derivations.fullscreenDetailHeaderHeight}
-			fullscreenDetailBodyScrollable={derivations.fullscreenDetailBodyScrollable}
-			fullscreenBodyLines={layout.fullscreenBodyLines}
-			widePullRequestListHeight={derivations.widePullRequestListHeight}
-			widePullRequestListNeedsScroll={derivations.widePullRequestListNeedsScroll}
-			narrowPullRequestListHeight={derivations.narrowPullRequestListHeight}
-			narrowPullRequestRowsHeight={derivations.narrowPullRequestRowsHeight}
-			narrowPullRequestListNeedsScroll={derivations.narrowPullRequestListNeedsScroll}
-			narrowDetailsPaneHeight={derivations.narrowDetailsPaneHeight}
-			narrowPreviewBodyHeight={derivations.narrowPreviewBodyHeight}
-			narrowPreviewBodyScrollable={derivations.narrowPreviewBodyScrollable}
-			activeFilterLabel={props.pullRequestActiveFilterLabel}
-			detailJunctions={derivations.detailJunctions}
-			prListProps={derivations.prListProps}
-			selectedPullRequest={props.selectedPullRequest}
-			selectedComments={props.selectedComments}
-			selectedCommentsStatus={props.selectedCommentsStatus}
-			selectedCommentsLoadState={props.selectedCommentsLoadState}
-			detailPlaceholderContent={props.detailPlaceholderContent}
-			isSelectedPullRequestDetailLoading={props.isSelectedPullRequestDetailLoading}
-			isSelectedPullRequestDetailError={props.isSelectedPullRequestDetailError}
-			selectedPullRequestDetailError={props.selectedPullRequestDetailError}
-			commentsViewActive={commentsViewActive}
-			commentsViewSelection={props.commentsViewSelection}
-			orderedComments={props.orderedComments}
-			commentSubject={props.selectedCommentSubject}
-			diffFullView={diffFullView}
-			runsView={props.runsView}
-			displayedDiffState={props.displayedDiffState}
-			stackedDiffFiles={props.stackedDiffFiles}
-			diffScrollTop={props.diffScrollTop}
-			effectiveDiffRenderView={props.effectiveDiffRenderView}
-			diffWhitespaceMode={props.diffWhitespaceMode}
-			diffWrapMode={props.diffWrapMode}
-			selectedDiffCommentAnchor={props.selectedDiffCommentAnchor}
-			selectedDiffCommentLabel={props.selectedDiffCommentLabel}
-			selectedDiffCommentThread={props.selectedDiffCommentThread}
-			selectDiffCommentLine={props.selectDiffCommentLine}
-			setDiffRenderableRef={props.setDiffRenderableRef}
-			detailFullView={detailFullView}
-			loadingIndicator={props.loadingIndicator}
-			themeId={props.themeId}
-			systemThemeGeneration={props.systemThemeGeneration}
-			prListScrollRef={props.scrollRefs.prListScrollRef}
-			detailScrollRef={props.scrollRefs.detailScrollRef}
-			detailPreviewScrollRef={props.scrollRefs.detailPreviewScrollRef}
-			diffScrollRef={props.scrollRefs.diffScrollRef}
-			onLinkOpen={props.openInlineLink}
-			diffFilePanel={props.diffFilePanel}
-		/>
-	)
-}
+		</Match>
+		<Match when={true}>
+			<PullRequestSurface
+				showScrollbars={props.showScrollbars}
+				isWideLayout={props.layout.isWideLayout}
+				contentWidth={props.layout.contentWidth}
+				leftPaneWidth={props.layout.leftPaneWidth}
+				rightPaneWidth={props.layout.rightPaneWidth}
+				leftContentWidth={props.layout.leftContentWidth}
+				rightContentWidth={props.layout.rightContentWidth}
+				fullscreenContentWidth={props.layout.fullscreenContentWidth}
+				sectionPadding={props.layout.sectionPadding}
+				wideBodyHeight={props.layout.wideBodyHeight}
+				wideDetailHeaderHeight={props.derivations.wideDetailHeaderHeight}
+				wideDetailBodyScrollable={props.derivations.wideDetailBodyScrollable}
+				wideDetailLines={props.layout.wideDetailLines}
+				fullscreenDetailHeaderHeight={props.derivations.fullscreenDetailHeaderHeight}
+				fullscreenDetailBodyScrollable={props.derivations.fullscreenDetailBodyScrollable}
+				fullscreenBodyLines={props.layout.fullscreenBodyLines}
+				widePullRequestListHeight={props.derivations.widePullRequestListHeight}
+				widePullRequestListNeedsScroll={props.derivations.widePullRequestListNeedsScroll}
+				narrowPullRequestListHeight={props.derivations.narrowPullRequestListHeight}
+				narrowPullRequestRowsHeight={props.derivations.narrowPullRequestRowsHeight}
+				narrowPullRequestListNeedsScroll={props.derivations.narrowPullRequestListNeedsScroll}
+				narrowDetailsPaneHeight={props.derivations.narrowDetailsPaneHeight}
+				narrowPreviewBodyHeight={props.derivations.narrowPreviewBodyHeight}
+				narrowPreviewBodyScrollable={props.derivations.narrowPreviewBodyScrollable}
+				activeFilterLabel={props.pullRequestActiveFilterLabel}
+				detailJunctions={props.derivations.detailJunctions}
+				prListProps={props.derivations.prListProps}
+				selectedPullRequest={props.selectedPullRequest}
+				selectedComments={props.selectedComments}
+				selectedCommentsStatus={props.selectedCommentsStatus}
+				selectedCommentsLoadState={props.selectedCommentsLoadState}
+				detailPlaceholderContent={props.detailPlaceholderContent}
+				isSelectedPullRequestDetailLoading={props.isSelectedPullRequestDetailLoading}
+				isSelectedPullRequestDetailError={props.isSelectedPullRequestDetailError}
+				selectedPullRequestDetailError={props.selectedPullRequestDetailError}
+				commentsViewActive={props.commentsViewActive}
+				commentsViewSelection={props.commentsViewSelection}
+				orderedComments={props.orderedComments}
+				commentSubject={props.selectedCommentSubject}
+				diffFullView={props.diffFullView}
+				runsView={props.runsView}
+				displayedDiffState={props.displayedDiffState}
+				stackedDiffFiles={props.stackedDiffFiles}
+				diffScrollTop={props.diffScrollTop}
+				effectiveDiffRenderView={props.effectiveDiffRenderView}
+				diffWhitespaceMode={props.diffWhitespaceMode}
+				diffWrapMode={props.diffWrapMode}
+				selectedDiffCommentAnchor={props.selectedDiffCommentAnchor}
+				selectedDiffCommentLabel={props.selectedDiffCommentLabel}
+				selectedDiffCommentThread={props.selectedDiffCommentThread}
+				selectDiffCommentLine={props.selectDiffCommentLine}
+				setDiffRenderableRef={props.setDiffRenderableRef}
+				detailFullView={props.detailFullView}
+				loadingIndicator={props.loadingIndicator}
+				themeId={props.themeId}
+				systemThemeGeneration={props.systemThemeGeneration}
+				prListScrollRef={props.scrollRefs.prListScrollRef}
+				detailScrollRef={props.scrollRefs.detailScrollRef}
+				detailPreviewScrollRef={props.scrollRefs.detailPreviewScrollRef}
+				diffScrollRef={props.scrollRefs.diffScrollRef}
+				onLinkOpen={props.openInlineLink}
+				diffFilePanel={props.diffFilePanel}
+			/>
+		</Match>
+	</Switch>
+)

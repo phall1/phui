@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test"
-import { act } from "react"
+import { act } from "../src/solid-hooks.js"
 
 // App-side modules select their runtime once per test process. Keep this in
 // sync with scrolling.test.tsx so file execution order cannot change either
@@ -11,11 +11,10 @@ process.env.PHUI_MOCK_WORKSPACE_PREFERENCES_PATH = "off"
 process.env.PHUI_PR_PAGE_SIZE = "100"
 
 const loadApp = async () => {
-	const { createTestRenderer } = await import("@opentui/core/testing")
-	const { createRoot } = await import("@opentui/react")
-	const { RegistryProvider } = await import("@effect/atom-react")
+	const { testRender } = await import("@opentui/solid")
+	const { RegistryProvider } = await import("../src/atom-solid.js")
 	const { App } = await import("../src/App.tsx")
-	return { createTestRenderer, createRoot, RegistryProvider, App }
+	return { testRender, RegistryProvider, App }
 }
 
 let cached: Awaited<ReturnType<typeof loadApp>>
@@ -42,21 +41,20 @@ const settle = async (renderOnce: () => Promise<void>, predicate: () => boolean,
 }
 
 const setupApp = async (width: number, height: number) => {
-	const setup = await cached.createTestRenderer({ width, height })
-	const root = cached.createRoot(setup.renderer)
-	act(() => {
-		root.render(
-			<cached.RegistryProvider>
-				<cached.App />
-			</cached.RegistryProvider>,
-		)
-	})
+	const { testRender, RegistryProvider, App } = cached
+	const setup = await testRender(
+		() => (
+			<RegistryProvider>
+				<App />
+			</RegistryProvider>
+		),
+		{ width, height },
+	)
 	await stepFrame(setup.renderOnce)
-	return { ...setup, root }
+	return setup
 }
 
 const cleanup = (setup: Awaited<ReturnType<typeof setupApp>>) => {
-	act(() => setup.root.unmount())
 	setup.renderer.destroy()
 }
 

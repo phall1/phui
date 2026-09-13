@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "../solid-hooks.js"
 import { readWorkspacePreferencesFile, writeWorkspacePreferencesFile } from "../workspacePreferenceFile.js"
 import { makeWorkspacePreferences, repositoryId, viewerId, type WorkspacePreferences } from "../workspacePreferences.js"
 

@@ -1,6 +1,6 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { useAtomSet, useAtomValue } from "../../atom-solid.js"
 import { Effect } from "effect"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef } from "../../solid-hooks.js"
 import { errorMessage } from "../../errors.js"
 import { detectSystemAppearance } from "../../systemAppearance.js"
 import { fixedThemeConfig, resolveThemeId, systemThemeConfigForTheme, type ThemeConfig, themeConfigWithSelection, type ThemeMode } from "../../themeConfig.js"

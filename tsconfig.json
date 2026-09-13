@@ -7,7 +7,7 @@
 		"verbatimModuleSyntax": true,
 		"rewriteRelativeImportExtensions": true,
 		"jsx": "react-jsx",
-		"jsxImportSource": "@opentui/react",
+		"jsxImportSource": "@opentui/solid",
 		"strict": true,
 		"exactOptionalPropertyTypes": true,
 		"noUnusedLocals": true,
@@ -16,7 +16,11 @@
 		"noUncheckedIndexedAccess": true,
 		"skipLibCheck": true,
 		"types": ["bun"],
-		"plugins": [{ "name": "@effect/language-service" }]
+		"plugins": [{ "name": "@effect/language-service" }],
+		"paths": {
+			"@opentui/solid/jsx-runtime": ["./src/opentui-jsx-runtime.d.ts"],
+			"@opentui/solid/jsx-dev-runtime": ["./src/opentui-jsx-runtime.d.ts"]
+		}
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx", "dev/**/*.ts", "dev/**/*.tsx"]
 }

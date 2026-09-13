@@ -2,10 +2,10 @@
 
 import { readFileSync } from "node:fs"
 import { addDefaultParsers, createCliRenderer } from "@opentui/core"
-import { createRoot, useRenderer, useTerminalDimensions } from "@opentui/react"
+import { render, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { Effect } from "effect"
 import { appendFile } from "node:fs/promises"
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "./solid-hooks.js"
 import { errorMessage } from "./errors.js"
 import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent } from "./launchIntent.js"
 import { createSystemThemeReloader, type SystemThemeReloadEvent } from "./systemThemeReload.js"
@@ -51,7 +51,7 @@ const FOCUS_REPORTING_DISABLE = "\x1b[?1004l"
 const FULL_SCREEN_REPAINT = "\x1b[2J\x1b[3J\x1b[H"
 
 type AppBundle = {
-	readonly RegistryProvider: (typeof import("@effect/atom-react"))["RegistryProvider"]
+	readonly RegistryProvider: (typeof import("./atom-solid.js"))["RegistryProvider"]
 	readonly App: (typeof import("./App.js"))["App"]
 }
 
@@ -68,7 +68,8 @@ const logReloadEvent = (event: SystemThemeReloadEvent) => {
 
 const StartupLogo = ({ hint }: { readonly hint: string }) => {
 	const startupRenderer = useRenderer()
-	const { width, height } = useTerminalDimensions()
+	const dimensions = useTerminalDimensions()
+	const { width, height } = dimensions()
 	const [frame, setFrame] = useState(0)
 
 	useEffect(() => {
@@ -149,7 +150,7 @@ const Bootstrap = () => {
 			addPhUiParsers()
 
 			setBootHint("Loading phui app")
-			void Promise.all([import("@effect/atom-react"), import("./App.js")]).then(
+			void Promise.all([import("./atom-solid.js"), import("./App.js")]).then(
 				([{ RegistryProvider }, { App }]) => {
 					if (cancelled) return
 					setBootHint("Mounting phui app")
@@ -191,4 +192,4 @@ globalThis.setTimeout(() => {
 	renderer.requestRender()
 }, 0)
 
-createRoot(renderer).render(<Bootstrap />)
+void render(() => <Bootstrap />, renderer)

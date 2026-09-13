@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect } from "../solid-hooks.js"
 import { registerHandoff } from "../commands/handoffs.js"
 import type { PullRequestItem } from "../domain.js"
 import type { PullRequestView } from "../pullRequestViews.js"

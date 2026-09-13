@@ -1,5 +1,5 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
-import type { MutableRefObject } from "react"
+import type { MutableRefObject } from "../solid-hooks.js"
 import type { PullRequestItem } from "../domain.js"
 import { type CommentEditorValue } from "../ui/commentEditor.js"
 import type { CommentModalState, SubmitReviewModalState } from "../ui/modals/types.js"

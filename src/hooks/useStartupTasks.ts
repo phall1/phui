@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect } from "../solid-hooks.js"
 import { devLog } from "../devLog.js"
 import type { IssueItem, PullRequestItem } from "../domain.js"
 import type { RepoRollupRow } from "../services/CacheService.js"

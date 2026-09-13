@@ -1,5 +1,5 @@
-import { useAtom, useAtomSet } from "@effect/atom-react"
-import type { MutableRefObject } from "react"
+import { useAtom, useAtomSet } from "../atom-solid.js"
+import type { MutableRefObject } from "../solid-hooks.js"
 import { config } from "../config.js"
 import { useItemLoadMore } from "./useItemLoadMore.js"
 import { type IssueView, issueViewToListInput } from "../issueViews.js"

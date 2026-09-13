@@ -15,4 +15,4 @@ phui's renderables go through OpenTUI's Zig core either way. Solid skips React's
 
 ## Status
 
-Landed.
+In progress on `main`. Runtime pins are OpenTUI Solid 0.5.11 + Effect `4.0.0-rc.115` + official `@effect/atom-solid`. Remaining work is Solid live updates for App TUI tests (list j/k, resize-restore).

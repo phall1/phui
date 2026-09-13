@@ -1,5 +1,5 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
-import { type MutableRefObject, useEffect, useRef } from "react"
+import { type MutableRefObject, useEffect, useRef } from "../../solid-hooks.js"
 import { registerHandoff } from "../../commands/handoffs.js"
 import { nearestDiffAnchorForLocation, type StackedDiffCommentAnchor } from "../diff.js"
 

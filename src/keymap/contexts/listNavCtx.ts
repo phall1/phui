@@ -29,6 +29,7 @@ export interface BuildListNavCtxInput {
 	readonly moveSelectedToPreviousGroup: () => void
 	readonly moveSelectedToNextGroup: () => void
 	readonly setSelected: (index: number) => void
+	readonly clearFilter?: () => void
 }
 
 export const buildListNavCtx = (input: BuildListNavCtxInput): ListNavCtx => ({
@@ -51,7 +52,7 @@ export const buildListNavCtx = (input: BuildListNavCtxInput): ListNavCtx => ({
 	cycleWorkspaceSurface: input.cycleWorkspaceSurface,
 	scrollDetailPreviewBy: input.scrollDetailPreviewBy,
 	scrollDetailPreviewTo: input.scrollDetailPreviewTo,
-	clearFilter: () => input.runCommandById("filter.clear"),
+	clearFilter: input.clearFilter ?? (() => input.runCommandById("filter.clear")),
 	stepSelected: input.stepSelected,
 	stepSelectedUp: input.stepSelectedUp,
 	stepSelectedDown: input.stepSelectedDown,

@@ -1,6 +1,9 @@
 import { TextAttributes, type BoxRenderable, type MouseEvent } from "@opentui/core"
-import { useRenderer } from "@opentui/react"
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { useRenderer } from "@opentui/solid"
+import { Fragment, useEffect, useMemo, useState } from "../solid-hooks.js"
+import { selectedCommentsAtom, selectedCommentsStatusAtom } from "./comments/atoms.js"
+import { selectedPullRequestAtom } from "./pullRequests/atoms.js"
 import { formatRelativeDate } from "../date.js"
 import type { CheckItem, PullRequestComment, PullRequestItem, PullRequestLabel } from "../domain.js"
 import { colors, type ThemeId } from "./colors.js"
@@ -527,8 +530,6 @@ export const DetailHeader = ({
 	paneWidth,
 	loadingIndicator,
 	showChecks = false,
-	comments = [],
-	commentsStatus = "idle",
 }: {
 	pullRequest: PullRequestItem
 	contentWidth: number
@@ -538,11 +539,15 @@ export const DetailHeader = ({
 	comments?: readonly PullRequestComment[]
 	commentsStatus?: DetailCommentsStatus
 }) => {
-	const wrappedTitle = wrapText(pullRequest.title, Math.max(1, paneWidth - 2))
+	const livePullRequest = useAtomValueSolid(() => selectedPullRequestAtom)
+	const liveComments = useAtomValueSolid(() => selectedCommentsAtom)
+	const liveCommentsStatus = useAtomValueSolid(() => selectedCommentsStatusAtom)
+	const headerPullRequest = () => livePullRequest() ?? pullRequest
+	const wrappedTitle = wrapText(headerPullRequest().title, Math.max(1, paneWidth - 2))
 	const layout = computeDetailHeaderLayout(pullRequest, paneWidth, showChecks)
 	const { hasChecks, checkRowsCount, bottomDividerHeight, labelRows } = layout
 	const statsText = diffStatText(pullRequest, loadingIndicator)
-	const commentsText = commentsStatus === "ready" && comments.length > 0 ? commentCountText(comments.length) : null
+	const commentsText = () => (liveCommentsStatus() === "ready" && liveComments().length > 0 ? commentCountText(liveComments().length) : null)
 	const opened = formatRelativeDate(pullRequest.createdAt)
 	const target = pullRequest.baseRefName && pullRequest.baseRefName !== pullRequest.defaultBranchName ? ` → ${pullRequest.baseRefName}` : ""
 	const branchBudget = Math.max(0, contentWidth - statsText.length - target.length - 2)
@@ -558,7 +563,7 @@ export const DetailHeader = ({
 			</box>
 			<PaddedRow>
 				<TextLine>
-					<SubjectMetaLine number={pullRequest.number} author={pullRequest.author} dateText={opened} commentsText={commentsText} contentWidth={contentWidth} />
+					<SubjectMetaLine number={headerPullRequest().number} author={headerPullRequest().author} dateText={opened} commentsText={commentsText()} contentWidth={contentWidth} />
 				</TextLine>
 			</PaddedRow>
 			<PaddedRow>

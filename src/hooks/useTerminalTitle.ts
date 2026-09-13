@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo } from "../solid-hooks.js"
 import { createTerminalTitleWriterForOutput, deriveTerminalTitle, type TerminalTitleOutput, type TerminalTitleState } from "../terminalTitle.js"
 
 const standardOutput = (): TerminalTitleOutput | undefined => (typeof process === "undefined" ? undefined : process.stdout)

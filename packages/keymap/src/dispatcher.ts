@@ -1,14 +1,7 @@
 import { type Binding, isBindingActive } from "./binding.ts"
 import type { Keymap } from "./keymap.ts"
 import type { ParsedStroke } from "./keys.ts"
-import {
-	type DispatchDecision,
-	type DispatchState,
-	initialDispatchState,
-	pureDispatch,
-	pureTick,
-	type PureDispatchOptions,
-} from "./pure-dispatch.ts"
+import { type DispatchDecision, type DispatchState, initialDispatchState, pureDispatch, pureTick, type PureDispatchOptions } from "./pure-dispatch.ts"
 
 export type DispatchResult<C> = DispatchDecision<C>
 
@@ -34,6 +27,8 @@ export interface Dispatcher<C> {
 	readonly getPending: () => readonly ParsedStroke[]
 	/** Drop any pending sequence and clear pending timeouts. */
 	readonly clearPending: () => void
+	/** Cancel pending prefix timeouts. */
+	readonly dispose: () => void
 	/** Subscribe to state changes (pending sequence shifts). */
 	readonly onStateChange: (listener: (state: DispatchState) => void) => () => void
 }
@@ -44,11 +39,7 @@ const defaultClock: Clock = {
 	clearTimeout: (handle) => globalThis.clearTimeout(handle as ReturnType<typeof globalThis.setTimeout>),
 }
 
-export const createDispatcher = <C>(
-	keymap: Keymap<C>,
-	getContext: () => C,
-	options: DispatcherOptions = {},
-): Dispatcher<C> => {
+export const createDispatcher = <C>(keymap: Keymap<C>, getContext: () => C, options: DispatcherOptions = {}): Dispatcher<C> => {
 	const clock = options.clock ?? defaultClock
 	const onCollision = options.onCollision
 
@@ -88,16 +79,18 @@ export const createDispatcher = <C>(
 		if (!onCollision) return
 		const matches = keymap.bindings.filter((b) => {
 			if (isBindingActive(b, ctx) !== true) return false
-			return b.sequence.length === sequence.length && b.sequence.every((s, i) =>
-				s.key === sequence[i]!.key
-				&& s.ctrl === sequence[i]!.ctrl
-				&& s.shift === sequence[i]!.shift
-				&& s.meta === sequence[i]!.meta)
+			return (
+				b.sequence.length === sequence.length &&
+				b.sequence.every((s, i) => s.key === sequence[i]!.key && s.ctrl === sequence[i]!.ctrl && s.shift === sequence[i]!.shift && s.meta === sequence[i]!.meta)
+			)
 		})
 		if (matches.length > 1) onCollision(sequence, matches as readonly Binding<unknown>[])
 	}
 
 	return {
+		dispose: () => {
+			clearTimer()
+		},
 		dispatch: (stroke) => {
 			const ctx = getContext()
 			const now = clock.now()

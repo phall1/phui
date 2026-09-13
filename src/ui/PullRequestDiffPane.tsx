@@ -1,5 +1,7 @@
 import type { DiffRenderable, MouseEvent, ScrollBoxRenderable } from "@opentui/core"
-import { useMemo, type Ref } from "react"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { useMemo, type Ref } from "../solid-hooks.js"
+import { diffCommentAnchorIndexAtom } from "./diff/atoms.js"
 import type { DiffCommentSide, PullRequestItem, PullRequestReviewComment } from "../domain.js"
 import { colors, lineNumberTextColor, type ThemeId } from "./colors.js"
 import { CommentBodyLine, commentCountText, commentMetaSegments, CommentSegmentsLine } from "./comments.js"
@@ -7,6 +9,7 @@ import {
 	createDiffSyntaxStyle,
 	diffCommentAnchorLabel,
 	diffCommentLineLabel,
+	getStackedDiffCommentAnchors,
 	diffFileStats,
 	diffFileStatsText,
 	diffStatText,
@@ -51,57 +54,29 @@ const FileStats = ({ stats }: { stats: DiffFileStats }) => {
 	)
 }
 
-const FileHeader = ({
-	file,
-	index,
-	count,
-	width,
-	suffix = "",
-	suffixColor = colors.muted,
-}: {
-	file: StackedDiffFilePatch["file"]
-	index: number
-	count: number
-	width: number
-	suffix?: string
-	suffixColor?: string
-}) => {
+const FileHeader = (props: { file: StackedDiffFilePatch["file"]; index: number; count: number; width: number; suffix?: string; suffixColor?: string }) => {
+	const file = props.file
+	const index = props.index
+	const count = props.count
+	const width = props.width
+	const suffix = () => props.suffix ?? ""
+	const suffixColor = () => props.suffixColor ?? colors.muted
 	const counter = `${index + 1}/${count}`
 	const stats = diffFileStats(file)
 	const statsText = diffFileStatsText(stats)
-	const nameWidth = Math.max(1, width - counter.length - statsText.length - suffix.length - 5)
+	const nameWidth = () => Math.max(1, width - counter.length - statsText.length - suffix().length - 5)
 	return (
 		<TextLine>
 			<span fg={colors.muted}>{counter} </span>
-			<span fg={colors.text}>{fitCell(file.name, nameWidth)}</span>
+			<span fg={colors.text}>{fitCell(file.name, nameWidth())}</span>
 			{statsText ? <span fg={colors.muted}> </span> : null}
 			<FileStats stats={stats} />
-			{suffix ? <span fg={suffixColor}>{suffix}</span> : null}
+			{suffix() ? <span fg={suffixColor()}>{suffix()}</span> : null}
 		</TextLine>
 	)
 }
 
-export const PullRequestDiffPane = ({
-	pullRequest,
-	diffState,
-	stackedFiles,
-	scrollTop,
-	view,
-	whitespaceMode,
-	wrapMode,
-	paneWidth,
-	height,
-	loadingIndicator,
-	scrollRef,
-	setDiffRef,
-	selectedCommentAnchor,
-	selectedCommentLabel,
-	selectedCommentThread,
-	onSelectCommentLine,
-	themeId,
-	themeGeneration,
-	showScrollbar,
-}: {
+export const PullRequestDiffPane = (props: {
 	pullRequest: PullRequestItem | null
 	diffState: PullRequestDiffState | undefined
 	stackedFiles: readonly StackedDiffFilePatch[]
@@ -122,6 +97,26 @@ export const PullRequestDiffPane = ({
 	themeGeneration: number
 	showScrollbar: boolean
 }) => {
+	const {
+		pullRequest,
+		diffState,
+		stackedFiles,
+		scrollTop,
+		view,
+		whitespaceMode,
+		wrapMode,
+		paneWidth,
+		height,
+		loadingIndicator,
+		scrollRef,
+		setDiffRef,
+		selectedCommentThread,
+		onSelectCommentLine,
+		themeId,
+		themeGeneration,
+		showScrollbar,
+	} = props
+	const commentAnchorIndex = useAtomValueSolid(() => diffCommentAnchorIndexAtom)
 	const readyFiles = diffState?._tag === "Ready" ? diffState.files : []
 	const syntaxStyle = useMemo(() => createDiffSyntaxStyle(), [themeId, themeGeneration])
 
@@ -164,12 +159,14 @@ export const PullRequestDiffPane = ({
 		)
 	}
 
-	const hasSelectedCommentAnchor = selectedCommentAnchor !== null
-	const commentPeek = hasSelectedCommentAnchor && selectedCommentThread.length > 0 ? selectedCommentThread[selectedCommentThread.length - 1]! : null
-	const commentPeekMeta =
-		commentPeek && selectedCommentAnchor
+	const hasSelectedCommentAnchor = () => props.selectedCommentAnchor !== null
+	const commentPeek = () => (hasSelectedCommentAnchor() && selectedCommentThread.length > 0 ? selectedCommentThread[selectedCommentThread.length - 1]! : null)
+	const commentPeekMeta = () => {
+		const peek = commentPeek()
+		const selectedCommentAnchor = props.selectedCommentAnchor
+		return peek && selectedCommentAnchor
 			? commentMetaSegments({
-					item: commentPeek,
+					item: peek,
 					markerLabel: diffCommentLineLabel(selectedCommentAnchor),
 					groups: [
 						[{ text: commentCountText(selectedCommentThread.length), fg: colors.muted }],
@@ -180,18 +177,24 @@ export const PullRequestDiffPane = ({
 					],
 				})
 			: []
+	}
 	const stickyScrollTop = Math.max(0, Math.floor(scrollTop))
 	const stickyArrayIndex = stackedDiffFileIndexAtLine(stackedFiles, stickyScrollTop)
 	const stickyFile = stickyArrayIndex >= 0 ? stackedFiles[stickyArrayIndex] : stackedFiles[0]
 	const incomingStickyFile = stickyArrayIndex >= 0 ? stackedFiles[stickyArrayIndex + 1] : undefined
 	const incomingHeaderDistance = incomingStickyFile ? incomingStickyFile.headerLine - stickyScrollTop : Number.POSITIVE_INFINITY
 	const incomingFile = incomingHeaderDistance === 1 ? incomingStickyFile : undefined
+	const liveCommentAnchor = () => {
+		const anchors = getStackedDiffCommentAnchors(stackedFiles, view, wrapMode, paneWidth)
+		return anchors[commentAnchorIndex()] ?? anchors[0] ?? null
+	}
 	const stickyCommentLabelFor = (stackedFile: StackedDiffFilePatch | undefined) => {
+		const selectedCommentAnchor = liveCommentAnchor()
 		if (!selectedCommentAnchor) return "  no lines"
 		if (selectedCommentAnchor.fileIndex !== stackedFile?.index) return ""
-		return `  ${selectedCommentLabel ?? diffCommentAnchorLabel(selectedCommentAnchor)}`
+		return `  ${diffCommentAnchorLabel(selectedCommentAnchor)}`
 	}
-	const stickyCommentColor = selectedCommentAnchor?.side === "LEFT" ? colors.status.failing : colors.status.passing
+	const stickyCommentColor = () => (liveCommentAnchor()?.side === "LEFT" ? colors.status.failing : colors.status.passing)
 	const diffLineNumberFg = lineNumberTextColor(colors.diff.lineNumberBg, colors.text)
 	const handleDiffMouseDown = function (this: ScrollBoxRenderable, event: MouseEvent) {
 		if (event.button !== 0) return
@@ -263,7 +266,7 @@ export const PullRequestDiffPane = ({
 									count={readyFiles.length}
 									width={paneWidth}
 									suffix={stickyCommentLabelFor(incomingFile)}
-									suffixColor={stickyCommentColor}
+									suffixColor={stickyCommentColor()}
 								/>
 							</PaddedRow>
 						</>
@@ -276,7 +279,7 @@ export const PullRequestDiffPane = ({
 									count={readyFiles.length}
 									width={paneWidth}
 									suffix={stickyCommentLabelFor(stickyFile)}
-									suffixColor={stickyCommentColor}
+									suffixColor={stickyCommentColor()}
 								/>
 							</PaddedRow>
 							<Divider width={paneWidth} />
@@ -284,14 +287,14 @@ export const PullRequestDiffPane = ({
 					)}
 				</box>
 			) : null}
-			{commentPeek ? (
+			{commentPeek() ? (
 				<>
 					<Divider width={paneWidth} />
 					<PaddedRow>
-						<CommentSegmentsLine segments={commentPeekMeta} />
+						<CommentSegmentsLine segments={commentPeekMeta()} />
 					</PaddedRow>
 					<PaddedRow>
-						<CommentBodyLine body={commentPeek.body} width={Math.max(1, paneWidth - 2)} />
+						<CommentBodyLine body={commentPeek()?.body ?? ""} width={Math.max(1, paneWidth - 2)} />
 					</PaddedRow>
 				</>
 			) : null}

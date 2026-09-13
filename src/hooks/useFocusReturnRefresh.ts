@@ -1,4 +1,4 @@
-import { type MutableRefObject } from "react"
+import { type MutableRefObject } from "../solid-hooks.js"
 import { useTerminalFocus } from "../ui/useTerminalFocus.js"
 import { useIdleRefresh } from "../ui/pullRequests/useIdleRefresh.js"
 

@@ -3,13 +3,13 @@ import type { WorkspaceSurface } from "../workspaceSurfaces.js"
 import type { RepositoryListItem } from "../ui/RepoList.js"
 
 export interface UseListSelectionSteppingInput {
-	readonly activeWorkspaceSurface: WorkspaceSurface
-	readonly visiblePullRequests: readonly PullRequestItem[]
-	readonly issues: readonly IssueItem[]
-	readonly repositoryItems: readonly RepositoryListItem[]
-	readonly loadMoreSlotAvailable: boolean
-	readonly issueLoadMoreSlotAvailable: boolean
-	readonly groupStarts: readonly number[]
+	readonly getActiveWorkspaceSurface: () => WorkspaceSurface
+	readonly getVisiblePullRequests: () => readonly PullRequestItem[]
+	readonly getIssues: () => readonly IssueItem[]
+	readonly getRepositoryItems: () => readonly RepositoryListItem[]
+	readonly getLoadMoreSlotAvailable: () => boolean
+	readonly getIssueLoadMoreSlotAvailable: () => boolean
+	readonly getGroupStarts: () => readonly number[]
 	readonly getCurrentGroupIndex: (current: number) => number
 	readonly setSelectedIndex: (next: number | ((current: number) => number)) => void
 	readonly setSelectedIssueIndex: (next: number | ((current: number) => number)) => void
@@ -40,23 +40,25 @@ export interface ListSelectionStepping {
  * to-bottom would jump past unloaded rows.
  */
 export const useListSelectionStepping = ({
-	activeWorkspaceSurface,
-	visiblePullRequests,
-	issues,
-	repositoryItems,
-	loadMoreSlotAvailable,
-	issueLoadMoreSlotAvailable,
-	groupStarts,
+	getActiveWorkspaceSurface,
+	getVisiblePullRequests,
+	getIssues,
+	getRepositoryItems,
+	getLoadMoreSlotAvailable,
+	getIssueLoadMoreSlotAvailable,
+	getGroupStarts,
 	getCurrentGroupIndex,
 	setSelectedIndex,
 	setSelectedIssueIndex,
 	setSelectedRepositoryIndex,
 }: UseListSelectionSteppingInput): ListSelectionStepping => {
-	const prMaxIndex = () => Math.max(0, visiblePullRequests.length - 1 + (loadMoreSlotAvailable ? 1 : 0))
-	const issueMaxIndex = () => Math.max(0, issues.length - 1 + (issueLoadMoreSlotAvailable ? 1 : 0))
+	const prMaxIndex = () => Math.max(0, getVisiblePullRequests().length - 1 + (getLoadMoreSlotAvailable() ? 1 : 0))
+	const issueMaxIndex = () => Math.max(0, getIssues().length - 1 + (getIssueLoadMoreSlotAvailable() ? 1 : 0))
 	const moveSelectedToPreviousGroup = () =>
 		setSelectedIndex((current) => {
-			if (activeWorkspaceSurface !== "pullRequests") return current
+			if (getActiveWorkspaceSurface() !== "pullRequests") return current
+			const visiblePullRequests = getVisiblePullRequests()
+			const groupStarts = getGroupStarts()
 			if (visiblePullRequests.length === 0 || groupStarts.length === 0) return 0
 			const currentGroup = getCurrentGroupIndex(current)
 			if (currentGroup <= 0) return groupStarts[groupStarts.length - 1]!
@@ -64,57 +66,74 @@ export const useListSelectionStepping = ({
 		})
 	const moveSelectedToNextGroup = () =>
 		setSelectedIndex((current) => {
-			if (activeWorkspaceSurface !== "pullRequests") return current
+			if (getActiveWorkspaceSurface() !== "pullRequests") return current
+			const visiblePullRequests = getVisiblePullRequests()
+			const groupStarts = getGroupStarts()
 			if (visiblePullRequests.length === 0 || groupStarts.length === 0) return 0
 			const currentGroup = getCurrentGroupIndex(current)
 			if (currentGroup >= groupStarts.length - 1) return groupStarts[0]!
 			return groupStarts[currentGroup + 1]!
 		})
-	const stepSelected = (delta: number) =>
-		activeWorkspaceSurface === "repos"
-			? setSelectedRepositoryIndex((current) => {
-					if (repositoryItems.length === 0) return 0
-					return Math.max(0, Math.min(repositoryItems.length - 1, current + delta))
-				})
-			: activeWorkspaceSurface === "issues"
-				? setSelectedIssueIndex((current) => {
-						if (issues.length === 0) return 0
-						return Math.max(0, Math.min(issueMaxIndex(), current + delta))
-					})
-				: setSelectedIndex((current) => {
-						if (visiblePullRequests.length === 0) return 0
-						return Math.max(0, Math.min(prMaxIndex(), current + delta))
-					})
+	const stepSelected = (delta: number) => {
+		const surface = getActiveWorkspaceSurface()
+		if (surface === "repos") {
+			setSelectedRepositoryIndex((current) => {
+				const repositoryItems = getRepositoryItems()
+				if (repositoryItems.length === 0) return 0
+				return Math.max(0, Math.min(repositoryItems.length - 1, current + delta))
+			})
+			return
+		}
+		if (surface === "issues") {
+			setSelectedIssueIndex((current) => {
+				if (getIssues().length === 0) return 0
+				return Math.max(0, Math.min(issueMaxIndex(), current + delta))
+			})
+			return
+		}
+		setSelectedIndex((current) => {
+			if (getVisiblePullRequests().length === 0) return 0
+			return Math.max(0, Math.min(prMaxIndex(), current + delta))
+		})
+	}
 	const stepSelectedDown = (count = 1) => stepSelected(count)
 	const stepSelectedUp = (count = 1) => stepSelected(-count)
 	const stepSelectedDownWithLoadMore = () => {
-		if (activeWorkspaceSurface === "repos") {
+		const surface = getActiveWorkspaceSurface()
+		if (surface === "repos") {
 			setSelectedRepositoryIndex((current) => {
+				const repositoryItems = getRepositoryItems()
 				if (repositoryItems.length === 0) return 0
 				return current >= repositoryItems.length - 1 ? 0 : current + 1
 			})
 			return
 		}
-		if (activeWorkspaceSurface === "issues") {
+		if (surface === "issues") {
 			setSelectedIssueIndex((current) => {
-				if (issues.length === 0) return 0
+				if (getIssues().length === 0) return 0
 				const max = issueMaxIndex()
 				return current >= max ? 0 : current + 1
 			})
 			return
 		}
 		setSelectedIndex((current) => {
-			if (visiblePullRequests.length === 0) return 0
+			if (getVisiblePullRequests().length === 0) return 0
 			const max = prMaxIndex()
 			return current >= max ? 0 : current + 1
 		})
 	}
-	const stepSelectedUpWrap = () =>
-		activeWorkspaceSurface === "repos"
-			? setSelectedRepositoryIndex((current) => Math.max(0, current - 1))
-			: activeWorkspaceSurface === "issues"
-				? setSelectedIssueIndex((current) => Math.max(0, current - 1))
-				: setSelectedIndex((current) => Math.max(0, current - 1))
+	const stepSelectedUpWrap = () => {
+		const surface = getActiveWorkspaceSurface()
+		if (surface === "repos") {
+			setSelectedRepositoryIndex((current) => Math.max(0, current - 1))
+			return
+		}
+		if (surface === "issues") {
+			setSelectedIssueIndex((current) => Math.max(0, current - 1))
+			return
+		}
+		setSelectedIndex((current) => Math.max(0, current - 1))
+	}
 
 	return { stepSelected, stepSelectedDown, stepSelectedUp, stepSelectedDownWithLoadMore, stepSelectedUpWrap, moveSelectedToPreviousGroup, moveSelectedToNextGroup }
 }

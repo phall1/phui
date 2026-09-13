@@ -1,5 +1,5 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
-import type { ComponentProps, MutableRefObject } from "react"
+import type { ComponentProps, MutableRefObject } from "../solid-hooks.js"
 import type { RepositoryDetails } from "../domain.js"
 import { DETAIL_BODY_SCROLL_LIMIT } from "../ui/DetailsPane.js"
 import { SplitPane } from "../ui/paneLayout.js"

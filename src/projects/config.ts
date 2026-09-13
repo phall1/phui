@@ -78,8 +78,8 @@ const dedupe = (values: readonly string[]): readonly string[] => [...new Set(val
 // === Env-driven scalars (src/config.ts idiom) ===
 
 const projectsEnvConfig = Config.all({
-	staleDays: Config.int("PHUI_PROJECTS_STALE_DAYS").pipe(Config.withDefault(DEFAULT_STALE_DAYS), Config.map(positiveIntOr(DEFAULT_STALE_DAYS))),
-	maxDepth: Config.int("PHUI_PROJECTS_MAX_DEPTH").pipe(Config.withDefault(DEFAULT_MAX_DEPTH), Config.map(depthOr(DEFAULT_MAX_DEPTH))),
+	staleDays: Config.Int("PHUI_PROJECTS_STALE_DAYS").pipe(Config.withDefault(DEFAULT_STALE_DAYS), Config.map(positiveIntOr(DEFAULT_STALE_DAYS))),
+	maxDepth: Config.Int("PHUI_PROJECTS_MAX_DEPTH").pipe(Config.withDefault(DEFAULT_MAX_DEPTH), Config.map(depthOr(DEFAULT_MAX_DEPTH))),
 })
 
 export interface ProjectsEnvConfig {

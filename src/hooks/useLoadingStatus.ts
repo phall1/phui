@@ -1,4 +1,7 @@
-import { useEffect } from "react"
+import { createEffect } from "solid-js"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { useEffect } from "../solid-hooks.js"
+import { selectedPullRequestAtom } from "../ui/pullRequests/atoms.js"
 import type { PullRequestItem } from "../domain.js"
 import type { WorkspaceSurface } from "../workspaceSurfaces.js"
 import type { CloseModalState, LabelModalState, MergeModalState, PullRequestStateModalState, SubmitReviewModalState } from "../ui/modals/types.js"
@@ -79,7 +82,7 @@ export const useLoadingStatus = ({
 	isInitialLoading,
 	startupLoadComplete,
 	setStartupLoadComplete,
-	selectedPullRequest,
+	selectedPullRequest: _selectedPullRequest,
 	loadPullRequestComments,
 }: UseLoadingStatusInput): LoadingStatus => {
 	const selectedPullRequestDetailHydrationState = selectedPullRequestDetailKey ? (detailHydrationState[selectedPullRequestDetailKey] ?? null) : null
@@ -110,11 +113,12 @@ export const useLoadingStatus = ({
 		setStartupLoadComplete(true)
 	}, [startupLoadComplete, pullRequestStatus, setStartupLoadComplete])
 
-	useEffect(() => {
-		if (pullRequestStatus !== "ready" || !selectedPullRequest) return
-		loadPullRequestComments(selectedPullRequest)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [pullRequestStatus, selectedPullRequest?.url, selectedPullRequest?.headRefOid, selectedPullRequest?.repository, selectedPullRequest?.number])
+	const selectedPullRequestLive = useAtomValueSolid(() => selectedPullRequestAtom)
+	createEffect(() => {
+		const current = selectedPullRequestLive()
+		if (pullRequestStatus !== "ready" || !current) return
+		loadPullRequestComments(current)
+	})
 
 	return {
 		selectedPullRequestDetailError,
