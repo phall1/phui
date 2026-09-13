@@ -18,8 +18,8 @@
 		"types": ["bun"],
 		"plugins": [{ "name": "@effect/language-service" }],
 		"paths": {
-			"@opentui/solid/jsx-runtime": ["./src/opentui-jsx-runtime.d.ts"],
-			"@opentui/solid/jsx-dev-runtime": ["./src/opentui-jsx-runtime.d.ts"]
+			"@opentui/solid/jsx-runtime": ["./src/opentui-jsx-runtime.ts"],
+			"@opentui/solid/jsx-dev-runtime": ["./src/opentui-jsx-runtime.ts"]
 		}
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx", "dev/**/*.ts", "dev/**/*.tsx"]

@@ -1,3 +1,4 @@
+export { Fragment, jsx, jsxDEV, jsxs } from "../node_modules/@opentui/solid/jsx-runtime.js"
 import type {
 	AsciiFontProps,
 	BoxProps,
@@ -17,23 +18,17 @@ import type {
 } from "../node_modules/@opentui/solid/src/types/elements.js"
 import type { JSX as SolidJSX } from "solid-js"
 
-type JsxComponent = (props: Record<string, unknown>) => unknown
 type WithKey<T> = T & { key?: string | number }
 type PhuiSpanProps = SpanProps & { fg?: string; bg?: string; attributes?: number; link?: { url: string }; key?: string | number }
 
-export declare function jsx(type: string | JsxComponent, props?: Record<string, unknown> | null): JSX.Element
-export declare const jsxs: typeof jsx
-export declare function jsxDEV(type: string | JsxComponent, props?: Record<string, unknown> | null): JSX.Element
-export declare function Fragment(props: { children?: JSX.Element }): JSX.Element
+export namespace JSX {
+	export type Element = SolidJSX.Element
 
-export declare namespace JSX {
-	type Element = SolidJSX.Element
-
-	interface IntrinsicAttributes {
+	export interface IntrinsicAttributes {
 		key?: string | number
 	}
 
-	interface IntrinsicElements extends ExtendedIntrinsicElements<OpenTUIComponents> {
+	export interface IntrinsicElements extends ExtendedIntrinsicElements<OpenTUIComponents> {
 		box: WithKey<BoxProps>
 		text: WithKey<TextProps>
 		span: PhuiSpanProps
@@ -55,7 +50,7 @@ export declare namespace JSX {
 		a: WithKey<LinkProps>
 	}
 
-	interface ElementChildrenAttribute {
+	export interface ElementChildrenAttribute {
 		children: {}
 	}
 }

@@ -15,4 +15,18 @@ describe("daily-driver package pins", () => {
 		expect(dependencies).not.toHaveProperty("react")
 		expect(dependencies).not.toHaveProperty("scheduler")
 	})
+
+	test("GitHub Actions install the Bun version in .bun-version", async () => {
+		const bunVersion = (await Bun.file(".bun-version").text()).trim()
+		expect(bunVersion).toBe("1.3.14")
+		expect(packageJson.devDependencies["@types/bun"]).toBe(bunVersion)
+
+		for (const name of ["ci.yml", "fork-publish.yml", "publish.yml"]) {
+			const text = await Bun.file(`.github/workflows/${name}`).text()
+			const setupCount = [...text.matchAll(/uses: oven-sh\/setup-bun@v2/g)].length
+			const pinCount = [...text.matchAll(/bun-version-file: \.bun-version/g)].length
+			expect(setupCount, name).toBeGreaterThan(0)
+			expect(pinCount, name).toBe(setupCount)
+		}
+	})
 })

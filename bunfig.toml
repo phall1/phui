@@ -1,4 +1,2 @@
-preload = ["@opentui/solid/preload"]
-
 [test]
 preload = ["./test/preloadMockEnv.ts", "@opentui/solid/preload"]
