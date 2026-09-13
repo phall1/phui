@@ -1,5 +1,13 @@
 # phui
 
+## [0.16.0](https://github.com/phall1/phui/compare/v0.15.0...v0.16.0) (2026-09-13)
+
+
+### Features
+
+* full react -&gt; solid and effect bump ([e58b01b](https://github.com/phall1/phui/commit/e58b01b79b92b552863eea6f566a08da582ee09c))
+* land daily-driver PR review actions and library pins ([42fc468](https://github.com/phall1/phui/commit/42fc46887dfc2f152f69867b10b2072257eaa084))
+
 ## [0.15.0](https://github.com/phall1/phui/compare/v0.14.1...v0.15.0) (2026-08-09)
 
 
