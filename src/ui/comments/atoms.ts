@@ -1,5 +1,5 @@
 import * as Atom from "effect/unstable/reactivity/Atom"
-import type { CreatePullRequestCommentInput, IssueItem, PullRequestComment, PullRequestItem } from "../../domain.js"
+import type { CreatePullRequestCommentInput, IssueItem, PendingReview, PullRequestComment, PullRequestItem, ReviewThread } from "../../domain.js"
 import { GitHubService } from "../../services/GitHubService.js"
 import { githubRuntime } from "../../services/runtime.js"
 import { pullRequestDiffKey } from "../diff.js"
@@ -12,6 +12,9 @@ import { idleCommentLoadState, type CommentLoadState, type StoredCommentLoadStat
 // === UI state atoms ===
 export const commentsViewActiveAtom = Atom.make(false)
 export const commentsViewSelectionAtom = Atom.make(0)
+export const pendingReviewKey = (repository: string, number: number) => `${repository}#${number}`
+export const pendingReviewByPrAtom = Atom.make<Record<string, PendingReview | null>>({}).pipe(Atom.keepAlive)
+export const reviewThreadsByPrAtom = Atom.make<Record<string, readonly ReviewThread[]>>({}).pipe(Atom.keepAlive)
 export const pullRequestCommentsAtom = Atom.make<Record<string, readonly PullRequestComment[]>>({}).pipe(Atom.keepAlive)
 export const pullRequestCommentsLoadedAtom = Atom.make<Record<string, StoredCommentLoadState>>({}).pipe(Atom.keepAlive)
 

@@ -392,6 +392,60 @@ export const MockGitHubService = {
 				removePullRequestLabel: () => Effect.void,
 				addIssueLabel: () => Effect.void,
 				removeIssueLabel: () => Effect.void,
+				findPendingReview: () => Effect.succeed(null),
+				createPendingReview: (_repository, _number, commitId) => Effect.succeed({ id: `pending:${Date.now()}`, nodeId: `PRR_mock_${Date.now()}`, commitId, comments: [] }),
+				addPendingReviewComment: (_repository, _number, _reviewId, input) =>
+					Effect.succeed({
+						id: `pending-comment:${Date.now()}`,
+						path: input.path,
+						line: input.line,
+						side: input.side,
+						author: username,
+						body: input.body,
+						createdAt: new Date(),
+						url: null,
+						inReplyTo: null,
+					}),
+				queuePendingDiffComment: (input) => {
+					const comment = {
+						id: `pending-comment:${Date.now()}`,
+						path: input.path,
+						line: input.line,
+						side: input.side,
+						author: username,
+						body: input.body,
+						createdAt: new Date(),
+						url: null,
+						inReplyTo: null,
+					}
+					return Effect.succeed({
+						pending: { id: `pending:${Date.now()}`, nodeId: `PRR_mock_${Date.now()}`, commitId: input.commitId, comments: [comment] },
+						comment,
+					})
+				},
+				submitPendingReview: () => Effect.void,
+				discardPendingReview: () => Effect.void,
+				listReviewThreads: () => Effect.succeed([]),
+				resolveReviewThread: () => Effect.void,
+				unresolveReviewThread: () => Effect.void,
+				getPullRequestCollaborators: () => Effect.succeed({ reviewers: [], teams: [], assignees: [] }),
+				addReviewers: () => Effect.void,
+				removeReviewers: () => Effect.void,
+				addAssignees: () => Effect.void,
+				removeAssignees: () => Effect.void,
+				updatePullRequestBranch: () => Effect.void,
+				reopenPullRequest: () => Effect.void,
+				reopenIssue: () => Effect.void,
+				editPullRequestTitleBody: () => Effect.void,
+				createPullRequest: (input) =>
+					Effect.succeed({
+						repository: input.repository,
+						number: 999,
+						url: `https://github.com/${input.repository}/pull/999`,
+						title: input.title,
+					}),
+				listPullRequestTimeline: () => Effect.succeed([]),
+				getWorkflowRunLogs: () => Effect.succeed("job / step\nerror: mock failure\n"),
 				listPullRequestPage: (input: ItemListInput<"pullRequest">) => {
 					const queueMode = queueModeForListMode(input.mode)
 					const filtered = filterByView(queueMode, input.repository, pullRequestSource(queueMode, input.repository), username, strictUserScope)

@@ -118,6 +118,21 @@ export interface PullRequestReviewComment {
 	readonly inReplyTo: string | null
 }
 
+export const pullRequestTimelineKinds = ["review", "force-push", "labeled", "unlabeled", "converted-to-draft", "ready-for-review", "merged", "closed", "reopened"] as const
+export type PullRequestTimelineKind = (typeof pullRequestTimelineKinds)[number]
+
+export interface PullRequestTimelineEvent {
+	readonly _tag: "timeline"
+	readonly id: string
+	readonly kind: PullRequestTimelineKind
+	readonly author: string
+	readonly body: string
+	readonly createdAt: Date | null
+	readonly url: string | null
+	readonly label: string | null
+	readonly reviewState: string | null
+}
+
 export type PullRequestComment =
 	| {
 			readonly _tag: "comment"
@@ -128,9 +143,46 @@ export type PullRequestComment =
 			readonly url: string | null
 	  }
 	| ({ readonly _tag: "review-comment" } & PullRequestReviewComment)
+	| PullRequestTimelineEvent
 
 export const isReviewComment = (comment: PullRequestComment): comment is PullRequestComment & { readonly _tag: "review-comment" } => comment._tag === "review-comment"
 export const isIssueComment = (comment: PullRequestComment): comment is PullRequestComment & { readonly _tag: "comment" } => comment._tag === "comment"
+export const isTimelineEvent = (comment: PullRequestComment): comment is PullRequestTimelineEvent => comment._tag === "timeline"
+
+export interface PendingReview {
+	readonly id: string
+	readonly nodeId: string | null
+	readonly commitId: string | null
+	readonly comments: readonly PullRequestReviewComment[]
+}
+
+export interface ReviewThread {
+	readonly id: string
+	readonly isResolved: boolean
+	readonly rootCommentId: string | null
+}
+
+export interface PullRequestCollaborators {
+	readonly reviewers: readonly string[]
+	readonly teams: readonly string[]
+	readonly assignees: readonly string[]
+}
+
+export interface CreatePullRequestInput {
+	readonly repository: string
+	readonly title: string
+	readonly body: string
+	readonly base: string
+	readonly head: string
+	readonly draft: boolean
+}
+
+export interface CreatedPullRequest {
+	readonly repository: string
+	readonly number: number
+	readonly url: string
+	readonly title: string
+}
 
 export interface PullRequestItem {
 	readonly repository: string

@@ -16,7 +16,7 @@
 // is a side-channel, not a parallel registry. Commands whose run is
 // atom-pure should not use this — they yield Atom.update/set directly.
 
-type Handoff =
+export type Handoff =
 	| "preserveDiffLocation"
 	| "quit"
 	| "openThemeModal"
@@ -28,6 +28,7 @@ type Handoff =
 	| "openReplyToSelectedComment"
 	| "openEditSelectedComment"
 	| "openDeleteSelectedComment"
+	| "queueDiffComment"
 	| "openDiffView"
 	| "reloadDiff"
 	| "openChangedFilesModal"

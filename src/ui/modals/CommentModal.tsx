@@ -67,6 +67,7 @@ export const CommentModal = ({
 				<HintRow
 					items={[
 						{ key: "enter", label: "save" },
+						{ key: "ctrl-enter", label: "queue" },
 						{ key: "shift-enter", label: "newline" },
 						{ key: "esc", label: "cancel" },
 					]}

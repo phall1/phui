@@ -10,6 +10,7 @@ describe("item view atoms", () => {
 			import { activeViewAtom, pullRequestsAtom, queueLoadCacheAtom } from "./src/ui/pullRequests/atoms.ts"
 			import { issueViewCacheKey } from "./src/issueViews.ts"
 			import { viewCacheKey } from "./src/pullRequestViews.ts"
+			import { workspaceSurfaceAtom } from "./src/workspace/atoms.ts"
 			const registry = AtomRegistry.make()
 			const waitFor = (atom) => new Promise((resolve, reject) => {
 				const settle = (result) => {
@@ -39,6 +40,7 @@ describe("item view atoms", () => {
 				registry.set(activeViewAtom, view)
 				await waitFor(pullRequestsAtom)
 			}
+			registry.set(workspaceSurfaceAtom, "issues")
 			for (const view of issueViews) {
 				registry.set(activeIssueViewAtom, view)
 				await waitFor(issuesAtom)
@@ -211,6 +213,44 @@ describe("item view atoms", () => {
 		`
 		const stdout = await runIsolatedProbe(probe)
 		expect(stdout).toBe("true")
+	})
+
+	test("issuesAtom does not fetch until Issues is active", async () => {
+		const probe = `
+			import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
+			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import { issuesAtom, issueQueueLoadCacheAtom } from "./src/ui/issues/atoms.ts"
+			import { workspaceSurfaceAtom } from "./src/workspace/atoms.ts"
+			const registry = AtomRegistry.make()
+			const waitFor = (atom, ready) => new Promise((resolve, reject) => {
+				const settle = (result) => {
+					if (result.waiting) return false
+					if (AsyncResult.isFailure(result)) reject(result.cause)
+					else if (AsyncResult.isSuccess(result) && ready(result.value)) resolve(result.value)
+					else return false
+					return true
+				}
+				if (settle(registry.get(atom))) return
+				let unsubscribe = () => {}
+				unsubscribe = registry.subscribe(atom, (result) => {
+					if (settle(result)) unsubscribe()
+				})
+			})
+			const idle = await waitFor(issuesAtom, () => true)
+			const idleCacheEmpty = Object.keys(registry.get(issueQueueLoadCacheAtom)).length === 0
+			const defaultSurface = registry.get(workspaceSurfaceAtom)
+			registry.set(workspaceSurfaceAtom, "issues")
+			const loaded = await waitFor(issuesAtom, (load) => load.fetchedAt !== null)
+			const cacheFilled = Object.keys(registry.get(issueQueueLoadCacheAtom)).length > 0
+			console.log([defaultSurface, idleCacheEmpty, idle.data.length, idle.fetchedAt, loaded.fetchedAt !== null, cacheFilled].join(","))
+		`
+		const stdout = await runIsolatedProbe(probe, {
+			PHUI_MOCK_PR_COUNT: "20",
+			PHUI_MOCK_REPOSITORY: "owner/repo",
+			PHUI_MOCK_WORKSPACE_PREFERENCES_PATH: "off",
+			PHUI_PR_FETCH_LIMIT: "2",
+		})
+		expect(stdout).toBe("pullRequests,true,0,,true,true")
 	})
 
 	test("an authoritative issue refresh removes a closed optimistic override", async () => {

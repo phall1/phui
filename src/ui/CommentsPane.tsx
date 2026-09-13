@@ -102,6 +102,7 @@ export const orderCommentsForDisplay = (comments: readonly PullRequestComment[])
 	}
 
 	const parentIdFor = (comment: PullRequestComment): string | null => {
+		if (comment._tag === "timeline") return null
 		if (comment._tag === "review-comment") return comment.inReplyTo
 		return issueQuoteParent(comment, comments, collapsedIssueBodies)
 	}

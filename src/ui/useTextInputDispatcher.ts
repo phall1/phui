@@ -1,7 +1,7 @@
 import { useKeyboard } from "@opentui/react"
 import type { WorkspaceSurface } from "../workspaceSurfaces.js"
 import { type CommentEditorValue, insertText } from "./commentEditor.js"
-import type { ChangedFilesModalState, CommandPaletteState, LabelModalState, OpenRepositoryModalState, SubmitReviewModalState, ThemeModalState } from "./modals.js"
+import type { ChangedFilesModalState, CommandPaletteState, LabelModalState, OpenRepositoryModalState, PromptModalState, SubmitReviewModalState, ThemeModalState } from "./modals.js"
 import { editSingleLineInput, isSingleLineInputKey, printableKeyText } from "./singleLineInput.js"
 
 export interface UseTextInputDispatcherInput {
@@ -10,6 +10,7 @@ export interface UseTextInputDispatcherInput {
 	// Modal active flags
 	readonly commandPaletteActive: boolean
 	readonly openRepositoryModalActive: boolean
+	readonly promptModalActive: boolean
 	readonly themeModalActive: boolean
 	readonly commentModalActive: boolean
 	readonly submitReviewModalActive: boolean
@@ -32,6 +33,7 @@ export interface UseTextInputDispatcherInput {
 	// Per-modal text-input setters
 	readonly setCommandPalette: (next: CommandPaletteState | ((prev: CommandPaletteState) => CommandPaletteState)) => void
 	readonly setOpenRepositoryModal: (next: OpenRepositoryModalState | ((prev: OpenRepositoryModalState) => OpenRepositoryModalState)) => void
+	readonly setPromptModal: (next: PromptModalState | ((prev: PromptModalState) => PromptModalState)) => void
 	readonly setChangedFilesModal: (next: ChangedFilesModalState | ((prev: ChangedFilesModalState) => ChangedFilesModalState)) => void
 	readonly setLabelModal: (next: LabelModalState | ((prev: LabelModalState) => LabelModalState)) => void
 	readonly setFilterDraft: (next: string | ((prev: string) => string)) => void
@@ -71,6 +73,17 @@ export const useTextInputDispatcher = (input: UseTextInputDispatcherInput): void
 		if (input.openRepositoryModalActive) {
 			if (isSingleLineInputKey(key)) {
 				input.setOpenRepositoryModal((current) => ({
+					...current,
+					query: editSingleLineInput(current.query, key) ?? current.query,
+					error: null,
+				}))
+			}
+			return
+		}
+
+		if (input.promptModalActive) {
+			if (isSingleLineInputKey(key)) {
+				input.setPromptModal((current) => ({
 					...current,
 					query: editSingleLineInput(current.query, key) ?? current.query,
 					error: null,

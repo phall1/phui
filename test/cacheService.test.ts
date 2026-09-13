@@ -432,6 +432,64 @@ describe("CacheService", () => {
 		expect(fetchedAt!.getTime()).toBeGreaterThanOrEqual(before.getTime() - 1000)
 	})
 
+	test("persists a diff by pull request and head revision", async () => {
+		const filename = await tempCachePath()
+		const key = pullRequestCacheKey({ repository: "owner/repo", number: 12 })
+		await runCache(
+			filename,
+			Effect.gen(function* () {
+				const cache = yield* CacheService
+				yield* cache.writeDiff({ repository: "owner/repo", number: 12 }, "sha-a", "diff --git a/x b/x")
+			}),
+		)
+
+		const hit = await runCache(
+			filename,
+			Effect.gen(function* () {
+				const cache = yield* CacheService
+				return yield* cache.readDiff({ repository: "owner/repo", number: 12 }, "sha-a")
+			}),
+		)
+		const miss = await runCache(
+			filename,
+			Effect.gen(function* () {
+				const cache = yield* CacheService
+				return yield* cache.readDiff({ repository: "owner/repo", number: 12 }, "sha-b")
+			}),
+		)
+
+		expect(key).toBe("owner/repo#12")
+		expect(hit).toBe("diff --git a/x b/x")
+		expect(miss).toBeNull()
+	})
+
+	test("repo metadata expires after the requested TTL", async () => {
+		const filename = await tempCachePath()
+		await runCache(
+			filename,
+			Effect.gen(function* () {
+				const cache = yield* CacheService
+				yield* cache.writeRepoMetadata("owner/repo", "labels", JSON.stringify([{ name: "bug" }]))
+			}),
+		)
+		const fresh = await runCache(
+			filename,
+			Effect.gen(function* () {
+				const cache = yield* CacheService
+				return yield* cache.readRepoMetadata("owner/repo", "labels", 24 * 60 * 60 * 1000)
+			}),
+		)
+		const stale = await runCache(
+			filename,
+			Effect.gen(function* () {
+				const cache = yield* CacheService
+				return yield* cache.readRepoMetadata("owner/repo", "labels", -1)
+			}),
+		)
+		expect(fresh).toBe(JSON.stringify([{ name: "bug" }]))
+		expect(stale).toBeNull()
+	})
+
 	test("layerFromPath falls back to disabled cache when startup fails", async () => {
 		const dir = await mkdtemp(join(tmpdir(), "phui-cache-fallback-"))
 		tempDirs.push(dir)

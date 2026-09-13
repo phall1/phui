@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { readFileSync } from "node:fs"
 import { addDefaultParsers, createCliRenderer } from "@opentui/core"
 import { createRoot, useRenderer, useTerminalDimensions } from "@opentui/react"
 import { Effect } from "effect"
@@ -14,9 +15,16 @@ import { colors, setSystemThemeColors } from "./ui/colors.js"
 import { LoadingLogoPane } from "./ui/LoadingLogo.js"
 import { SPINNER_INTERVAL_MS } from "./ui/spinner.js"
 
+const launchArgs = process.argv.slice(2)
+if (launchArgs.includes("--version") || launchArgs.includes("-v")) {
+	const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { readonly version: string }
+	process.stdout.write(`${pkg.version}\n`)
+	process.exit(0)
+}
+
 const launchIntent = (() => {
 	try {
-		return parseLaunchIntent(process.argv.slice(2))
+		return parseLaunchIntent(launchArgs)
 	} catch (error) {
 		if (!(error instanceof LaunchIntentError)) throw error
 		process.stderr.write(`${formatLaunchIntentError(error)}\n`)

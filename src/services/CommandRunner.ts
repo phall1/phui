@@ -13,14 +13,14 @@ export interface RunOptions {
 	readonly stdin?: string
 }
 
-export class CommandError extends Schema.TaggedErrorClass<CommandError>()("CommandError", {
+export class CommandError extends Schema.TaggedError<CommandError>()("CommandError", {
 	command: Schema.String,
 	args: Schema.Array(Schema.String),
 	detail: Schema.String,
 	cause: Schema.Defect(),
 }) {}
 
-export class JsonParseError extends Schema.TaggedErrorClass<JsonParseError>()("JsonParseError", {
+export class JsonParseError extends Schema.TaggedError<JsonParseError>()("JsonParseError", {
 	command: Schema.String,
 	args: Schema.Array(Schema.String),
 	stdout: Schema.String,

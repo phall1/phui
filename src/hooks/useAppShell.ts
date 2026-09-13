@@ -141,6 +141,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		themeModalActive,
 		commandPaletteActive,
 		openRepositoryModalActive,
+		promptModalActive,
 		labelModal,
 		closeModal,
 		pullRequestStateModal,
@@ -165,6 +166,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		setThemeModal,
 		setCommandPalette,
 		setOpenRepositoryModal,
+		setPromptModal,
 	} = useModalStack()
 	const [startupLoadComplete, setStartupLoadComplete] = useState(false)
 	const [homeCrumbHovered, setHomeCrumbHovered] = useState(false)
@@ -805,7 +807,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		moveDiffCommentThread,
 	} = diffNav
 
-	const { submitCommentModal, openNewIssueCommentModal, openReplyToSelectedComment, openEditSelectedComment, openDeleteSelectedComment, confirmDeleteComment } =
+	const { submitCommentModal, queueDiffComment, openNewIssueCommentModal, openReplyToSelectedComment, openEditSelectedComment, openDeleteSelectedComment, confirmDeleteComment } =
 		useCommentMutations({
 			selectedCommentSubject,
 			selectedCommentKey,
@@ -1034,6 +1036,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		openReplyToSelectedComment,
 		openEditSelectedComment,
 		openDeleteSelectedComment,
+		queueDiffComment,
 	})
 
 	// === Helpers used by the keymap layers ===
@@ -1090,6 +1093,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		labelModalActive,
 		themeModalActive,
 		openRepositoryModalActive,
+		promptModalActive,
 		commentModalActive,
 		deleteCommentModalActive,
 		commandPaletteActive,
@@ -1196,6 +1200,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		handleQuitOrClose,
 		setCommandPalette,
 		setOpenRepositoryModal,
+		setPromptModal,
 		setChangedFilesModal,
 		setLabelModal,
 		editThemeQuery,

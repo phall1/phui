@@ -45,6 +45,7 @@ export const CommentThreadModal = ({
 					items={[
 						{ key: "↑↓", label: "scroll" },
 						{ key: "enter", label: "comment" },
+						{ key: "t", label: "resolve" },
 						{ key: "esc", label: "close" },
 					]}
 				/>

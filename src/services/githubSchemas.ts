@@ -54,7 +54,7 @@ const RawItemSearchCommonFields = {
 export const RawIssueSearchNodeSchema = Schema.Struct({
 	...RawItemSearchCommonFields,
 	updatedAt: Schema.String,
-	body: Schema.String,
+	body: Schema.optionalKey(Schema.String),
 	labels: Schema.Struct({ nodes: Schema.Array(RawLabelSchema) }),
 	comments: Schema.Struct({ totalCount: Schema.Number }),
 })
@@ -371,7 +371,6 @@ query PullRequests($searchQuery: String!, $first: Int!, $after: String) {
 const ISSUE_FIELDS_FRAGMENT = `
         number
         title
-        body
         state
         createdAt
         updatedAt
@@ -419,6 +418,190 @@ query RepositoryDetails($owner: String!, $name: String!) {
     defaultBranchRef { name }
     openIssues: issues(states: OPEN) { totalCount }
     openPRs: pullRequests(states: OPEN) { totalCount }
+  }
+}
+`
+
+const TimelineActorSchema = Schema.NullOr(Schema.Struct({ login: Schema.String }))
+const TimelineNodeSchema = Schema.Struct({
+	__typename: Schema.String,
+	id: Schema.optionalKey(Schema.String),
+	createdAt: Schema.optionalKey(Schema.String),
+	body: Schema.optionalKey(Schema.String),
+	state: Schema.optionalKey(Schema.String),
+	author: Schema.optionalKey(TimelineActorSchema),
+	actor: Schema.optionalKey(TimelineActorSchema),
+	label: Schema.optionalKey(Schema.NullOr(Schema.Struct({ name: Schema.String }))),
+})
+
+export const PullRequestTimelineResponseSchema = Schema.Struct({
+	data: Schema.Struct({
+		repository: Schema.NullOr(
+			Schema.Struct({
+				pullRequest: Schema.NullOr(
+					Schema.Struct({
+						timelineItems: Schema.Struct({
+							nodes: Schema.Array(Schema.NullOr(TimelineNodeSchema)),
+						}),
+					}),
+				),
+			}),
+		),
+	}),
+})
+
+export const pullRequestTimelineQuery = `
+query PullRequestTimeline($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      timelineItems(first: 40, itemTypes: [PULL_REQUEST_REVIEW, HEAD_REF_FORCE_PUSHED_EVENT, LABELED_EVENT, UNLABELED_EVENT, CONVERT_TO_DRAFT_EVENT, READY_FOR_REVIEW_EVENT, MERGED_EVENT, CLOSED_EVENT, REOPENED_EVENT]) {
+        nodes {
+          __typename
+          ... on PullRequestReview { id author { login } body state createdAt }
+          ... on HeadRefForcePushedEvent { id actor { login } createdAt }
+          ... on LabeledEvent { id actor { login } createdAt label { name } }
+          ... on UnlabeledEvent { id actor { login } createdAt label { name } }
+          ... on ConvertToDraftEvent { id actor { login } createdAt }
+          ... on ReadyForReviewEvent { id actor { login } createdAt }
+          ... on MergedEvent { id actor { login } createdAt }
+          ... on ClosedEvent { id actor { login } createdAt }
+          ... on ReopenedEvent { id actor { login } createdAt }
+        }
+      }
+    }
+  }
+}
+`
+
+export const ReviewThreadsResponseSchema = Schema.Struct({
+	data: Schema.Struct({
+		repository: Schema.NullOr(
+			Schema.Struct({
+				pullRequest: Schema.NullOr(
+					Schema.Struct({
+						reviewThreads: Schema.Struct({
+							nodes: Schema.Array(
+								Schema.NullOr(
+									Schema.Struct({
+										id: Schema.String,
+										isResolved: Schema.Boolean,
+										comments: Schema.Struct({
+											nodes: Schema.Array(Schema.NullOr(Schema.Struct({ databaseId: Schema.NullOr(Schema.Number) }))),
+										}),
+									}),
+								),
+							),
+						}),
+					}),
+				),
+			}),
+		),
+	}),
+})
+
+export const reviewThreadsQuery = `
+query ReviewThreads($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100) {
+        nodes { id isResolved comments(first: 1) { nodes { databaseId } } }
+      }
+    }
+  }
+}
+`
+
+export const ResolveThreadResponseSchema = Schema.Struct({
+	data: Schema.Struct({
+		resolveReviewThread: Schema.optionalKey(Schema.NullOr(Schema.Struct({ thread: Schema.NullOr(Schema.Struct({ id: Schema.String, isResolved: Schema.Boolean })) }))),
+		unresolveReviewThread: Schema.optionalKey(Schema.NullOr(Schema.Struct({ thread: Schema.NullOr(Schema.Struct({ id: Schema.String, isResolved: Schema.Boolean })) }))),
+	}),
+})
+
+export const resolveReviewThreadMutation = `
+mutation ResolveThread($id: ID!) {
+  resolveReviewThread(input: {threadId: $id}) { thread { id isResolved } }
+}
+`
+
+export const unresolveReviewThreadMutation = `
+mutation UnresolveThread($id: ID!) {
+  unresolveReviewThread(input: {threadId: $id}) { thread { id isResolved } }
+}
+`
+
+export const PendingReviewSchema = Schema.Struct({
+	id: Schema.Union([Schema.Number, Schema.String]),
+	node_id: Schema.optionalKey(Schema.String),
+	state: Schema.optionalKey(Schema.String),
+	commit_id: Schema.optionalKey(Schema.NullOr(Schema.String)),
+	body: Schema.optionalKey(Schema.NullOr(Schema.String)),
+})
+
+export const PendingReviewsResponseSchema = Schema.Union([Schema.Array(PendingReviewSchema), Schema.Array(Schema.Array(PendingReviewSchema))])
+
+export const CreatedPullRequestSchema = Schema.Struct({
+	number: Schema.Number,
+	url: Schema.String,
+	title: Schema.String,
+})
+
+export const PullRequestCollaboratorsSchema = Schema.Struct({
+	reviewRequests: Schema.optionalKey(
+		Schema.Array(
+			Schema.Struct({
+				login: Schema.optionalKey(Schema.String),
+				name: Schema.optionalKey(Schema.String),
+				slug: Schema.optionalKey(Schema.String),
+			}),
+		),
+	),
+	assignees: Schema.optionalKey(Schema.Array(Schema.Struct({ login: Schema.String }))),
+})
+
+export const UpdateBranchResponseSchema = Schema.Struct({
+	message: Schema.optionalKey(Schema.String),
+	url: Schema.optionalKey(Schema.String),
+})
+
+const GraphQLActorSchema = Schema.NullOr(Schema.Struct({ login: Schema.String }))
+
+export const AddPullRequestReviewThreadResponseSchema = Schema.Struct({
+	data: Schema.Struct({
+		addPullRequestReviewThread: Schema.NullOr(
+			Schema.Struct({
+				thread: Schema.NullOr(
+					Schema.Struct({
+						comments: Schema.Struct({
+							nodes: Schema.Array(
+								Schema.NullOr(
+									Schema.Struct({
+										databaseId: Schema.NullOr(Schema.Number),
+										body: Schema.optionalKey(Schema.String),
+										createdAt: Schema.optionalKey(Schema.String),
+										author: Schema.optionalKey(GraphQLActorSchema),
+										path: Schema.optionalKey(Schema.String),
+										line: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+										diffSide: Schema.optionalKey(Schema.String),
+									}),
+								),
+							),
+						}),
+					}),
+				),
+			}),
+		),
+	}),
+})
+
+export const addPullRequestReviewThreadMutation = `
+mutation AddPendingReviewThread($reviewId: ID!, $path: String!, $body: String!, $line: Int!, $side: DiffSide!, $startLine: Int, $startSide: DiffSide) {
+  addPullRequestReviewThread(input: { pullRequestReviewId: $reviewId, path: $path, body: $body, line: $line, side: $side, startLine: $startLine, startSide: $startSide }) {
+    thread {
+      comments(first: 1) {
+        nodes { databaseId body createdAt author { login } path line diffSide }
+      }
+    }
   }
 }
 `

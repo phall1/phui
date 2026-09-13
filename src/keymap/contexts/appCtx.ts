@@ -57,6 +57,7 @@ export interface BuildAppCtxFlags {
 	readonly labelModalActive: boolean
 	readonly themeModalActive: boolean
 	readonly openRepositoryModalActive: boolean
+	readonly promptModalActive: boolean
 	readonly commentModalActive: boolean
 	readonly deleteCommentModalActive: boolean
 	readonly commandPaletteActive: boolean
@@ -80,6 +81,7 @@ export interface BuildAppCtxInput {
 	readonly labelModal: BuildLabelModalCtxInput
 	readonly themeModal: BuildThemeModalCtxInput
 	readonly openRepositoryModal: BuildOpenRepositoryModalCtxInput
+	readonly prompt: { readonly closeActiveModal: () => void; readonly confirmPrompt: () => void }
 	readonly commentModal: BuildCommentModalCtxInput
 	readonly deleteCommentModal: BuildDeleteCommentModalCtxInput
 	readonly commandPalette: BuildCommandPaletteCtxInput
@@ -113,6 +115,7 @@ export const buildAppCtx = (input: BuildAppCtxInput): AppCtx => ({
 	},
 	themeModal: buildThemeModalCtx(input.themeModal),
 	openRepositoryModal: { closeModal: input.openRepositoryModal.closeActiveModal, openFromInput: input.openRepositoryModal.openRepositoryFromInput },
+	prompt: { closeModal: input.prompt.closeActiveModal, confirmPrompt: input.prompt.confirmPrompt },
 	commentModal: buildCommentModalCtx(input.commentModal),
 	deleteCommentModal: { closeModal: input.deleteCommentModal.closeActiveModal, confirmDelete: input.deleteCommentModal.confirmDeleteComment },
 	commandPalette: buildCommandPaletteCtx(input.commandPalette),

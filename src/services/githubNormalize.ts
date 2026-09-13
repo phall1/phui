@@ -4,12 +4,17 @@ import {
 	type CreatePullRequestCommentInput,
 	type IssueItem,
 	type Mergeable,
+	type PendingReview,
+	type PullRequestCollaborators,
 	type PullRequestComment,
 	type PullRequestItem,
 	type PullRequestMergeInfo,
 	type PullRequestReviewComment,
+	type PullRequestTimelineEvent,
+	type PullRequestTimelineKind,
 	type RepositoryDetails,
 	type RepositoryMergeMethods,
+	type ReviewThread,
 	type ReviewStatus,
 	type RunConclusion,
 	runConclusions,
@@ -21,10 +26,16 @@ import {
 } from "../domain.js"
 import { type ItemPage } from "../item.js"
 import {
+	type AddPullRequestReviewThreadResponseSchema,
 	type CommentsResponseSchema,
 	type MergeInfoResponseSchema,
+	type PendingReviewSchema,
+	type PendingReviewsResponseSchema,
+	type PullRequestCollaboratorsSchema,
 	type PullRequestConnection,
 	type PullRequestFilesResponseSchema,
+	type PullRequestTimelineResponseSchema,
+	type ReviewThreadsResponseSchema,
 	type RawCheckContext,
 	RawCheckContextSchema,
 	type RawIssueSearchNode,
@@ -213,7 +224,7 @@ export const parseIssueSearchNode = (item: RawIssueSearchNode): IssueItem => ({
 	number: item.number,
 	state: item.state.toLowerCase() === "closed" ? "closed" : "open",
 	title: item.title,
-	body: item.body,
+	body: item.body ?? "",
 	author: item.author?.login ?? "unknown",
 	labels: item.labels.nodes.map((label) => ({
 		name: label.name,
@@ -473,3 +484,137 @@ const fileHeaderPatch = (file: RawPullRequestFile) => {
 }
 
 export const pullRequestFilesToPatch = (files: readonly RawPullRequestFile[]): string => files.map(fileHeaderPatch).join("\n")
+
+const timelineKindFromTypename = (typename: string): PullRequestTimelineKind | null => {
+	switch (typename) {
+		case "PullRequestReview":
+			return "review"
+		case "HeadRefForcePushedEvent":
+			return "force-push"
+		case "LabeledEvent":
+			return "labeled"
+		case "UnlabeledEvent":
+			return "unlabeled"
+		case "ConvertToDraftEvent":
+			return "converted-to-draft"
+		case "ReadyForReviewEvent":
+			return "ready-for-review"
+		case "MergedEvent":
+			return "merged"
+		case "ClosedEvent":
+			return "closed"
+		case "ReopenedEvent":
+			return "reopened"
+		default:
+			return null
+	}
+}
+
+const timelineBody = (kind: PullRequestTimelineKind, node: { readonly body?: string; readonly state?: string; readonly label?: { readonly name: string } | null }): string => {
+	if (kind === "review") {
+		const state = node.state?.replaceAll("_", " ").toLowerCase() ?? "commented"
+		const body = node.body?.trim() ?? ""
+		return body.length > 0 ? `reviewed (${state}): ${body}` : `reviewed (${state})`
+	}
+	if (kind === "labeled") return `added label ${node.label?.name ?? ""}`.trim()
+	if (kind === "unlabeled") return `removed label ${node.label?.name ?? ""}`.trim()
+	if (kind === "force-push") return "force-pushed the head branch"
+	if (kind === "converted-to-draft") return "converted this pull request to draft"
+	if (kind === "ready-for-review") return "marked this pull request as ready for review"
+	if (kind === "merged") return "merged this pull request"
+	if (kind === "closed") return "closed this"
+	return "reopened this"
+}
+
+export const parsePullRequestTimeline = (response: Schema.Schema.Type<typeof PullRequestTimelineResponseSchema>): readonly PullRequestTimelineEvent[] => {
+	const nodes = response.data.repository?.pullRequest?.timelineItems.nodes ?? []
+	const events: PullRequestTimelineEvent[] = []
+	for (const node of nodes) {
+		if (!node) continue
+		const kind = timelineKindFromTypename(node.__typename)
+		if (!kind) continue
+		events.push({
+			_tag: "timeline",
+			id: node.id ?? `${kind}:${node.createdAt ?? ""}`,
+			kind,
+			author: node.author?.login ?? node.actor?.login ?? "unknown",
+			body: timelineBody(kind, node),
+			createdAt: node.createdAt ? new Date(node.createdAt) : null,
+			url: null,
+			label: node.label?.name ?? null,
+			reviewState: node.state ?? null,
+		})
+	}
+	return events
+}
+
+export const parseReviewThreads = (response: Schema.Schema.Type<typeof ReviewThreadsResponseSchema>): readonly ReviewThread[] => {
+	const nodes = response.data.repository?.pullRequest?.reviewThreads.nodes ?? []
+	return nodes.flatMap((node) => {
+		if (!node) return []
+		const root = node.comments.nodes.find((comment) => comment?.databaseId != null)
+		return [
+			{
+				id: node.id,
+				isResolved: node.isResolved,
+				rootCommentId: root?.databaseId != null ? String(root.databaseId) : null,
+			},
+		]
+	})
+}
+
+const flattenPendingReviews = (response: Schema.Schema.Type<typeof PendingReviewsResponseSchema>): readonly Schema.Schema.Type<typeof PendingReviewSchema>[] =>
+	Array.isArray(response[0])
+		? (response as readonly (readonly Schema.Schema.Type<typeof PendingReviewSchema>[])[]).flat()
+		: (response as readonly Schema.Schema.Type<typeof PendingReviewSchema>[])
+
+export const pendingReviewFromList = (
+	reviews: Schema.Schema.Type<typeof PendingReviewsResponseSchema>,
+): { readonly id: string; readonly nodeId: string | null; readonly commitId: string | null } | null => {
+	const pending = flattenPendingReviews(reviews).find((review) => review.state === "PENDING")
+	if (!pending) return null
+	return { id: String(pending.id), nodeId: pending.node_id ?? null, commitId: pending.commit_id ?? null }
+}
+
+export const parseAddPullRequestReviewThreadComment = (
+	response: Schema.Schema.Type<typeof AddPullRequestReviewThreadResponseSchema>,
+	input: CreatePullRequestCommentInput,
+): PullRequestReviewComment => {
+	const node = response.data.addPullRequestReviewThread?.thread?.comments.nodes.find((comment) => comment !== null) ?? null
+	const side = node?.diffSide === "LEFT" || node?.diffSide === "RIGHT" ? node.diffSide : input.side
+	return {
+		id: node?.databaseId != null ? String(node.databaseId) : fallbackCreatedComment(input).id,
+		path: node?.path ?? input.path,
+		line: node?.line ?? input.line,
+		side,
+		author: node?.author?.login ?? "you",
+		body: node?.body ?? input.body,
+		createdAt: node?.createdAt ? new Date(node.createdAt) : new Date(),
+		url: null,
+		inReplyTo: null,
+	}
+}
+
+export const parsePendingReview = (
+	reviews: Schema.Schema.Type<typeof PendingReviewsResponseSchema>,
+	comments: Schema.Schema.Type<typeof CommentsResponseSchema>,
+): PendingReview | null => {
+	const pending = pendingReviewFromList(reviews)
+	if (!pending) return null
+	return { ...pending, comments: parsePullRequestComments(comments) }
+}
+
+export const parsePullRequestCollaborators = (response: Schema.Schema.Type<typeof PullRequestCollaboratorsSchema>): PullRequestCollaborators => {
+	const reviewers: string[] = []
+	const teams: string[] = []
+	for (const request of response.reviewRequests ?? []) {
+		if (request.login) reviewers.push(request.login)
+		else if (request.slug) teams.push(request.slug)
+		else if (request.name) teams.push(request.name)
+	}
+	return {
+		reviewers,
+		teams,
+		assignees: (response.assignees ?? []).map((assignee) => assignee.login),
+	}
+}

@@ -7,7 +7,8 @@ import { EditorOpener } from "../services/EditorOpener.js"
 import { WorktreeOpener } from "../services/WorktreeOpener.js"
 import { GitHubService } from "../services/GitHubService.js"
 import { saveStoredDiffWhitespaceMode } from "../themeStore.js"
-import { commentsViewActiveAtom, selectedCommentKeyAtom } from "../ui/comments/atoms.js"
+import { commentsViewActiveAtom, pendingReviewByPrAtom, pendingReviewKey, reviewThreadsByPrAtom, selectedCommentKeyAtom, selectedOrderedCommentAtom } from "../ui/comments/atoms.js"
+import { matchReviewThread, resolveTargetCommentIds } from "../ui/comments/reviewThreads.js"
 import { detailFullViewAtom, detailScrollOffsetAtom } from "../ui/detail/atoms.js"
 import { diffCommentRangeStartIndexAtom, diffFullViewAtom, diffRenderViewAtom, diffWhitespaceModeAtom, diffWrapModeAtom } from "../ui/diff/atoms.js"
 import {
@@ -17,6 +18,8 @@ import {
 	runsFullViewAtom,
 	runsKey,
 	runsListSelectionAtom,
+	repositorySelectedRunIdAtom,
+	runsLogsOpenAtom,
 	selectedRunIdAtom,
 	workflowRunDetailsFor,
 } from "../ui/runs/atoms.js"
@@ -24,7 +27,9 @@ import { filterDraftAtom, filterModeAtom, filterQueryAtom } from "../ui/filter/a
 import { selectedIssueAtom } from "../ui/issues/atoms.js"
 import { activeModalAtom } from "../ui/modals/atoms.js"
 import { submitReviewOptions } from "../ui/modals/shared.js"
-import { initialCommandPaletteState, initialCommentModalState, initialOpenRepositoryModalState, Modal } from "../ui/modals/types.js"
+import { parsePeoplePrompt } from "../ui/modals/peoplePrompt.js"
+import { initialCommandPaletteState, initialCommentModalState, initialOpenRepositoryModalState, initialPromptModalState, Modal } from "../ui/modals/types.js"
+import { updateBranchConflictNotice } from "../ui/runs/runLogs.js"
 import { noticeAtom } from "../ui/notice/atoms.js"
 import type { PullRequestUserQueueMode } from "../domain.js"
 import { pullRequestQueueModes } from "../domain.js"
@@ -90,17 +95,16 @@ import { defineCommand, type CommandDefinition } from "./registry.js"
 const queueModeHandoffKey = (mode: PullRequestUserQueueMode) =>
 	mode === "authored" ? ("viewAuthored" as const) : mode === "review" ? ("viewReview" as const) : mode === "assigned" ? ("viewAssigned" as const) : ("viewMentioned" as const)
 
-const queueViewCommands = pullRequestQueueModes.map(
-	(mode): CommandDefinition =>
-		defineCommand({
-			id: `view.${mode}`,
-			title: queueViewTitleFor(mode),
-			scope: "View",
-			subtitle: queueViewSubtitleAtom(mode),
-			keywords: [mode, "queue", "view"],
-			disabledReason: queueViewAlreadyActiveReasonAtom(mode),
-			run: Effect.sync(() => invokeHandoff(queueModeHandoffKey(mode))),
-		}),
+const queueViewCommands = pullRequestQueueModes.map((mode): CommandDefinition =>
+	defineCommand({
+		id: `view.${mode}`,
+		title: queueViewTitleFor(mode),
+		scope: "View",
+		subtitle: queueViewSubtitleAtom(mode),
+		keywords: [mode, "queue", "view"],
+		disabledReason: queueViewAlreadyActiveReasonAtom(mode),
+		run: Effect.sync(() => invokeHandoff(queueModeHandoffKey(mode))),
+	}),
 )
 
 const workspaceSurfaceCommands = workspaceSurfaces.map((surface, index): CommandDefinition => {
@@ -808,6 +812,302 @@ export const globalCommands: readonly CommandDefinition[] = [
 		disabledReason: ownCommentReasonAtom,
 		keywords: ["remove", "destroy"],
 		run: Effect.sync(() => invokeHandoff("openDeleteSelectedComment")),
+	}),
+
+	defineCommand({
+		id: "pull.update-branch",
+		title: "Update branch from base",
+		scope: "Pull request",
+		subtitle: selectedPullRequestLabelAtom,
+		keywords: ["sync", "rebase", "merge base"],
+		disabledReason: noOpenPullRequestReasonAtom,
+		run: Effect.gen(function* () {
+			const pr = yield* Atom.get(selectedPullRequestAtom)
+			if (!pr || pr.state !== "open") return
+			yield* GitHubService.use((github) => github.updatePullRequestBranch(pr.repository, pr.number)).pipe(
+				Effect.matchEffect({
+					onSuccess: () => Atom.set(noticeAtom, `Updated #${pr.number} from ${pr.baseRefName}`),
+					onFailure: (error) => Atom.set(noticeAtom, updateBranchConflictNotice(errorMessage(error)) ?? errorMessage(error)),
+				}),
+			)
+		}),
+	}),
+	defineCommand({
+		id: "pull.reopen",
+		title: "Reopen pull request",
+		scope: "Pull request",
+		subtitle: selectedPullRequestLabelAtom,
+		keywords: ["open"],
+		disabledReason: noPullRequestReasonAtom,
+		run: Effect.gen(function* () {
+			const pr = yield* Atom.get(selectedPullRequestAtom)
+			if (!pr || pr.state === "open") return
+			yield* GitHubService.use((github) => github.reopenPullRequest(pr.repository, pr.number)).pipe(
+				Effect.matchEffect({
+					onSuccess: () => Atom.set(noticeAtom, `Reopened #${pr.number}`),
+					onFailure: (error) => Atom.set(noticeAtom, errorMessage(error)),
+				}),
+			)
+		}),
+	}),
+	defineCommand({
+		id: "issue.reopen",
+		title: "Reopen issue",
+		scope: "Issue",
+		subtitle: selectedIssueLabelAtom,
+		keywords: ["open"],
+		disabledReason: noSelectedItemReasonAtom,
+		run: Effect.gen(function* () {
+			const issue = yield* Atom.get(selectedIssueAtom)
+			if (!issue || issue.state === "open") return
+			yield* GitHubService.use((github) => github.reopenIssue(issue.repository, issue.number)).pipe(
+				Effect.matchEffect({
+					onSuccess: () => Atom.set(noticeAtom, `Reopened #${issue.number}`),
+					onFailure: (error) => Atom.set(noticeAtom, errorMessage(error)),
+				}),
+			)
+		}),
+	}),
+	defineCommand({
+		id: "pull.reviewers",
+		title: "Request reviewers",
+		scope: "Pull request",
+		subtitle: selectedPullRequestLabelAtom,
+		keywords: ["review request", "team"],
+		disabledReason: noOpenPullRequestReasonAtom,
+		run: Effect.gen(function* () {
+			const pr = yield* Atom.get(selectedPullRequestAtom)
+			if (!pr) return
+			yield* Atom.set(activeModalAtom, Modal.Prompt({ ...initialPromptModalState, kind: "reviewers", repository: pr.repository, number: pr.number }))
+		}),
+	}),
+	defineCommand({
+		id: "pull.assignees",
+		title: "Manage assignees",
+		scope: "Pull request",
+		subtitle: selectedPullRequestLabelAtom,
+		keywords: ["assign"],
+		disabledReason: noOpenPullRequestReasonAtom,
+		run: Effect.gen(function* () {
+			const pr = yield* Atom.get(selectedPullRequestAtom)
+			if (!pr) return
+			yield* Atom.set(activeModalAtom, Modal.Prompt({ ...initialPromptModalState, kind: "assignees", repository: pr.repository, number: pr.number }))
+		}),
+	}),
+	defineCommand({
+		id: "pull.edit",
+		title: "Edit title and body",
+		scope: "Pull request",
+		subtitle: selectedPullRequestLabelAtom,
+		keywords: ["description", "title"],
+		disabledReason: noOpenPullRequestReasonAtom,
+		run: Effect.gen(function* () {
+			const pr = yield* Atom.get(selectedPullRequestAtom)
+			if (!pr) return
+			yield* Atom.set(activeModalAtom, Modal.Prompt({ ...initialPromptModalState, kind: "edit-pr", repository: pr.repository, number: pr.number, query: pr.title, body: pr.body }))
+		}),
+	}),
+	defineCommand({
+		id: "pull.create",
+		title: "Create pull request",
+		scope: "Pull request",
+		keywords: ["open pr", "new pr"],
+		run: Effect.gen(function* () {
+			const repository = yield* Atom.get(selectedRepositoryAtom)
+			if (!repository) {
+				yield* Atom.set(noticeAtom, "Select a repository first.")
+				return
+			}
+			yield* Atom.set(activeModalAtom, Modal.Prompt({ ...initialPromptModalState, kind: "create-pr", repository }))
+		}),
+	}),
+	defineCommand({
+		id: "review.discard-pending",
+		title: "Discard pending review",
+		scope: "Pull request",
+		subtitle: selectedPullRequestLabelAtom,
+		keywords: ["queue", "draft review"],
+		disabledReason: noOpenPullRequestReasonAtom,
+		run: Effect.gen(function* () {
+			const pr = yield* Atom.get(selectedPullRequestAtom)
+			if (!pr) return
+			const key = pendingReviewKey(pr.repository, pr.number)
+			const pending = (yield* Atom.get(pendingReviewByPrAtom))[key]
+			if (!pending) {
+				yield* Atom.set(noticeAtom, "No pending review.")
+				return
+			}
+			yield* GitHubService.use((github) => github.discardPendingReview(pr.repository, pr.number, pending.id)).pipe(
+				Effect.matchEffect({
+					onSuccess: () =>
+						Effect.gen(function* () {
+							yield* Atom.update(pendingReviewByPrAtom, (current) => ({ ...current, [key]: null }))
+							yield* Atom.set(noticeAtom, "Discarded pending review")
+						}),
+					onFailure: (error) => Atom.set(noticeAtom, errorMessage(error)),
+				}),
+			)
+		}),
+	}),
+	defineCommand({
+		id: "review.toggle-thread",
+		title: "Resolve or unresolve thread",
+		scope: "Comments",
+		keywords: ["conversation", "resolve"],
+		disabledReason: noOpenPullRequestReasonAtom,
+		run: Effect.gen(function* () {
+			const pr = yield* Atom.get(selectedPullRequestAtom)
+			if (!pr) return
+			const modal = yield* Atom.get(activeModalAtom)
+			const selected = yield* Atom.get(selectedOrderedCommentAtom)
+			const commentIds = resolveTargetCommentIds({
+				threadModalRootId: modal._tag === "CommentThread" ? modal.rootCommentId : null,
+				selectedOrderedCommentId: selected && selected._tag !== "timeline" ? selected.id : null,
+			})
+			if (commentIds.length === 0) return
+			const key = pendingReviewKey(pr.repository, pr.number)
+			let threads = (yield* Atom.get(reviewThreadsByPrAtom))[key] ?? []
+			if (threads.length === 0) {
+				threads = yield* GitHubService.use((github) => github.listReviewThreads(pr.repository, pr.number))
+				yield* Atom.update(reviewThreadsByPrAtom, (current) => ({ ...current, [key]: threads }))
+			}
+			const thread = matchReviewThread(threads, commentIds)
+			if (!thread) {
+				yield* Atom.set(noticeAtom, "No review thread for this comment.")
+				return
+			}
+			yield* GitHubService.use((github) => (thread.isResolved ? github.unresolveReviewThread(thread.id) : github.resolveReviewThread(thread.id))).pipe(
+				Effect.matchEffect({
+					onSuccess: () =>
+						Effect.gen(function* () {
+							yield* Atom.update(reviewThreadsByPrAtom, (current) => ({
+								...current,
+								[key]: (current[key] ?? []).map((entry) => (entry.id === thread.id ? { ...entry, isResolved: !thread.isResolved } : entry)),
+							}))
+							yield* Atom.set(noticeAtom, thread.isResolved ? "Unresolved thread" : "Resolved thread")
+						}),
+					onFailure: (error) => Atom.set(noticeAtom, errorMessage(error)),
+				}),
+			)
+		}),
+	}),
+	defineCommand({
+		id: "review.queue-comment",
+		title: "Add comment to pending review",
+		scope: "Comments",
+		keywords: ["queue", "pending"],
+		run: Effect.sync(() => invokeHandoff("queueDiffComment")),
+	}),
+	defineCommand({
+		id: "runs.view-logs",
+		title: "Show failed job logs",
+		scope: "Runs",
+		shortcut: "shift-l",
+		keywords: ["log", "output", "ci"],
+		run: Effect.gen(function* () {
+			const prRunId = yield* Atom.get(selectedRunIdAtom)
+			const repoRunId = yield* Atom.get(repositorySelectedRunIdAtom)
+			if (prRunId === null && repoRunId === null) {
+				yield* Atom.set(noticeAtom, "Open a workflow run first.")
+				return
+			}
+			yield* Atom.set(runsLogsOpenAtom, true)
+		}),
+	}),
+	defineCommand({
+		id: "prompt.confirm",
+		title: "Confirm prompt",
+		scope: "Global",
+		run: Effect.gen(function* () {
+			const modal = yield* Atom.get(activeModalAtom)
+			if (modal._tag !== "Prompt" || modal.running) return
+			const query = modal.query.trim()
+			if (query.length === 0) {
+				yield* Atom.set(activeModalAtom, Modal.Prompt({ ...modal, error: "Enter a value." }))
+				return
+			}
+			yield* Atom.set(activeModalAtom, Modal.Prompt({ ...modal, running: true, error: null }))
+			const fail = (error: unknown) => Atom.set(activeModalAtom, Modal.Prompt({ ...modal, running: false, error: errorMessage(error) }))
+			if ((modal.kind === "reviewers" || modal.kind === "assignees") && modal.number !== null) {
+				const people = parsePeoplePrompt(query)
+				if (!people) {
+					yield* Atom.set(activeModalAtom, Modal.Prompt({ ...modal, running: false, error: "Enter a GitHub login." }))
+					return
+				}
+				yield* GitHubService.use((github) => {
+					if (modal.kind === "reviewers") {
+						return people.action === "remove"
+							? github.removeReviewers(modal.repository, modal.number!, [people.login])
+							: github.addReviewers(modal.repository, modal.number!, [people.login])
+					}
+					return people.action === "remove"
+						? github.removeAssignees(modal.repository, modal.number!, [people.login])
+						: github.addAssignees(modal.repository, modal.number!, [people.login])
+				}).pipe(
+					Effect.matchEffect({
+						onSuccess: () =>
+							Effect.gen(function* () {
+								yield* Atom.set(activeModalAtom, Modal.None())
+								const verb =
+									modal.kind === "reviewers"
+										? people.action === "remove"
+											? `Removed review request from ${people.login}`
+											: `Requested review from ${people.login}`
+										: people.action === "remove"
+											? `Unassigned ${people.login}`
+											: `Assigned ${people.login}`
+								yield* Atom.set(noticeAtom, verb)
+							}),
+						onFailure: fail,
+					}),
+				)
+				return
+			}
+			if (modal.kind === "edit-pr" && modal.number !== null) {
+				const [titlePart, bodyPart] = query.split("|", 2)
+				const title = (titlePart ?? query).trim()
+				const body = (bodyPart ?? modal.body).trim()
+				yield* GitHubService.use((github) => github.editPullRequestTitleBody(modal.repository, modal.number!, title, body)).pipe(
+					Effect.matchEffect({
+						onSuccess: () =>
+							Effect.gen(function* () {
+								yield* Atom.set(activeModalAtom, Modal.None())
+								yield* Atom.set(noticeAtom, "Updated pull request")
+							}),
+						onFailure: fail,
+					}),
+				)
+				return
+			}
+			if (modal.kind === "create-pr") {
+				const draft = query.startsWith("draft:")
+				const rest = draft ? query.slice("draft:".length).trim() : query
+				const [title, head, base] = rest.split("|").map((part) => part.trim())
+				if (!title || !head) {
+					yield* Atom.set(activeModalAtom, Modal.Prompt({ ...modal, running: false, error: "Need title | head." }))
+					return
+				}
+				yield* GitHubService.use((github) =>
+					github.createPullRequest({
+						repository: modal.repository,
+						title,
+						body: modal.body,
+						base: base || modal.base || "main",
+						head,
+						draft,
+					}),
+				).pipe(
+					Effect.matchEffect({
+						onSuccess: (created) =>
+							Effect.gen(function* () {
+								yield* Atom.set(activeModalAtom, Modal.None())
+								yield* Atom.set(noticeAtom, `Opened #${created.number} ${created.title}`)
+							}),
+						onFailure: fail,
+					}),
+				)
+			}
+		}),
 	}),
 
 	defineCommand({

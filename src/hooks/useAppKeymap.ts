@@ -7,6 +7,7 @@ import type {
 	LabelModalState,
 	MergeModalState,
 	OpenRepositoryModalState,
+	PromptModalState,
 	SubmitReviewModalState,
 	ThemeModalState,
 } from "../ui/modals/types.js"
@@ -30,6 +31,7 @@ export interface UseAppKeymapInput {
 	readonly labelModalActive: boolean
 	readonly themeModalActive: boolean
 	readonly openRepositoryModalActive: boolean
+	readonly promptModalActive: boolean
 	readonly commentModalActive: boolean
 	readonly deleteCommentModalActive: boolean
 	readonly commandPaletteActive: boolean
@@ -158,6 +160,7 @@ export interface UseAppKeymapInput {
 	// Text-input dispatch
 	readonly setCommandPalette: (next: CommandPaletteState | ((prev: CommandPaletteState) => CommandPaletteState)) => void
 	readonly setOpenRepositoryModal: (next: OpenRepositoryModalState | ((prev: OpenRepositoryModalState) => OpenRepositoryModalState)) => void
+	readonly setPromptModal: (next: PromptModalState | ((prev: PromptModalState) => PromptModalState)) => void
 	readonly setChangedFilesModal: (next: ChangedFilesModalState | ((prev: ChangedFilesModalState) => ChangedFilesModalState)) => void
 	readonly setLabelModal: (next: LabelModalState | ((prev: LabelModalState) => LabelModalState)) => void
 	readonly editThemeQuery: (transform: (query: string) => string) => void
@@ -187,6 +190,7 @@ export const useAppKeymap = (i: UseAppKeymapInput): void => {
 				labelModalActive: i.labelModalActive,
 				themeModalActive: i.themeModalActive,
 				openRepositoryModalActive: i.openRepositoryModalActive,
+				promptModalActive: i.promptModalActive,
 				commentModalActive: i.commentModalActive,
 				deleteCommentModalActive: i.deleteCommentModalActive,
 				commandPaletteActive: i.commandPaletteActive,
@@ -199,6 +203,7 @@ export const useAppKeymap = (i: UseAppKeymapInput): void => {
 					i.commentModalActive ||
 					i.commandPaletteActive ||
 					i.openRepositoryModalActive ||
+					i.promptModalActive ||
 					i.changedFilesModalActive ||
 					i.submitReviewModalActive ||
 					i.labelModalActive ||
@@ -218,7 +223,13 @@ export const useAppKeymap = (i: UseAppKeymapInput): void => {
 				cycleMergeMethod: i.cycleMergeMethod,
 				moveMergeSelection: i.moveMergeSelection,
 			},
-			commentThreadModal: { halfPage: i.halfPage, closeActiveModal: i.closeActiveModal, openDiffCommentModal: i.openDiffCommentModal, scrollCommentThread: i.scrollCommentThread },
+			commentThreadModal: {
+				halfPage: i.halfPage,
+				closeActiveModal: i.closeActiveModal,
+				openDiffCommentModal: i.openDiffCommentModal,
+				scrollCommentThread: i.scrollCommentThread,
+				toggleResolve: () => i.runCommandById("review.toggle-thread"),
+			},
 			changedFilesModal: {
 				hasResults: i.changedFileResultsLength > 0,
 				closeActiveModal: i.closeActiveModal,
@@ -244,7 +255,8 @@ export const useAppKeymap = (i: UseAppKeymapInput): void => {
 				moveThemeSelection: i.moveThemeSelection,
 			},
 			openRepositoryModal: { closeActiveModal: i.closeActiveModal, openRepositoryFromInput: i.openRepositoryFromInput },
-			commentModal: { closeActiveModal: i.closeActiveModal },
+			prompt: { closeActiveModal: i.closeActiveModal, confirmPrompt: () => i.runCommandById("prompt.confirm") },
+			commentModal: { closeActiveModal: i.closeActiveModal, queueComment: () => i.runCommandById("review.queue-comment") },
 			deleteCommentModal: { closeActiveModal: i.closeActiveModal, confirmDeleteComment: i.confirmDeleteComment },
 			commandPalette: {
 				closeActiveModal: i.closeActiveModal,
@@ -343,6 +355,7 @@ export const useAppKeymap = (i: UseAppKeymapInput): void => {
 		textInput: {
 			commandPaletteActive: i.commandPaletteActive,
 			openRepositoryModalActive: i.openRepositoryModalActive,
+			promptModalActive: i.promptModalActive,
 			themeModalActive: i.themeModalActive,
 			commentModalActive: i.commentModalActive,
 			submitReviewModalActive: i.submitReviewModalActive,
@@ -359,6 +372,7 @@ export const useAppKeymap = (i: UseAppKeymapInput): void => {
 			switchWorkspaceSurface: i.switchWorkspaceSurface,
 			setCommandPalette: i.setCommandPalette,
 			setOpenRepositoryModal: i.setOpenRepositoryModal,
+			setPromptModal: i.setPromptModal,
 			setChangedFilesModal: i.setChangedFilesModal,
 			setLabelModal: i.setLabelModal,
 			setFilterDraft: i.setFilterDraft,

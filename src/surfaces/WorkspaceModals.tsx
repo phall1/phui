@@ -12,6 +12,7 @@ import {
 	LabelModal,
 	MergeModal,
 	OpenRepositoryModal,
+	PromptModal,
 	PullRequestStateModal,
 	SubmitReviewModal,
 	ThemeModal,
@@ -94,4 +95,5 @@ export const WorkspaceModals = (props: WorkspaceModalsProps) =>
 				{...layoutToProps(props.layouts.CommandPalette)}
 			/>
 		),
+		Prompt: (state) => <PromptModal state={state} {...layoutToProps(props.layouts.Prompt)} />,
 	})

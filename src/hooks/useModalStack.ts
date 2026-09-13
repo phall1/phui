@@ -12,6 +12,7 @@ import {
 	initialMergeModalState,
 	initialModal,
 	initialOpenRepositoryModalState,
+	initialPromptModalState,
 	initialPullRequestStateModalState,
 	initialSubmitReviewModalState,
 	initialThemeModalState,
@@ -24,6 +25,7 @@ import {
 	type LabelModalState,
 	type MergeModalState,
 	type OpenRepositoryModalState,
+	type PromptModalState,
 	type PullRequestStateModalState,
 	type SubmitReviewModalState,
 	type ThemeModalState,
@@ -45,6 +47,7 @@ export interface ModalStack {
 	readonly themeModalActive: boolean
 	readonly commandPaletteActive: boolean
 	readonly openRepositoryModalActive: boolean
+	readonly promptModalActive: boolean
 	readonly labelModal: LabelModalState
 	readonly closeModal: CloseModalState
 	readonly pullRequestStateModal: PullRequestStateModalState
@@ -57,6 +60,7 @@ export interface ModalStack {
 	readonly themeModal: ThemeModalState
 	readonly commandPalette: CommandPaletteState
 	readonly openRepositoryModal: OpenRepositoryModalState
+	readonly promptModal: PromptModalState
 	readonly setLabelModal: ReturnType<typeof makeModalSetter<"Label">>
 	readonly setPullRequestStateModal: ReturnType<typeof makeModalSetter<"PullRequestState">>
 	readonly setMergeModal: ReturnType<typeof makeModalSetter<"Merge">>
@@ -69,6 +73,7 @@ export interface ModalStack {
 	readonly setThemeModal: ReturnType<typeof makeModalSetter<"Theme">>
 	readonly setCommandPalette: ReturnType<typeof makeModalSetter<"CommandPalette">>
 	readonly setOpenRepositoryModal: ReturnType<typeof makeModalSetter<"OpenRepository">>
+	readonly setPromptModal: ReturnType<typeof makeModalSetter<"Prompt">>
 }
 
 type ModalSetter = (current: Modal) => Modal
@@ -108,6 +113,7 @@ export const useModalStack = (): ModalStack => {
 	const themeModalActive = Modal.$is("Theme")(activeModal)
 	const commandPaletteActive = Modal.$is("CommandPalette")(activeModal)
 	const openRepositoryModalActive = Modal.$is("OpenRepository")(activeModal)
+	const promptModalActive = Modal.$is("Prompt")(activeModal)
 	return {
 		activeModal,
 		closeActiveModal,
@@ -124,6 +130,7 @@ export const useModalStack = (): ModalStack => {
 		themeModalActive,
 		commandPaletteActive,
 		openRepositoryModalActive,
+		promptModalActive,
 		labelModal: labelModalActive ? activeModal : initialLabelModalState,
 		closeModal: closeModalActive ? activeModal : initialCloseModalState,
 		pullRequestStateModal: pullRequestStateModalActive ? activeModal : initialPullRequestStateModalState,
@@ -136,6 +143,7 @@ export const useModalStack = (): ModalStack => {
 		themeModal: themeModalActive ? activeModal : initialThemeModalState,
 		commandPalette: commandPaletteActive ? activeModal : initialCommandPaletteState,
 		openRepositoryModal: openRepositoryModalActive ? activeModal : initialOpenRepositoryModalState,
+		promptModal: promptModalActive ? activeModal : initialPromptModalState,
 		setLabelModal: makeModalSetter(setActiveModal, "Label"),
 		setPullRequestStateModal: makeModalSetter(setActiveModal, "PullRequestState"),
 		setMergeModal: makeModalSetter(setActiveModal, "Merge"),
@@ -148,5 +156,6 @@ export const useModalStack = (): ModalStack => {
 		setThemeModal: makeModalSetter(setActiveModal, "Theme"),
 		setCommandPalette: makeModalSetter(setActiveModal, "CommandPalette"),
 		setOpenRepositoryModal: makeModalSetter(setActiveModal, "OpenRepository"),
+		setPromptModal: makeModalSetter(setActiveModal, "Prompt"),
 	}
 }

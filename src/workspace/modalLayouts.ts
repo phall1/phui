@@ -42,6 +42,7 @@ export interface ModalLayouts {
 	readonly Theme: ModalRect
 	readonly OpenRepository: ModalRect
 	readonly CommandPalette: ModalRect
+	readonly Prompt: ModalRect
 }
 
 export const computeModalLayouts = ({ contentWidth, terminalHeight, longestLabelName, longestDiffFileName, changedFilesModalActive }: ModalLayoutInput): ModalLayouts => {
@@ -76,5 +77,6 @@ export const computeModalLayouts = ({ contentWidth, terminalHeight, longestLabel
 		Theme: sized(38, 58, 12, 16),
 		OpenRepository: sized(46, 76, 8, 8),
 		CommandPalette: sized(50, 88, 8, 24),
+		Prompt: sized(46, 76, 8, 10),
 	}
 }

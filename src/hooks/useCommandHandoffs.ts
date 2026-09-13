@@ -27,6 +27,7 @@ export interface UseCommandHandoffsInput {
 	readonly openReplyToSelectedComment: () => void
 	readonly openEditSelectedComment: () => void
 	readonly openDeleteSelectedComment: () => void
+	readonly queueDiffComment: () => void
 }
 
 /**
@@ -61,6 +62,7 @@ export const useCommandHandoffs = ({
 	openReplyToSelectedComment,
 	openEditSelectedComment,
 	openDeleteSelectedComment,
+	queueDiffComment,
 }: UseCommandHandoffsInput): void => {
 	useEffect(() => registerHandoff("quit", () => renderer.destroy()), [renderer])
 	useEffect(() => registerHandoff("refreshPullRequests", () => refreshPullRequests("Refreshed", { resetTransientState: true })), [refreshPullRequests])
@@ -91,6 +93,7 @@ export const useCommandHandoffs = ({
 	useEffect(() => registerHandoff("openReplyToSelectedComment", openReplyToSelectedComment), [openReplyToSelectedComment])
 	useEffect(() => registerHandoff("openEditSelectedComment", openEditSelectedComment), [openEditSelectedComment])
 	useEffect(() => registerHandoff("openDeleteSelectedComment", openDeleteSelectedComment), [openDeleteSelectedComment])
+	useEffect(() => registerHandoff("queueDiffComment", queueDiffComment), [queueDiffComment])
 	useEffect(
 		() =>
 			registerHandoff("viewRepository", () => {

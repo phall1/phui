@@ -3,14 +3,20 @@ import * as Option from "effect/Option"
 import { config } from "../config.js"
 import {
 	type CreatePullRequestCommentInput,
+	type CreatePullRequestInput,
+	type CreatedPullRequest,
 	type IssueItem,
+	type PendingReview,
+	type PullRequestCollaborators,
 	type PullRequestComment,
 	type PullRequestItem,
 	type PullRequestMergeAction,
 	type PullRequestMergeInfo,
 	type PullRequestReviewComment,
+	type PullRequestTimelineEvent,
 	type RepositoryDetails,
 	type RepositoryMergeMethods,
+	type ReviewThread,
 	type SubmitPullRequestReviewInput,
 	type WorkflowRun,
 	type WorkflowRunDetails,
@@ -26,14 +32,19 @@ import {
 	parseIssueComment,
 	parseIssueComments,
 	parseIssueSearchNode,
+	parseAddPullRequestReviewThreadComment,
+	pendingReviewFromList,
 	parsePullRequest,
+	parsePullRequestCollaborators,
 	parsePullRequestComment,
 	parsePullRequestComments,
 	parsePullRequestFiles,
 	parsePullRequestMergeInfo,
 	parsePullRequestSummary,
+	parsePullRequestTimeline,
 	parseRepositoryDetails,
 	parseRepositoryMergeMethods,
+	parseReviewThreads,
 	parseRunDetails,
 	parseWorkflowRuns,
 	pullRequestFilesToPatch,
@@ -41,25 +52,39 @@ import {
 	sortComments,
 } from "./githubNormalize.js"
 import {
+	addPullRequestReviewThreadMutation,
+	AddPullRequestReviewThreadResponseSchema,
 	CommentsResponseSchema,
+	CreatedPullRequestSchema,
 	issueSearchQuery,
 	MergeInfoResponseSchema,
+	PendingReviewSchema,
+	PendingReviewsResponseSchema,
 	PullRequestAdminMergeResponseSchema,
+	PullRequestCollaboratorsSchema,
 	PullRequestCommentSchema,
 	pullRequestDetailQuery,
 	PullRequestDetailResponseSchema,
 	PullRequestFilesResponseSchema,
 	pullRequestSummarySearchQuery,
+	pullRequestTimelineQuery,
+	PullRequestTimelineResponseSchema,
 	RawIssueSearchNodeSchema,
 	RawPullRequestSummaryNodeSchema,
 	RepoLabelsResponseSchema,
 	RepositoryDetailsResponseSchema,
 	RepositoryMergeMethodsResponseSchema,
 	RepositoryPullRequestsResponseSchema,
+	ResolveThreadResponseSchema,
+	resolveReviewThreadMutation,
+	reviewThreadsQuery,
+	ReviewThreadsResponseSchema,
 	repositoryDetailsQuery,
 	repositoryPullRequestsQuery,
 	SearchResponseSchema,
 	type SearchResponse,
+	unresolveReviewThreadMutation,
+	UpdateBranchResponseSchema,
 	ViewerSchema,
 	WorkflowRunDetailsSchema,
 	WorkflowRunListSchema,
@@ -117,6 +142,40 @@ export class GitHubService extends Context.Service<
 		readonly removePullRequestLabel: (repository: string, number: number, label: string) => Effect.Effect<void, CommandError>
 		readonly addIssueLabel: (repository: string, number: number, label: string) => Effect.Effect<void, CommandError>
 		readonly removeIssueLabel: (repository: string, number: number, label: string) => Effect.Effect<void, CommandError>
+		readonly findPendingReview: (repository: string, number: number) => Effect.Effect<PendingReview | null, GitHubError>
+		readonly createPendingReview: (repository: string, number: number, commitId: string) => Effect.Effect<PendingReview, GitHubError>
+		readonly addPendingReviewComment: (
+			repository: string,
+			number: number,
+			reviewId: string,
+			input: CreatePullRequestCommentInput,
+		) => Effect.Effect<PullRequestReviewComment, GitHubError>
+		readonly queuePendingDiffComment: (
+			input: CreatePullRequestCommentInput,
+		) => Effect.Effect<{ readonly pending: PendingReview; readonly comment: PullRequestReviewComment }, GitHubError>
+		readonly submitPendingReview: (
+			repository: string,
+			number: number,
+			reviewId: string,
+			event: SubmitPullRequestReviewInput["event"],
+			body: string,
+		) => Effect.Effect<void, CommandError>
+		readonly discardPendingReview: (repository: string, number: number, reviewId: string) => Effect.Effect<void, CommandError>
+		readonly listReviewThreads: (repository: string, number: number) => Effect.Effect<readonly ReviewThread[], GitHubError>
+		readonly resolveReviewThread: (threadId: string) => Effect.Effect<void, GitHubError>
+		readonly unresolveReviewThread: (threadId: string) => Effect.Effect<void, GitHubError>
+		readonly getPullRequestCollaborators: (repository: string, number: number) => Effect.Effect<PullRequestCollaborators, GitHubError>
+		readonly addReviewers: (repository: string, number: number, reviewers: readonly string[]) => Effect.Effect<void, CommandError>
+		readonly removeReviewers: (repository: string, number: number, reviewers: readonly string[]) => Effect.Effect<void, CommandError>
+		readonly addAssignees: (repository: string, number: number, assignees: readonly string[]) => Effect.Effect<void, CommandError>
+		readonly removeAssignees: (repository: string, number: number, assignees: readonly string[]) => Effect.Effect<void, CommandError>
+		readonly updatePullRequestBranch: (repository: string, number: number) => Effect.Effect<void, GitHubError>
+		readonly reopenPullRequest: (repository: string, number: number) => Effect.Effect<void, CommandError>
+		readonly reopenIssue: (repository: string, number: number) => Effect.Effect<void, CommandError>
+		readonly editPullRequestTitleBody: (repository: string, number: number, title: string, body: string) => Effect.Effect<void, CommandError>
+		readonly createPullRequest: (input: CreatePullRequestInput) => Effect.Effect<CreatedPullRequest, GitHubError>
+		readonly listPullRequestTimeline: (repository: string, number: number) => Effect.Effect<readonly PullRequestTimelineEvent[], GitHubError>
+		readonly getWorkflowRunLogs: (repository: string, runId: number, failedOnly: boolean) => Effect.Effect<string, CommandError>
 	}
 >()("phui/GitHubService") {
 	static readonly layerNoDeps = Layer.effect(
@@ -333,18 +392,39 @@ export class GitHubService extends Context.Service<
 					Effect.map(parsePullRequestComments),
 				)
 
+			const listPullRequestTimeline = Effect.fn("GitHubService.listPullRequestTimeline")(function* (repository: string, number: number) {
+				const repo = repositoryParts(repository)
+				if (!repo) {
+					return yield* new CommandError({ command: "gh", args: [], detail: `Invalid repository: ${repository}`, cause: repository })
+				}
+				const response = yield* ghJson("listPullRequestTimeline", PullRequestTimelineResponseSchema, [
+					"api",
+					"graphql",
+					"-f",
+					`query=${pullRequestTimelineQuery}`,
+					"-F",
+					`owner=${repo.owner}`,
+					"-F",
+					`name=${repo.name}`,
+					"-F",
+					`number=${number}`,
+				])
+				return parsePullRequestTimeline(response)
+			})
+
 			const listPullRequestComments = Effect.fn("GitHubService.listPullRequestComments")(function* (repository: string, number: number) {
-				const [issueComments, reviewComments] = yield* Effect.all(
+				const [issueComments, reviewComments, timeline] = yield* Effect.all(
 					[
 						ghJson("listPullRequestIssueComments", CommentsResponseSchema, ["api", "--paginate", "--slurp", `repos/${repository}/issues/${number}/comments`]).pipe(
 							Effect.map(parseIssueComments),
 						),
 						listPullRequestReviewComments(repository, number).pipe(Effect.map((comments) => comments.map(reviewCommentAsComment))),
+						listPullRequestTimeline(repository, number).pipe(Effect.catch(() => Effect.succeed([] as const))),
 					],
 					{ concurrency: "unbounded" },
 				)
 
-				return sortComments([...issueComments, ...reviewComments])
+				return sortComments([...issueComments, ...reviewComments, ...timeline])
 			})
 
 			const listIssueComments = (repository: string, number: number) =>
@@ -499,6 +579,164 @@ export class GitHubService extends Context.Service<
 			const removeIssueLabel = (repository: string, number: number, label: string) =>
 				ghVoid("removeIssueLabel", ["issue", "edit", String(number), "--repo", repository, "--remove-label", label])
 
+			const findPendingReview = Effect.fn("GitHubService.findPendingReview")(function* (repository: string, number: number) {
+				const reviews = yield* ghJson("findPendingReview", PendingReviewsResponseSchema, ["api", "--paginate", "--slurp", `repos/${repository}/pulls/${number}/reviews`])
+				const pending = pendingReviewFromList(reviews)
+				if (!pending) return null
+				const comments = yield* ghJson("listPendingReviewComments", CommentsResponseSchema, [
+					"api",
+					"--paginate",
+					"--slurp",
+					`repos/${repository}/pulls/${number}/reviews/${pending.id}/comments`,
+				])
+				return { ...pending, comments: parsePullRequestComments(comments) } satisfies PendingReview
+			})
+
+			const createPendingReview = Effect.fn("GitHubService.createPendingReview")(function* (repository: string, number: number, commitId: string) {
+				const created = yield* command.runSchema(PendingReviewSchema, "gh", [
+					"api",
+					"--method",
+					"POST",
+					`repos/${repository}/pulls/${number}/reviews`,
+					"-f",
+					`commit_id=${commitId}`,
+				])
+				return { id: String(created.id), nodeId: created.node_id ?? null, commitId: created.commit_id ?? commitId, comments: [] } satisfies PendingReview
+			})
+
+			const addPendingReviewComment = Effect.fn("GitHubService.addPendingReviewComment")(function* (
+				_repository: string,
+				_number: number,
+				reviewId: string,
+				input: CreatePullRequestCommentInput,
+			) {
+				if (!reviewId.startsWith("PRR_")) {
+					return yield* new CommandError({
+						command: "gh",
+						args: [],
+						detail: "Pending review is missing a GraphQL node id (PRR_…). Refresh and queue again.",
+						cause: reviewId,
+					})
+				}
+				const response = yield* ghJson("addPendingReviewComment", AddPullRequestReviewThreadResponseSchema, [
+					"api",
+					"graphql",
+					"-f",
+					`query=${addPullRequestReviewThreadMutation}`,
+					"-f",
+					`reviewId=${reviewId}`,
+					"-f",
+					`path=${input.path}`,
+					"-f",
+					`body=${input.body}`,
+					"-F",
+					`line=${input.line}`,
+					"-f",
+					`side=${input.side}`,
+					...(input.startLine === undefined ? [] : ["-F", `startLine=${input.startLine}`, "-f", `startSide=${input.startSide ?? input.side}`]),
+				])
+				return parseAddPullRequestReviewThreadComment(response, input)
+			})
+
+			const queuePendingDiffComment = Effect.fn("GitHubService.queuePendingDiffComment")(function* (input: CreatePullRequestCommentInput) {
+				let pending = yield* findPendingReview(input.repository, input.number)
+				if (!pending) pending = yield* createPendingReview(input.repository, input.number, input.commitId)
+				const reviewId = pending.nodeId
+				if (!reviewId?.startsWith("PRR_")) {
+					return yield* new CommandError({
+						command: "gh",
+						args: [],
+						detail: "Pending review is missing a GraphQL node id (PRR_…). Refresh and queue again.",
+						cause: reviewId ?? pending.id,
+					})
+				}
+				const comment = yield* addPendingReviewComment(input.repository, input.number, reviewId, input)
+				return { pending: { ...pending, comments: [...pending.comments, comment] }, comment }
+			})
+
+			const submitPendingReview = (repository: string, number: number, reviewId: string, event: SubmitPullRequestReviewInput["event"], body: string) =>
+				ghVoid("submitPendingReview", ["api", "--method", "POST", `repos/${repository}/pulls/${number}/reviews/${reviewId}/events`, "-f", `event=${event}`, "-f", `body=${body}`])
+
+			const discardPendingReview = (repository: string, number: number, reviewId: string) =>
+				ghVoid("discardPendingReview", ["api", "--method", "DELETE", `repos/${repository}/pulls/${number}/reviews/${reviewId}`])
+
+			const listReviewThreads = Effect.fn("GitHubService.listReviewThreads")(function* (repository: string, number: number) {
+				const repo = repositoryParts(repository)
+				if (!repo) {
+					return yield* new CommandError({ command: "gh", args: [], detail: `Invalid repository: ${repository}`, cause: repository })
+				}
+				const response = yield* ghJson("listReviewThreads", ReviewThreadsResponseSchema, [
+					"api",
+					"graphql",
+					"-f",
+					`query=${reviewThreadsQuery}`,
+					"-F",
+					`owner=${repo.owner}`,
+					"-F",
+					`name=${repo.name}`,
+					"-F",
+					`number=${number}`,
+				])
+				return parseReviewThreads(response)
+			})
+
+			const setReviewThreadResolved = (label: string, mutation: string, threadId: string) =>
+				ghJson(label, ResolveThreadResponseSchema, ["api", "graphql", "-f", `query=${mutation}`, "-f", `id=${threadId}`]).pipe(Effect.asVoid)
+
+			const resolveReviewThread = (threadId: string) => setReviewThreadResolved("resolveReviewThread", resolveReviewThreadMutation, threadId)
+			const unresolveReviewThread = (threadId: string) => setReviewThreadResolved("unresolveReviewThread", unresolveReviewThreadMutation, threadId)
+
+			const getPullRequestCollaborators = (repository: string, number: number) =>
+				ghJson("getPullRequestCollaborators", PullRequestCollaboratorsSchema, ["pr", "view", String(number), "--repo", repository, "--json", "reviewRequests,assignees"]).pipe(
+					Effect.map(parsePullRequestCollaborators),
+				)
+
+			const addReviewers = (repository: string, number: number, reviewers: readonly string[]) =>
+				ghVoid("addReviewers", ["pr", "edit", String(number), "--repo", repository, ...reviewers.flatMap((reviewer) => ["--add-reviewer", reviewer])])
+
+			const removeReviewers = (repository: string, number: number, reviewers: readonly string[]) =>
+				ghVoid("removeReviewers", ["pr", "edit", String(number), "--repo", repository, ...reviewers.flatMap((reviewer) => ["--remove-reviewer", reviewer])])
+
+			const addAssignees = (repository: string, number: number, assignees: readonly string[]) =>
+				ghVoid("addAssignees", ["pr", "edit", String(number), "--repo", repository, ...assignees.flatMap((assignee) => ["--add-assignee", assignee])])
+
+			const removeAssignees = (repository: string, number: number, assignees: readonly string[]) =>
+				ghVoid("removeAssignees", ["pr", "edit", String(number), "--repo", repository, ...assignees.flatMap((assignee) => ["--remove-assignee", assignee])])
+
+			const updatePullRequestBranch = Effect.fn("GitHubService.updatePullRequestBranch")(function* (repository: string, number: number) {
+				yield* ghJson("updatePullRequestBranch", UpdateBranchResponseSchema, ["api", "--method", "PUT", `repos/${repository}/pulls/${number}/update-branch`])
+			})
+
+			const reopenPullRequest = (repository: string, number: number) => ghVoid("reopenPullRequest", ["pr", "reopen", String(number), "--repo", repository])
+			const reopenIssue = (repository: string, number: number) => ghVoid("reopenIssue", ["issue", "reopen", String(number), "--repo", repository])
+
+			const editPullRequestTitleBody = (repository: string, number: number, title: string, body: string) =>
+				ghVoid("editPullRequestTitleBody", ["pr", "edit", String(number), "--repo", repository, "--title", title, "--body", body])
+
+			const createPullRequest = Effect.fn("GitHubService.createPullRequest")(function* (input: CreatePullRequestInput) {
+				const created = yield* ghJson("createPullRequest", CreatedPullRequestSchema, [
+					"pr",
+					"create",
+					"--repo",
+					input.repository,
+					"--title",
+					input.title,
+					"--body",
+					input.body,
+					"--base",
+					input.base,
+					"--head",
+					input.head,
+					"--json",
+					"number,url,title",
+					...(input.draft ? ["--draft"] : []),
+				])
+				return { ...created, repository: input.repository }
+			})
+
+			const getWorkflowRunLogs = (repository: string, runId: number, failedOnly: boolean) =>
+				command.run("gh", ["run", "view", String(runId), "--repo", repository, failedOnly ? "--log-failed" : "--log"]).pipe(Effect.map((result) => result.stdout))
+
 			return GitHubService.of({
 				listPullRequestPage,
 				listIssuePage,
@@ -535,6 +773,27 @@ export class GitHubService extends Context.Service<
 				removePullRequestLabel,
 				addIssueLabel,
 				removeIssueLabel,
+				findPendingReview,
+				createPendingReview,
+				addPendingReviewComment,
+				queuePendingDiffComment,
+				submitPendingReview,
+				discardPendingReview,
+				listReviewThreads,
+				resolveReviewThread,
+				unresolveReviewThread,
+				getPullRequestCollaborators,
+				addReviewers,
+				removeReviewers,
+				addAssignees,
+				removeAssignees,
+				updatePullRequestBranch,
+				reopenPullRequest,
+				reopenIssue,
+				editPullRequestTitleBody,
+				createPullRequest,
+				listPullRequestTimeline,
+				getWorkflowRunLogs,
 			})
 		}),
 	)

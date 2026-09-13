@@ -12,6 +12,7 @@ import {
 	verticalDiffAnchor,
 } from "../ui/diff.js"
 import { diffCommentRangeSelection, sameDiffCommentTarget } from "../ui/diff/comments.js"
+import { threadRootCommentId } from "../ui/comments/reviewThreads.js"
 
 const DIFF_STICKY_HEADER_LINES = 2
 import type { ChangedFilesModalState, CommentModalState } from "../ui/modals/types.js"
@@ -31,7 +32,7 @@ export interface DiffCommentNavigatorInput {
 	readonly diffCommentThreadAnchors: readonly StackedDiffCommentAnchor[]
 	readonly selectedDiffCommentAnchor: StackedDiffCommentAnchor | null
 	readonly selectedDiffCommentAnchorIndex: number
-	readonly selectedDiffCommentThread: readonly unknown[]
+	readonly selectedDiffCommentThread: readonly { readonly id: string; readonly inReplyTo: string | null }[]
 	readonly diffCommentRangeActive: boolean
 	readonly stackedDiffFiles: readonly StackedDiffFilePatch[]
 	readonly readyDiffFiles: readonly DiffFilePatch[]
@@ -44,7 +45,7 @@ export interface DiffCommentNavigatorInput {
 	readonly closeActiveModal: () => void
 	readonly setChangedFilesModal: (next: ChangedFilesModalState) => void
 	readonly setCommentModal: (state: CommentModalState | ((prev: CommentModalState) => CommentModalState)) => void
-	readonly setCommentThreadModal: (state: { scrollOffset: number }) => void
+	readonly setCommentThreadModal: (state: { scrollOffset: number; rootCommentId: string | null }) => void
 	readonly initialCommentModalState: CommentModalState
 	readonly flashNotice: (msg: string) => void
 }
@@ -277,7 +278,7 @@ export const useDiffCommentNavigator = (input: DiffCommentNavigatorInput): DiffC
 
 	const openDiffCommentThreadModal = () => {
 		if (!selectedDiffCommentAnchor || selectedDiffCommentThread.length === 0) return
-		setCommentThreadModal({ scrollOffset: 0 })
+		setCommentThreadModal({ scrollOffset: 0, rootCommentId: threadRootCommentId(selectedDiffCommentThread) })
 	}
 
 	const openSelectedDiffComment = () => {

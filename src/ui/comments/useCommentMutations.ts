@@ -1,6 +1,7 @@
 import type { CreatePullRequestCommentInput, IssueItem, PullRequestComment, PullRequestReviewComment } from "../../domain.js"
 import { errorMessage } from "../../errors.js"
 import { quotedReplyBody } from "../comments.js"
+import { queuePendingDiffCommentAtom } from "../../services/systemAtoms.js"
 import {
 	createPullRequestCommentAtom,
 	createPullRequestIssueCommentAtom,
@@ -8,6 +9,8 @@ import {
 	deleteReviewCommentAtom,
 	editPullRequestIssueCommentAtom,
 	editReviewCommentAtom,
+	pendingReviewByPrAtom,
+	pendingReviewKey,
 	replyToReviewCommentAtom,
 } from "./atoms.js"
 import { useAtomSet } from "@effect/atom-react"
@@ -73,6 +76,7 @@ export interface UseCommentMutationsResult {
 	readonly canEditSelectedComment: boolean
 	readonly hasSelectedComment: boolean
 	readonly submitDiffComment: () => void
+	readonly queueDiffComment: () => void
 	readonly submitIssueComment: () => void
 	readonly submitReplyComment: () => void
 	readonly submitEditComment: () => void
@@ -94,6 +98,8 @@ export interface UseCommentMutationsResult {
  */
 export const useCommentMutations = (input: UseCommentMutationsInput): UseCommentMutationsResult => {
 	const createPullRequestComment = useAtomSet(createPullRequestCommentAtom, { mode: "promise" })
+	const queuePendingDiffComment = useAtomSet(queuePendingDiffCommentAtom, { mode: "promise" })
+	const setPendingReviewByPr = useAtomSet(pendingReviewByPrAtom)
 	const createPullRequestIssueComment = useAtomSet(createPullRequestIssueCommentAtom, { mode: "promise" })
 	const replyToReviewComment = useAtomSet(replyToReviewCommentAtom, { mode: "promise" })
 	const editPullRequestIssueComment = useAtomSet(editPullRequestIssueCommentAtom, { mode: "promise" })
@@ -199,7 +205,7 @@ export const useCommentMutations = (input: UseCommentMutationsInput): UseComment
 		setCommentModal({ ...initialCommentModalState, target: { kind: "reply", subject, inReplyTo: rootId, anchorLabel: anchor } })
 	}
 
-	const submitDiffComment = () => {
+	const commitDiffComment = (mode: "post" | "queue") => {
 		if (commentModal.target.kind !== "diff" || !commentModal.target.target) return
 		const body = requireCommentBody()
 		if (body === null) return
@@ -231,13 +237,21 @@ export const useCommentMutations = (input: UseCommentMutationsInput): UseComment
 			body,
 			...rangeInput,
 		} satisfies CreatePullRequestCommentInput
+		const request =
+			mode === "queue"
+				? () =>
+						queuePendingDiffComment(apiInput).then((result) => {
+							setPendingReviewByPr((current) => ({ ...current, [pendingReviewKey(frozen.repository, frozen.number)]: result.pending }))
+							return reviewCommentAsPullRequestComment(result.comment)
+						})
+				: () => createPullRequestComment(apiInput).then(reviewCommentAsPullRequestComment)
 
 		submitOptimisticComment({
 			key,
 			optimistic: reviewCommentAsPullRequestComment(optimisticReview),
-			postingMessage: `Commenting on ${target.path}:${target.line}`,
-			successMessage: `Commented on ${target.path}:${target.line}`,
-			request: () => createPullRequestComment(apiInput).then(reviewCommentAsPullRequestComment),
+			postingMessage: mode === "queue" ? `Queuing comment on ${target.path}:${target.line}` : `Commenting on ${target.path}:${target.line}`,
+			successMessage: mode === "queue" ? `Queued comment on ${target.path}:${target.line}` : `Commented on ${target.path}:${target.line}`,
+			request,
 			onOptimistic: () => {
 				if (threadKey) {
 					setDiffCommentThreads((current) => ({
@@ -266,6 +280,9 @@ export const useCommentMutations = (input: UseCommentMutationsInput): UseComment
 			},
 		})
 	}
+
+	const submitDiffComment = () => commitDiffComment("post")
+	const queueDiffComment = () => commitDiffComment("queue")
 
 	const submitIssueComment = () => {
 		if (commentModal.target.kind !== "issue" || !commentModal.target.subject) return
@@ -350,7 +367,7 @@ export const useCommentMutations = (input: UseCommentMutationsInput): UseComment
 			body: comment.body,
 			cursor: comment.body.length,
 			error: null,
-			target: { kind: "edit", subject, commentId: comment.id, commentTag: comment._tag, anchorLabel },
+			target: { kind: "edit", subject, commentId: comment.id, commentTag: comment._tag === "review-comment" ? "review-comment" : "comment", anchorLabel },
 		})
 	}
 
@@ -439,7 +456,7 @@ export const useCommentMutations = (input: UseCommentMutationsInput): UseComment
 		setDeleteCommentModal({
 			subject,
 			commentId: comment.id,
-			commentTag: comment._tag,
+			commentTag: comment._tag === "review-comment" ? "review-comment" : "comment",
 			author: comment.author,
 			preview,
 			running: false,
@@ -518,6 +535,7 @@ export const useCommentMutations = (input: UseCommentMutationsInput): UseComment
 		canEditSelectedComment: canEditComment(selectedOrderedComment, username),
 		hasSelectedComment: selectedOrderedComment !== null,
 		submitDiffComment,
+		queueDiffComment,
 		submitIssueComment,
 		submitReplyComment,
 		submitEditComment,

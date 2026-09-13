@@ -20,6 +20,7 @@ import {
 	parseRepositoryDetails,
 	parseRepositoryMergeMethods,
 	restCommentId,
+	parsePullRequestTimeline,
 	sortComments,
 } from "../src/services/githubNormalize.ts"
 import {
@@ -471,5 +472,28 @@ describe("comment fallbacks", () => {
 		expect(edit._tag).toBe("review-comment")
 		expect(edit.id).toBe("9999")
 		expect(edit.body).toBe("new body")
+	})
+
+	test("parsePullRequestTimeline maps review, label, and merge events", () => {
+		const events = parsePullRequestTimeline({
+			data: {
+				repository: {
+					pullRequest: {
+						timelineItems: {
+							nodes: [
+								{ __typename: "PullRequestReview", id: "r1", author: { login: "kit" }, body: "please fix", state: "CHANGES_REQUESTED", createdAt: "2026-01-01T00:00:00Z" },
+								{ __typename: "LabeledEvent", id: "l1", actor: { login: "alice" }, createdAt: "2026-01-01T01:00:00Z", label: { name: "bug" } },
+								{ __typename: "MergedEvent", id: "m1", actor: { login: "bob" }, createdAt: "2026-01-02T00:00:00Z" },
+								{ __typename: "IssueComment", id: "skip" },
+							],
+						},
+					},
+				},
+			},
+		})
+		expect(events.map((event) => event.kind)).toEqual(["review", "labeled", "merged"])
+		expect(events[0]?.body).toContain("please fix")
+		expect(events[1]?.label).toBe("bug")
+		expect(events[2]?.author).toBe("bob")
 	})
 })

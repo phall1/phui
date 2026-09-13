@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Schema } from "effect"
 import { CommandRunner } from "./CommandRunner.js"
 
-export class ClipboardError extends Schema.TaggedErrorClass<ClipboardError>()("ClipboardError", {
+export class ClipboardError extends Schema.TaggedError<ClipboardError>()("ClipboardError", {
 	detail: Schema.String,
 }) {}
 

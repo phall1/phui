@@ -281,7 +281,7 @@ export const minimizeWhitespacePatch = (patch: string) => {
 	const lines = patch.split("\n")
 	const minimized: string[] = []
 
-	for (let index = 0; index < lines.length; ) {
+	for (let index = 0; index < lines.length;) {
 		const line = lines[index]!
 		if (!line.match(hunkHeaderPattern)) {
 			minimized.push(line)

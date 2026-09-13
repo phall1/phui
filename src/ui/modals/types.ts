@@ -98,6 +98,20 @@ export interface DeleteCommentModalState {
 
 export interface CommentThreadModalState {
 	readonly scrollOffset: number
+	readonly rootCommentId: string | null
+}
+
+export interface PromptModalState {
+	readonly kind: "reviewers" | "assignees" | "edit-pr" | "create-pr"
+	readonly repository: string
+	readonly number: number | null
+	readonly query: string
+	readonly body: string
+	readonly base: string
+	readonly head: string
+	readonly draft: boolean
+	readonly running: boolean
+	readonly error: string | null
 }
 
 export interface ChangedFilesModalState {
@@ -204,6 +218,20 @@ export const initialDeleteCommentModalState: DeleteCommentModalState = {
 
 export const initialCommentThreadModalState: CommentThreadModalState = {
 	scrollOffset: 0,
+	rootCommentId: null,
+}
+
+export const initialPromptModalState: PromptModalState = {
+	kind: "reviewers",
+	repository: "",
+	number: null,
+	query: "",
+	body: "",
+	base: "main",
+	head: "",
+	draft: false,
+	running: false,
+	error: null,
 }
 
 export const initialChangedFilesModalState: ChangedFilesModalState = {
@@ -263,6 +291,7 @@ export type Modal = Data.TaggedEnum<{
 	Theme: ThemeModalState
 	CommandPalette: CommandPaletteState
 	OpenRepository: OpenRepositoryModalState
+	Prompt: PromptModalState
 }>
 
 export const Modal = Data.taggedEnum<Modal>()
@@ -285,4 +314,5 @@ export const modalInitialStates = {
 	Theme: initialThemeModalState,
 	CommandPalette: initialCommandPaletteState,
 	OpenRepository: initialOpenRepositoryModalState,
+	Prompt: initialPromptModalState,
 } as const satisfies { [Tag in Exclude<ModalTag, "None">]: ModalState<Tag> }

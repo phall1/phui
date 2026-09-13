@@ -14,6 +14,7 @@ import { labelModalKeymap, type LabelModalCtx } from "./labelModal.ts"
 import { listNavKeymap, type ListNavCtx } from "./listNav.ts"
 import { mergeModalKeymap, type MergeModalCtx } from "./mergeModal.ts"
 import { openRepositoryModalKeymap, type OpenRepositoryModalCtx } from "./openRepositoryModal.ts"
+import { promptModalKeymap, type PromptModalCtx } from "./promptModal.ts"
 import { buildInboxViewCtx, inboxViewKeymap } from "../notifications/keymap.js"
 import { buildProjectsViewCtx, projectsViewKeymap } from "../projects/keymap.js"
 import { buildStarsViewCtx, starsViewKeymap } from "../stars/keymap.js"
@@ -35,6 +36,7 @@ export interface AppCtx {
 	readonly labelModalActive: boolean
 	readonly themeModalActive: boolean
 	readonly openRepositoryModalActive: boolean
+	readonly promptModalActive: boolean
 	readonly commentModalActive: boolean
 	readonly deleteCommentModalActive: boolean
 	readonly commandPaletteActive: boolean
@@ -59,6 +61,7 @@ export interface AppCtx {
 	readonly labelModal: LabelModalCtx
 	readonly themeModal: ThemeModalCtx
 	readonly openRepositoryModal: OpenRepositoryModalCtx
+	readonly prompt: PromptModalCtx
 	readonly commentModal: CommentModalCtx
 	readonly deleteCommentModal: DeleteCommentModalCtx
 	readonly commandPalette: CommandPaletteCtx
@@ -87,6 +90,7 @@ const modalActive = (a: AppCtx): boolean =>
 	a.labelModalActive ||
 	a.themeModalActive ||
 	a.openRepositoryModalActive ||
+	a.promptModalActive ||
 	a.commentModalActive ||
 	a.deleteCommentModalActive ||
 	a.commandPaletteActive
@@ -147,6 +151,7 @@ export const appKeymap = App(
 	labelModalKeymap.scope((a) => a.labelModalActive && a.labelModal),
 	themeModalKeymap.scope((a) => a.themeModalActive && a.themeModal),
 	openRepositoryModalKeymap.scope((a) => a.openRepositoryModalActive && a.openRepositoryModal),
+	promptModalKeymap.scope((a) => a.promptModalActive && a.prompt),
 	commentModalKeymap.scope((a) => a.commentModalActive && a.commentModal),
 	deleteCommentModalKeymap.scope((a) => a.deleteCommentModalActive && a.deleteCommentModal),
 	commandPaletteKeymap.scope((a) => a.commandPaletteActive && a.commandPalette),

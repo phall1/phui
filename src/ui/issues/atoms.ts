@@ -44,6 +44,17 @@ const trimIssueQueueLoadCache = (cache: Partial<Record<string, IssueLoad>>) => {
 export const issuesAtom = githubRuntime.atom(
 	Effect.fnUntraced(function* (get) {
 		const view = get(activeIssueViewAtom)
+		if (get(workspaceSurfaceAtom) !== "issues") {
+			return (
+				get(issueQueueLoadCacheAtom)[issueViewCacheKey(view)] ?? {
+					view,
+					data: [],
+					fetchedAt: null,
+					endCursor: null,
+					hasNextPage: false,
+				}
+			)
+		}
 		const github = yield* GitHubService
 		const cacheService = yield* CacheService
 		return yield* loadItemQueue(view, issueQueueLoadCacheAtom, {

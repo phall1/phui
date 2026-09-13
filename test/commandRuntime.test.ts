@@ -32,6 +32,28 @@ describe("command runtime", () => {
 		})
 	})
 
+	test("review.queue-comment invokes the registered queueDiffComment handoff", async () => {
+		const probe = `
+			import { Effect } from "effect"
+			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import { dispatchCommand } from "./src/commands/dispatch.ts"
+			import { registerHandoff } from "./src/commands/handoffs.ts"
+			const registry = AtomRegistry.make()
+			let called = false
+			registerHandoff("queueDiffComment", () => {
+				called = true
+			})
+			await Effect.runPromise(dispatchCommand("review.queue-comment").pipe(Effect.provideService(AtomRegistry.AtomRegistry, registry)))
+			console.log(called)
+		`
+		expect(await runIsolatedProbe(probe)).toBe("true")
+	})
+
+	test("useCommandHandoffs registers the queueDiffComment handoff", async () => {
+		const source = await Bun.file(new URL("../src/hooks/useCommandHandoffs.ts", import.meta.url)).text()
+		expect(source).toContain('registerHandoff("queueDiffComment"')
+	})
+
 	test("handoff cleanup cannot remove a newer registration", () => {
 		const calls: string[] = []
 		const cleanFirst = registerHandoff("quit", () => calls.push("first"))

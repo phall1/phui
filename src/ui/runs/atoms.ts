@@ -8,6 +8,7 @@ import { githubRuntime } from "../../services/runtime.js"
 // `runs` is a full-screen PR view mode, a peer of `diff` / `comments`. The flag
 // lives here (read by useViewModeState + PullRequestSurface + the keymap layer).
 export const runsFullViewAtom = Atom.make(false)
+export const runsLogsOpenAtom = Atom.make(false)
 
 // Which run (if any) is drilled into — null = runs list (view A); set = run detail
 // (view B). Cleared when the runs view closes.

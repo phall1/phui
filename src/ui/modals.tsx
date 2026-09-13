@@ -11,6 +11,7 @@ export { FilterModal, filterOptions } from "./modals/FilterModal.js"
 export { LabelModal } from "./modals/LabelModal.js"
 export { MergeModal } from "./modals/MergeModal.js"
 export { OpenRepositoryModal } from "./modals/OpenRepositoryModal.js"
+export { PromptModal } from "./modals/PromptModal.js"
 export { PullRequestStateModal } from "./modals/PullRequestStateModal.js"
 export { SubmitReviewModal } from "./modals/SubmitReviewModal.js"
 export { ThemeModal } from "./modals/ThemeModal.js"
@@ -33,6 +34,7 @@ export type {
 	ModalState,
 	ModalTag,
 	OpenRepositoryModalState,
+	PromptModalState,
 	PullRequestStateModalState,
 	SubmitReviewModalState,
 	ThemeModalState,
@@ -49,6 +51,7 @@ export {
 	initialMergeModalState,
 	initialModal,
 	initialOpenRepositoryModalState,
+	initialPromptModalState,
 	initialPullRequestStateModalState,
 	initialSubmitReviewModalState,
 	initialThemeModalState,

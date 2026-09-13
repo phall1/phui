@@ -40,7 +40,7 @@ export interface RepoRollupRow {
 	readonly lastActivityAt: Date | null
 }
 
-export class CacheError extends Schema.TaggedErrorClass<CacheError>()("CacheError", {
+export class CacheError extends Schema.TaggedError<CacheError>()("CacheError", {
 	operation: Schema.String,
 	cause: Schema.Defect(),
 }) {}
@@ -434,6 +434,23 @@ const cacheMigrations = {
 		)`
 		yield* sql`CREATE INDEX IF NOT EXISTS issues_repository_number_idx ON issues (repository, number)`
 	}),
+	"006_diff_and_metadata_cache": Effect.gen(function* () {
+		const sql = yield* SqlClient.SqlClient
+		yield* sql`CREATE TABLE IF NOT EXISTS diff_cache (
+			pr_key TEXT NOT NULL,
+			head_ref_oid TEXT NOT NULL,
+			patch TEXT NOT NULL,
+			fetched_at TEXT NOT NULL,
+			PRIMARY KEY (pr_key, head_ref_oid)
+		)`
+		yield* sql`CREATE TABLE IF NOT EXISTS repo_metadata_cache (
+			repository TEXT NOT NULL,
+			kind TEXT NOT NULL,
+			data_json TEXT NOT NULL,
+			fetched_at TEXT NOT NULL,
+			PRIMARY KEY (repository, kind)
+		)`
+	}),
 } satisfies Record<string, Effect.Effect<void, unknown, SqlClient.SqlClient>>
 
 const pullRequestRow = (pullRequest: PullRequestItem, updatedAt = new Date().toISOString()) => ({
@@ -522,6 +539,10 @@ const pruneSql = (sql: SqlClient.SqlClient) => {
 				SELECT value FROM queue_snapshots, json_each(queue_snapshots.pr_keys_json)
 				WHERE view_key LIKE 'issue:%'
 			)`
+		const diffCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+		yield* sql`DELETE FROM diff_cache
+			WHERE fetched_at < ${diffCutoff}
+			OR pr_key NOT IN (SELECT pr_key FROM pull_requests)`
 	}).pipe(Effect.catch(() => Effect.void))
 }
 
@@ -769,14 +790,12 @@ const liveCacheService = (sql: SqlClient.SqlClient) => {
 				entry.issueCount = row.count
 				bumpActivity(entry, row.last_activity_at)
 			}
-			return [...byRepository.entries()].map(
-				([repository, entry]): RepoRollupRow => ({
-					repository,
-					pullRequestCount: entry.pullRequestCount,
-					issueCount: entry.issueCount,
-					lastActivityAt: entry.lastActivityAt,
-				}),
-			)
+			return [...byRepository.entries()].map(([repository, entry]): RepoRollupRow => ({
+				repository,
+				pullRequestCount: entry.pullRequestCount,
+				issueCount: entry.issueCount,
+				lastActivityAt: entry.lastActivityAt,
+			}))
 		}).pipe(Effect.mapError((cause) => toCacheError("readRepoRollup", cause)))
 
 	const readRepositoryDetails = (repository: string): Effect.Effect<RepositoryDetails | null, CacheError> =>
@@ -811,6 +830,47 @@ const liveCacheService = (sql: SqlClient.SqlClient) => {
 		yield* pruneSql(sql)
 	})
 
+	const readDiff = (key: PullRequestCacheKey, headRefOid: string): Effect.Effect<string | null, CacheError> =>
+		Effect.gen(function* () {
+			const rows = yield* sql<{ readonly patch: string }>`SELECT patch FROM diff_cache WHERE pr_key = ${pullRequestCacheKey(key)} AND head_ref_oid = ${headRefOid} LIMIT 1`
+			return rows[0]?.patch ?? null
+		}).pipe(Effect.mapError((cause) => toCacheError("readDiff", cause)))
+
+	const writeDiff = (key: PullRequestCacheKey, headRefOid: string, patch: string): Effect.Effect<void> =>
+		Effect.gen(function* () {
+			const row = { pr_key: pullRequestCacheKey(key), head_ref_oid: headRefOid, patch, fetched_at: new Date().toISOString() }
+			yield* sql`INSERT INTO diff_cache ${sql.insert(row)}
+				ON CONFLICT(pr_key, head_ref_oid) DO UPDATE SET
+					patch = excluded.patch,
+					fetched_at = excluded.fetched_at`
+		}).pipe(
+			Effect.catch(() => Effect.void),
+			Effect.asVoid,
+		)
+
+	const readRepoMetadata = (repository: string, kind: string, maxAgeMs: number): Effect.Effect<string | null, CacheError> =>
+		Effect.gen(function* () {
+			const rows = yield* sql<{ readonly data_json: string; readonly fetched_at: string }>`
+				SELECT data_json, fetched_at FROM repo_metadata_cache WHERE repository = ${repository} AND kind = ${kind} LIMIT 1`
+			const row = rows[0]
+			if (!row) return null
+			const fetchedAt = parseDate(row.fetched_at)
+			if (!fetchedAt || Date.now() - fetchedAt.getTime() > maxAgeMs) return null
+			return row.data_json
+		}).pipe(Effect.mapError((cause) => toCacheError("readRepoMetadata", cause)))
+
+	const writeRepoMetadata = (repository: string, kind: string, dataJson: string): Effect.Effect<void> =>
+		Effect.gen(function* () {
+			const row = { repository, kind, data_json: dataJson, fetched_at: new Date().toISOString() }
+			yield* sql`INSERT INTO repo_metadata_cache ${sql.insert(row)}
+				ON CONFLICT(repository, kind) DO UPDATE SET
+					data_json = excluded.data_json,
+					fetched_at = excluded.fetched_at`
+		}).pipe(
+			Effect.catch(() => Effect.void),
+			Effect.asVoid,
+		)
+
 	return {
 		readQueue,
 		writeQueue,
@@ -826,6 +886,10 @@ const liveCacheService = (sql: SqlClient.SqlClient) => {
 		writeRepositoryDetails,
 		readWorkspacePreferences,
 		writeWorkspacePreferences,
+		readDiff,
+		writeDiff,
+		readRepoMetadata,
+		writeRepoMetadata,
 		prune,
 	}
 }
@@ -847,6 +911,10 @@ export class CacheService extends Context.Service<
 		readonly writeRepositoryDetails: (details: RepositoryDetails) => Effect.Effect<void>
 		readonly readWorkspacePreferences: (viewer: ViewerId) => Effect.Effect<WorkspacePreferences | null, CacheError>
 		readonly writeWorkspacePreferences: (preferences: WorkspacePreferencesInput | WorkspacePreferences) => Effect.Effect<void, CacheError>
+		readonly readDiff: (key: PullRequestCacheKey, headRefOid: string) => Effect.Effect<string | null, CacheError>
+		readonly writeDiff: (key: PullRequestCacheKey, headRefOid: string, patch: string) => Effect.Effect<void>
+		readonly readRepoMetadata: (repository: string, kind: string, maxAgeMs: number) => Effect.Effect<string | null, CacheError>
+		readonly writeRepoMetadata: (repository: string, kind: string, dataJson: string) => Effect.Effect<void>
 		readonly prune: () => Effect.Effect<void>
 	}
 >()("phui/CacheService") {
@@ -867,6 +935,10 @@ export class CacheService extends Context.Service<
 			writeRepositoryDetails: () => Effect.void,
 			readWorkspacePreferences: () => Effect.succeed(null),
 			writeWorkspacePreferences: () => Effect.void,
+			readDiff: () => Effect.succeed(null),
+			writeDiff: () => Effect.void,
+			readRepoMetadata: () => Effect.succeed(null),
+			writeRepoMetadata: () => Effect.void,
 			prune: () => Effect.void,
 		}),
 	)

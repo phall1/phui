@@ -43,3 +43,28 @@ describe("Issue command derivations", () => {
 		expect(stdout).toBe("Issue is not open.")
 	})
 })
+
+describe("daily-driver commands", () => {
+	test("registers review, collaborator, lifecycle, and log commands", async () => {
+		const probe = `
+			import { commandsById } from "./src/commands/index.ts"
+			const ids = [
+				"pull.update-branch",
+				"pull.reopen",
+				"issue.reopen",
+				"pull.reviewers",
+				"pull.assignees",
+				"pull.edit",
+				"pull.create",
+				"review.discard-pending",
+				"review.toggle-thread",
+				"review.queue-comment",
+				"runs.view-logs",
+				"prompt.confirm",
+			]
+			console.log(ids.every((id) => commandsById.has(id)))
+		`
+		const stdout = await runIsolatedProbe(probe)
+		expect(stdout).toBe("true")
+	})
+})
