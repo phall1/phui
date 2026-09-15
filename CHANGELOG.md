@@ -1,5 +1,12 @@
 # phui
 
+## [0.17.3](https://github.com/phall1/phui/compare/v0.17.2...v0.17.3) (2026-09-15)
+
+
+### Bug Fixes
+
+* **release:** compile standalone binaries with the Solid JSX plugin ([4a208e5](https://github.com/phall1/phui/commit/4a208e57d4ac7b4c19f96f08369ec6e9a03c3074))
+
 ## [0.17.2](https://github.com/phall1/phui/compare/v0.17.1...v0.17.2) (2026-09-15)
 
 
