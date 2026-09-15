@@ -5,7 +5,7 @@ import { addDefaultParsers, createCliRenderer } from "@opentui/core"
 import { render, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { Effect } from "effect"
 import { appendFile } from "node:fs/promises"
-import { useEffect, useState } from "./solid-hooks.js"
+import { createSignal, onCleanup, onMount, Show } from "solid-js"
 import { errorMessage } from "./errors.js"
 import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent } from "./launchIntent.js"
 import { createSystemThemeReloader, type SystemThemeReloadEvent } from "./systemThemeReload.js"
@@ -66,24 +66,25 @@ const logReloadEvent = (event: SystemThemeReloadEvent) => {
 	void appendFile(SYSTEM_THEME_DEBUG_LOG_PATH, line).catch(() => {})
 }
 
-const StartupLogo = ({ hint }: { readonly hint: string }) => {
+const StartupLogo = (props: { readonly hint: string }) => {
 	const startupRenderer = useRenderer()
 	const dimensions = useTerminalDimensions()
-	const { width, height } = dimensions()
-	const [frame, setFrame] = useState(0)
+	const width = () => dimensions().width
+	const height = () => dimensions().height
+	const [frame, setFrame] = createSignal(0)
 
-	useEffect(() => {
+	onMount(() => {
 		startupRenderer.setBackgroundColor(colors.background)
-	}, [startupRenderer])
+	})
 
-	useEffect(() => {
+	onMount(() => {
 		const interval = globalThis.setInterval(() => setFrame((current) => current + 1), SPINNER_INTERVAL_MS)
-		return () => globalThis.clearInterval(interval)
-	}, [])
+		onCleanup(() => globalThis.clearInterval(interval))
+	})
 
 	return (
-		<box width={width} height={height} flexDirection="column" backgroundColor={colors.background}>
-			<LoadingLogoPane content={{ hint }} width={width} height={height} frame={frame} />
+		<box width={width()} height={height()} flexDirection="column" backgroundColor={colors.background}>
+			<LoadingLogoPane content={{ hint: props.hint }} width={width()} height={height()} frame={frame()} />
 		</box>
 	)
 }
@@ -138,48 +139,53 @@ process.on("SIGUSR2", () => {
 })
 
 const Bootstrap = () => {
-	const [appBundle, setAppBundle] = useState<AppBundle | null>(null)
-	const [bootHint, setBootHint] = useState("Starting phui")
-	const [systemThemeGeneration, setSystemThemeGeneration] = useState(0)
+	const [appBundle, setAppBundle] = createSignal<AppBundle | null>(null)
+	const [bootHint, setBootHint] = createSignal("Starting phui")
+	const [systemThemeGeneration, setSystemThemeGeneration] = createSignal(0)
 
-	useEffect(() => {
-		let cancelled = false
+	onMount(() => {
 		notifySystemThemeReload = () => setSystemThemeGeneration((current) => current + 1)
-		const timer = globalThis.setTimeout(() => {
-			setBootHint("Registering syntax parsers")
-			addPhUiParsers()
-
-			setBootHint("Loading phui app")
-			void Promise.all([import("./atom-solid.js"), import("./App.js")]).then(
-				([{ RegistryProvider }, { App }]) => {
-					if (cancelled) return
-					setBootHint("Mounting phui app")
-					setAppBundle({ RegistryProvider, App })
-				},
-				(error) => {
-					if (cancelled) return
-					setBootHint(errorMessage(error))
-				},
-			)
-		}, 0)
-
-		return () => {
-			cancelled = true
+		onCleanup(() => {
 			notifySystemThemeReload = () => {}
-			globalThis.clearTimeout(timer)
-		}
-	}, [])
+		})
 
-	if (appBundle) {
-		const { RegistryProvider, App } = appBundle
+		setBootHint("Registering syntax parsers")
+		try {
+			addPhUiParsers()
+		} catch (error) {
+			setBootHint(errorMessage(error))
+			return
+		}
+
+		setBootHint("Loading phui app")
+		void Promise.all([import("./atom-solid.js"), import("./App.js")]).then(
+			([{ RegistryProvider }, { App }]) => {
+				setBootHint("Mounting phui app")
+				setAppBundle({ RegistryProvider, App })
+			},
+			(error) => {
+				setBootHint(errorMessage(error))
+			},
+		)
+	})
+
+	const LoadedView = () => {
+		const bundle = appBundle()
+		if (!bundle) return null
+		const Provider = bundle.RegistryProvider
+		const LoadedApp = bundle.App
 		return (
-			<RegistryProvider>
-				<App systemThemeGeneration={systemThemeGeneration} launchIntent={launchIntent} />
-			</RegistryProvider>
+			<Provider>
+				<LoadedApp systemThemeGeneration={systemThemeGeneration()} launchIntent={launchIntent} />
+			</Provider>
 		)
 	}
 
-	return <StartupLogo hint={bootHint} />
+	return (
+		<Show when={appBundle()} fallback={<StartupLogo hint={bootHint()} />}>
+			<LoadedView />
+		</Show>
+	)
 }
 
 process.stdout.write(FOCUS_REPORTING_ENABLE)
