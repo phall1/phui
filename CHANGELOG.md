@@ -1,5 +1,13 @@
 # phui
 
+## [0.17.1](https://github.com/phall1/phui/compare/v0.17.0...v0.17.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* **bootstrap:** load the app before render so compiled binaries boot ([e601a56](https://github.com/phall1/phui/commit/e601a560d0380b1f27ebd0e327f18fa272488e7e))
+* **cli:** detect brew installs from compiled binary path ([2b9c1a2](https://github.com/phall1/phui/commit/2b9c1a28137f53276e29ad738899a5697faaf451))
+
 ## [0.17.0](https://github.com/phall1/phui/compare/v0.16.1...v0.17.0) (2026-09-15)
 
 
