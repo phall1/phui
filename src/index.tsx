@@ -3,18 +3,15 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { addDefaultParsers, createCliRenderer } from "@opentui/core"
-import { render, useRenderer, useTerminalDimensions } from "@opentui/solid"
+import { render } from "@opentui/solid"
 import { Effect } from "effect"
 import { appendFile } from "node:fs/promises"
-import { createSignal, onCleanup, onMount, Show } from "solid-js"
-import { errorMessage } from "./errors.js"
+import { createSignal } from "solid-js"
 import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent } from "./launchIntent.js"
 import { createSystemThemeReloader, type SystemThemeReloadEvent } from "./systemThemeReload.js"
 import { setTuiSuspender } from "./tuiSuspension.js"
 import { loadStoredSystemThemeAutoReload } from "./themeStore.js"
 import { colors, setSystemThemeColors } from "./ui/colors.js"
-import { LoadingLogoPane } from "./ui/LoadingLogo.js"
-import { SPINNER_INTERVAL_MS } from "./ui/spinner.js"
 
 const launchArgs = process.argv.slice(2)
 if (launchArgs.includes("--version") || launchArgs.includes("-v")) {
@@ -51,11 +48,6 @@ const FOCUS_REPORTING_ENABLE = "\x1b[?1004h"
 const FOCUS_REPORTING_DISABLE = "\x1b[?1004l"
 const FULL_SCREEN_REPAINT = "\x1b[2J\x1b[3J\x1b[H"
 
-type AppBundle = {
-	readonly RegistryProvider: (typeof import("./atom-solid.js"))["RegistryProvider"]
-	readonly App: (typeof import("./App.js"))["App"]
-}
-
 let notifySystemThemeReload = () => {}
 
 const SYSTEM_THEME_READ_TIMEOUT_MS = 500
@@ -67,29 +59,6 @@ const logReloadEvent = (event: SystemThemeReloadEvent) => {
 	void appendFile(SYSTEM_THEME_DEBUG_LOG_PATH, line).catch(() => {})
 }
 
-const StartupLogo = (props: { readonly hint: string }) => {
-	const startupRenderer = useRenderer()
-	const dimensions = useTerminalDimensions()
-	const width = () => dimensions().width
-	const height = () => dimensions().height
-	const [frame, setFrame] = createSignal(0)
-
-	onMount(() => {
-		startupRenderer.setBackgroundColor(colors.background)
-	})
-
-	onMount(() => {
-		const interval = globalThis.setInterval(() => setFrame((current) => current + 1), SPINNER_INTERVAL_MS)
-		onCleanup(() => globalThis.clearInterval(interval))
-	})
-
-	return (
-		<box width={width()} height={height()} flexDirection="column" backgroundColor={colors.background}>
-			<LoadingLogoPane content={{ hint: props.hint }} width={width()} height={height()} frame={frame()} />
-		</box>
-	)
-}
-
 const renderer = await createCliRenderer({
 	exitOnCtrlC: false,
 	screenMode: "alternate-screen",
@@ -99,6 +68,8 @@ const renderer = await createCliRenderer({
 		process.exit(0)
 	},
 })
+
+renderer.setBackgroundColor(colors.background)
 
 // Let editor-launch (and any future hand-off) suspend the renderer so an
 // interactive subprocess (nvim, etc.) can own the terminal, then reacquire it.
@@ -139,53 +110,21 @@ process.on("SIGUSR2", () => {
 	systemThemeReloader.requestReload()
 })
 
-const Bootstrap = () => {
-	const [appBundle, setAppBundle] = createSignal<AppBundle | null>(null)
-	const [bootHint, setBootHint] = createSignal("Starting phui")
+try {
+	addPhUiParsers()
+} catch {
+	// Syntax highlighting is optional; still mount the app.
+}
+
+const [{ RegistryProvider }, { App }] = await Promise.all([import("./atom-solid.js"), import("./App.js")])
+
+const Root = () => {
 	const [systemThemeGeneration, setSystemThemeGeneration] = createSignal(0)
-
-	onMount(() => {
-		notifySystemThemeReload = () => setSystemThemeGeneration((current) => current + 1)
-		onCleanup(() => {
-			notifySystemThemeReload = () => {}
-		})
-
-		setBootHint("Registering syntax parsers")
-		try {
-			addPhUiParsers()
-		} catch (error) {
-			setBootHint(errorMessage(error))
-			return
-		}
-
-		setBootHint("Loading phui app")
-		void Promise.all([import("./atom-solid.js"), import("./App.js")]).then(
-			([{ RegistryProvider }, { App }]) => {
-				setBootHint("Mounting phui app")
-				setAppBundle({ RegistryProvider, App })
-			},
-			(error) => {
-				setBootHint(errorMessage(error))
-			},
-		)
-	})
-
-	const LoadedView = () => {
-		const bundle = appBundle()
-		if (!bundle) return null
-		const Provider = bundle.RegistryProvider
-		const LoadedApp = bundle.App
-		return (
-			<Provider>
-				<LoadedApp systemThemeGeneration={systemThemeGeneration()} launchIntent={launchIntent} />
-			</Provider>
-		)
-	}
-
+	notifySystemThemeReload = () => setSystemThemeGeneration((current) => current + 1)
 	return (
-		<Show when={appBundle()} fallback={<StartupLogo hint={bootHint()} />}>
-			<LoadedView />
-		</Show>
+		<RegistryProvider>
+			<App systemThemeGeneration={systemThemeGeneration()} launchIntent={launchIntent} />
+		</RegistryProvider>
 	)
 }
 
@@ -199,4 +138,4 @@ globalThis.setTimeout(() => {
 	renderer.requestRender()
 }, 0)
 
-void render(() => <Bootstrap />, renderer)
+void render(() => <Root />, renderer)
