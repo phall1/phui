@@ -1,5 +1,12 @@
 # phui
 
+## [0.17.2](https://github.com/phall1/phui/compare/v0.17.1...v0.17.2) (2026-09-15)
+
+
+### Bug Fixes
+
+* **tui:** do not mount inactive panes in compiled binaries ([67f2b6f](https://github.com/phall1/phui/commit/67f2b6f204c545ef668303f9bbd98cf1bb5fe965))
+
 ## [0.17.1](https://github.com/phall1/phui/compare/v0.17.0...v0.17.1) (2026-09-15)
 
 
