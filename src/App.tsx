@@ -3,7 +3,6 @@ import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { useTerminalDimensions } from "@opentui/solid"
 import type { PhuiLaunchIntent } from "./launchIntent.js"
 import { colors } from "./ui/colors.js"
-import { LoadingLogoPane } from "./ui/LoadingLogo.js"
 import { centerCell, Divider, TextLine } from "./ui/primitives.js"
 import { WorkspaceTabs } from "./ui/WorkspaceTabs.js"
 import { WorkspaceContent } from "./surfaces/WorkspaceContent.js"
@@ -18,7 +17,7 @@ import { diffFullViewAtom, readyDiffFilesAtom, selectedDiffStateAtom } from "./u
 import { buildStackedDiffFiles, PullRequestDiffState } from "./ui/diff.js"
 import { filterDraftAtom, filterModeAtom, filterQueryAtom } from "./ui/filter/atoms.js"
 import { activeModalAtom } from "./ui/modals/atoms.js"
-import { displayedPullRequestsAtom, pullRequestsAtom, selectedPullRequestAtom, visibleGroupsAtom } from "./ui/pullRequests/atoms.js"
+import { selectedPullRequestAtom, visibleGroupsAtom } from "./ui/pullRequests/atoms.js"
 import { runsFullViewAtom } from "./ui/runs/atoms.js"
 import { selectedRepositoryAtom, workspaceSurfaceAtom, workspaceTabSurfacesAtom } from "./workspace/atoms.js"
 
@@ -55,10 +54,7 @@ export const App = ({ systemThemeGeneration = 0, launchIntent = defaultLaunchInt
 	const filterMode = useAtomValueSolid(() => filterModeAtom)
 	const filterQuery = useAtomValueSolid(() => filterQueryAtom)
 	const filterDraft = useAtomValueSolid(() => filterDraftAtom)
-	const displayedPullRequests = useAtomValueSolid(() => displayedPullRequestsAtom)
-	const pullRequestResult = useAtomValueSolid(() => pullRequestsAtom)
 	const showWorkspaceTabs = () => !detailFullView() && !diffFullView() && !runsFullView() && !commentsViewActive()
-	const isInitialLoading = () => displayedPullRequests().length === 0 && pullRequestResult().waiting
 
 	return (
 		<Show
@@ -71,88 +67,79 @@ export const App = ({ systemThemeGeneration = 0, launchIntent = defaultLaunchInt
 				</box>
 			}
 		>
-			<Show
-				when={!isInitialLoading()}
-				fallback={
-					<box width={shell.terminalWidth} height={shell.terminalHeight} flexDirection="column" backgroundColor={colors.background}>
-						<LoadingLogoPane content={shell.detailPlaceholderContent} width={shell.contentWidth} height={shell.terminalHeight} frame={shell.loadingFrame} />
+			<box width={dimensions().width} height={dimensions().height} flexDirection="column" backgroundColor={colors.background}>
+				<box paddingLeft={1} paddingRight={1} flexDirection="column" backgroundColor={colors.background}>
+					<box width={shell.headerFooterWidth} height={1} flexDirection="row">
+						<WorkspaceHeader {...shell.headerProps} />
+						{shell.headerRight ? (
+							<TextLine width={shell.headerRight.length}>
+								<span fg={colors.muted}>{shell.headerRight}</span>
+							</TextLine>
+						) : null}
 					</box>
-				}
-			>
-				<box width={dimensions().width} height={dimensions().height} flexDirection="column" backgroundColor={colors.background}>
-					<box paddingLeft={1} paddingRight={1} flexDirection="column" backgroundColor={colors.background}>
-						<box width={shell.headerFooterWidth} height={1} flexDirection="row">
-							<WorkspaceHeader {...shell.headerProps} />
-							{shell.headerRight ? (
-								<TextLine width={shell.headerRight.length}>
-									<span fg={colors.muted}>{shell.headerRight}</span>
-								</TextLine>
-							) : null}
-						</box>
-					</box>
-					<Divider width={shell.contentWidth} junctions={shell.workspaceTopDividerJunctions} />
-					{showWorkspaceTabs() ? (
-						<>
-							<box paddingRight={1} backgroundColor={colors.background}>
-								<WorkspaceTabs
-									activeSurface={activeWorkspaceSurface()}
-									width={Math.max(24, shell.contentWidth - 1)}
-									surfaces={workspaceTabSurfaces()}
-									counts={shell.workspaceTabCounts}
-									onSelect={shell.switchWorkspaceSurface}
-								/>
-							</box>
-							<Divider width={shell.contentWidth} junctions={shell.workspaceBottomDividerJunctions} />
-						</>
-					) : null}
-					<WorkspaceContent
-						{...shell.contentProps}
-						activeWorkspaceSurface={activeWorkspaceSurface()}
-						selectedRepository={selectedRepository()}
-						selectedPullRequest={selectedPullRequest()}
-						commentsViewActive={commentsViewActive()}
-						diffFullView={diffFullView()}
-						detailFullView={detailFullView()}
-						selectedComments={selectedComments()}
-						selectedCommentsStatus={selectedCommentsStatus()}
-						displayedDiffState={
-							selectedDiffState()?._tag === "Ready"
-								? PullRequestDiffState.Ready({
-										patch: readyDiffFiles()
-											.map((file) => file.patch)
-											.join("\n"),
-										files: readyDiffFiles(),
-									})
-								: selectedDiffState()
-						}
-						stackedDiffFiles={buildStackedDiffFiles(
-							readyDiffFiles(),
-							shell.contentProps.effectiveDiffRenderView,
-							shell.contentProps.diffWrapMode,
-							shell.contentProps.diffFilePanel.visible ? shell.contentProps.diffFilePanel.diffPaneWidth : shell.contentWidth,
-						)}
-						derivations={{
-							...shell.contentProps.derivations,
-							prListProps: {
-								...shell.contentProps.derivations.prListProps,
-								groups: visibleGroups(),
-								selectedUrl: selectedPullRequest()?.url ?? shell.contentProps.derivations.prListProps.selectedUrl,
-								filterText: filterMode() ? filterDraft() : filterQuery(),
-								showRepositoryGroups: selectedRepository() === null,
-							},
-						}}
-					/>
-					<Divider width={shell.contentWidth} junctions={shell.preFooterDividerJunctions} />
-					<WorkspaceFooter
-						{...shell.footerProps}
-						filterMode={filterMode()}
-						visibleFilterText={filterMode() ? filterDraft() : filterQuery()}
-						detailFullView={detailFullView()}
-						diffFullView={diffFullView()}
-					/>
-					<WorkspaceModals {...shell.modalsProps} activeModal={activeModal()} />
 				</box>
-			</Show>
+				<Divider width={shell.contentWidth} junctions={shell.workspaceTopDividerJunctions} />
+				{showWorkspaceTabs() ? (
+					<>
+						<box paddingRight={1} backgroundColor={colors.background}>
+							<WorkspaceTabs
+								activeSurface={activeWorkspaceSurface()}
+								width={Math.max(24, shell.contentWidth - 1)}
+								surfaces={workspaceTabSurfaces()}
+								counts={shell.workspaceTabCounts}
+								onSelect={shell.switchWorkspaceSurface}
+							/>
+						</box>
+						<Divider width={shell.contentWidth} junctions={shell.workspaceBottomDividerJunctions} />
+					</>
+				) : null}
+				<WorkspaceContent
+					{...shell.contentProps}
+					activeWorkspaceSurface={activeWorkspaceSurface()}
+					selectedRepository={selectedRepository()}
+					selectedPullRequest={selectedPullRequest()}
+					commentsViewActive={commentsViewActive()}
+					diffFullView={diffFullView()}
+					detailFullView={detailFullView()}
+					selectedComments={selectedComments()}
+					selectedCommentsStatus={selectedCommentsStatus()}
+					displayedDiffState={
+						selectedDiffState()?._tag === "Ready"
+							? PullRequestDiffState.Ready({
+									patch: readyDiffFiles()
+										.map((file) => file.patch)
+										.join("\n"),
+									files: readyDiffFiles(),
+								})
+							: selectedDiffState()
+					}
+					stackedDiffFiles={buildStackedDiffFiles(
+						readyDiffFiles(),
+						shell.contentProps.effectiveDiffRenderView,
+						shell.contentProps.diffWrapMode,
+						shell.contentProps.diffFilePanel.visible ? shell.contentProps.diffFilePanel.diffPaneWidth : shell.contentWidth,
+					)}
+					derivations={{
+						...shell.contentProps.derivations,
+						prListProps: {
+							...shell.contentProps.derivations.prListProps,
+							groups: visibleGroups(),
+							selectedUrl: selectedPullRequest()?.url ?? shell.contentProps.derivations.prListProps.selectedUrl,
+							filterText: filterMode() ? filterDraft() : filterQuery(),
+							showRepositoryGroups: selectedRepository() === null,
+						},
+					}}
+				/>
+				<Divider width={shell.contentWidth} junctions={shell.preFooterDividerJunctions} />
+				<WorkspaceFooter
+					{...shell.footerProps}
+					filterMode={filterMode()}
+					visibleFilterText={filterMode() ? filterDraft() : filterQuery()}
+					detailFullView={detailFullView()}
+					diffFullView={diffFullView()}
+				/>
+				<WorkspaceModals {...shell.modalsProps} activeModal={activeModal()} />
+			</box>
 		</Show>
 	)
 }

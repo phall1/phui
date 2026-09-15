@@ -1,5 +1,6 @@
 import { chmod, cp, mkdir, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { compilePhuiBinary } from "./compile-binary.js"
 import { binaryPackageName, currentReleaseTargetId, findReleaseTarget, releaseTargets, type ReleaseTarget } from "./release-targets.js"
 
 const root = process.cwd()
@@ -15,11 +16,6 @@ const rootPackage = (await Bun.file(join(root, "package.json")).json()) as {
 
 const outDir = join(root, "dist", "npm")
 const requested = process.argv[2]
-
-const run = (cmd: readonly string[]) => {
-	const proc = Bun.spawnSync({ cmd: [...cmd], cwd: root, stdout: "inherit", stderr: "inherit" })
-	if (proc.exitCode !== 0) throw new Error(`Command failed (${proc.exitCode}): ${cmd.join(" ")}`)
-}
 
 const reuseReleaseBinary = process.env.PHUI_REUSE_RELEASE_BINARY === "1"
 
@@ -65,7 +61,7 @@ const buildBinaryPackage = async (target: ReleaseTarget) => {
 	if (reuseReleaseBinary && (await Bun.file(releaseBinaryPath).exists())) {
 		await cp(releaseBinaryPath, binaryPath)
 	} else {
-		run(["bun", "build", "--compile", "--bytecode", "--format=esm", `--target=${target.bunTarget}`, `--outfile=${binaryPath}`, "src/standalone.ts"])
+		await compilePhuiBinary(binaryPath, target.bunTarget)
 	}
 	await chmod(binaryPath, 0o755)
 	await cp(join(root, "LICENSE"), join(packageDir, "LICENSE"))

@@ -1,5 +1,6 @@
 import { chmod, mkdir, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { compilePhuiBinary } from "./compile-binary.js"
 import { currentReleaseTargetId, findReleaseTarget, releaseTargets } from "./release-targets.js"
 
 const root = process.cwd()
@@ -39,7 +40,7 @@ for (const target of selectedTargets()) {
 	const assetPath = join(releaseDir, assetName)
 
 	await mkdir(stageDir, { recursive: true })
-	run(["bun", "build", "--compile", "--bytecode", "--format=esm", `--target=${target.bunTarget}`, `--outfile=${binaryPath}`, "src/standalone.ts"])
+	await compilePhuiBinary(binaryPath, target.bunTarget)
 	await chmod(binaryPath, 0o755)
 
 	if (target.id === hostTargetId) {
