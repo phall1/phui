@@ -1,5 +1,5 @@
 import type { DiffRenderable, ScrollBoxRenderable } from "@opentui/core"
-import { Match, Switch } from "solid-js"
+import { createMemo, type JSX } from "solid-js"
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import type { ComponentProps, MutableRefObject } from "../solid-hooks.js"
 import { runsFullViewAtom } from "../ui/runs/atoms.js"
@@ -97,13 +97,54 @@ export interface PullRequestSurfaceProps {
 	readonly diffFilePanel: DiffFilePanelBundle
 }
 
+const When = <T,>(props: {
+	readonly when: T | null | undefined | false
+	readonly fallback?: JSX.Element
+	readonly children: (value: Exclude<T, null | undefined | false>) => JSX.Element
+}): JSX.Element =>
+	createMemo(() => {
+		const current = props.when
+		if (current) return props.children(current as Exclude<T, null | undefined | false>)
+		return props.fallback ?? null
+	}) as unknown as JSX.Element
+
 export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 	const runsFullView = useAtomValueSolid(() => runsFullViewAtom)
 	return (
-		<Switch>
-			<Match when={props.commentsViewActive && props.commentSubject}>
+		<When
+			when={props.commentsViewActive ? props.commentSubject : null}
+			fallback={
+				<When
+					when={runsFullView() ? props.selectedPullRequest : null}
+					fallback={
+						<When when={props.diffFullView || null} fallback={<PullRequestListDetail {...props} />}>
+							{() => <DiffSurfaceGate {...props} />}
+						</When>
+					}
+				>
+					{(pullRequest) => (
+						<PullRequestRunsPane
+							pullRequest={pullRequest}
+							inDetail={props.runsView.inDetail}
+							runsState={props.runsView.runsState}
+							detailState={props.runsView.detailState}
+							runsSelection={props.runsView.runsSelection}
+							detailSelection={props.runsView.detailSelection}
+							detailRows={props.runsView.detailRows}
+							onSelectRow={props.runsView.selectRow}
+							onActivateRow={props.runsView.activateRow}
+							contentWidth={props.fullscreenContentWidth}
+							height={props.wideBodyHeight}
+							loadingIndicator={props.loadingIndicator}
+							showScrollbar={props.showScrollbars}
+						/>
+					)}
+				</When>
+			}
+		>
+			{(subject) => (
 				<CommentsPane
-					item={props.commentSubject!}
+					item={subject}
 					comments={props.selectedComments}
 					orderedComments={props.orderedComments}
 					loadState={props.selectedCommentsLoadState}
@@ -115,47 +156,24 @@ export const PullRequestSurface = (props: PullRequestSurfaceProps) => {
 					themeGeneration={props.systemThemeGeneration}
 					showScrollbar={props.showScrollbars}
 				/>
-			</Match>
-			<Match when={runsFullView() && props.selectedPullRequest}>
-				<PullRequestRunsPane
-					pullRequest={props.selectedPullRequest!}
-					inDetail={props.runsView.inDetail}
-					runsState={props.runsView.runsState}
-					detailState={props.runsView.detailState}
-					runsSelection={props.runsView.runsSelection}
-					detailSelection={props.runsView.detailSelection}
-					detailRows={props.runsView.detailRows}
-					onSelectRow={props.runsView.selectRow}
-					onActivateRow={props.runsView.activateRow}
-					contentWidth={props.fullscreenContentWidth}
-					height={props.wideBodyHeight}
-					loadingIndicator={props.loadingIndicator}
-					showScrollbar={props.showScrollbars}
-				/>
-			</Match>
-			<Match when={props.diffFullView}>
-				<DiffSurfaceGate {...props} />
-			</Match>
-			<Match when={true}>
-				<PullRequestListDetail {...props} />
-			</Match>
-		</Switch>
+			)}
+		</When>
 	)
 }
 
 const DiffSurfaceGate = (props: PullRequestSurfaceProps) => {
 	const selectedDiffState = useAtomValueSolid(() => selectedDiffStateAtom)
 	return (
-		<Switch>
-			<Match when={selectedDiffState()?._tag === "Ready"}>
-				<DiffSurface {...props} />
-			</Match>
-			<Match when={true}>
+		<When
+			when={selectedDiffState()?._tag === "Ready" || null}
+			fallback={
 				<box height={props.wideBodyHeight} width={props.contentWidth}>
 					<text>Loading diff</text>
 				</box>
-			</Match>
-		</Switch>
+			}
+		>
+			{() => <DiffSurface {...props} />}
+		</When>
 	)
 }
 

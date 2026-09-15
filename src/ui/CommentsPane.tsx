@@ -184,7 +184,7 @@ export const CommentsPane = ({
 	themeGeneration,
 	showScrollbar,
 }: {
-	item: { readonly repository: string; readonly number: number }
+	item: { readonly repository: string; readonly number: number } | null
 	comments: readonly PullRequestComment[]
 	orderedComments: readonly OrderedComment[]
 	loadState: CommentLoadState
@@ -201,14 +201,16 @@ export const CommentsPane = ({
 	const offsets = useMemo(() => blockOffsets(blocks), [blocks])
 	const scrollboxRef = useRef<ScrollBoxRenderable | null>(null)
 	const safeIndex = Math.max(0, Math.min(selectedIndex, blocks.length - 1))
-
-	const headerLine = (() => {
-		const repo = shortRepoName(item.repository)
-		const count = commentsHeaderStatus(loadState, commentCountText(comments.length), loadingIndicator)
-		const left = `Comments #${item.number}  ${repo}`
-		const gap = Math.max(2, contentWidth - left.length - count.length)
-		return { left, gap, count }
-	})()
+	const headerLine =
+		item == null
+			? null
+			: (() => {
+					const repo = shortRepoName(item.repository)
+					const count = commentsHeaderStatus(loadState, commentCountText(comments.length), loadingIndicator)
+					const left = `Comments #${item.number}  ${repo}`
+					const gap = Math.max(2, contentWidth - left.length - count.length)
+					return { left, gap, count }
+				})()
 
 	// height = header (1) + body divider (1) + body (variable). The bottom
 	// divider + footer live in the App-level chrome (FooterHints) so the
@@ -232,6 +234,8 @@ export const CommentsPane = ({
 		if (blockTop < viewportTop) scrollbox.scrollTo({ x: 0, y: blockTop })
 		else if (blockBottom > viewportBottom) scrollbox.scrollTo({ x: 0, y: Math.max(0, blockBottom - bodyHeight) })
 	}, [safeIndex, blocks, offsets, bodyHeight, commentsNeedScroll, errorRows])
+
+	if (item == null || headerLine == null) return null
 
 	const renderedBlocks = blocks.map((block, index) => {
 		const isSelected = index === safeIndex
