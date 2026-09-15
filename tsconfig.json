@@ -16,6 +16,7 @@
 		"noUncheckedIndexedAccess": true,
 		"skipLibCheck": true,
 		"types": ["bun"],
+		"lib": ["ES2022", "DOM"],
 		"plugins": [{ "name": "@effect/language-service" }],
 		"paths": {
 			"@opentui/solid/jsx-runtime": ["./src/opentui-jsx-runtime.ts"],

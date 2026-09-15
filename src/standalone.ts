@@ -1,5 +1,7 @@
 import packageJson from "../package.json" with { type: "json" }
+import { Effect } from "effect"
 import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent } from "./launchIntent.js"
+import { runUpgrade } from "./upgrade/index.js"
 
 const help = `phui ${packageJson.version}
 
@@ -22,7 +24,7 @@ Options:
   --view details|diff|comments|runs  Open a pull request view (default: details)
 
 Commands:
-  upgrade                            Show package-manager upgrade guidance
+  upgrade                            Upgrade phui to the latest release
   -v, --version                      Print the installed version
   -h, --help                         Show this help message
 `
@@ -41,8 +43,8 @@ if (command === "-v" || command === "--version" || command === "version") {
 }
 
 if (command === "upgrade") {
-	console.error("Use your package manager to upgrade phui, for example `brew upgrade phui`.")
-	process.exit(1)
+	const exitCode = await Effect.runPromise(runUpgrade())
+	process.exit(exitCode)
 }
 
 try {

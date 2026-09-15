@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import { addDefaultParsers, createCliRenderer } from "@opentui/core"
 import { render, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { Effect } from "effect"
@@ -17,7 +18,7 @@ import { SPINNER_INTERVAL_MS } from "./ui/spinner.js"
 
 const launchArgs = process.argv.slice(2)
 if (launchArgs.includes("--version") || launchArgs.includes("-v")) {
-	const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { readonly version: string }
+	const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url).href), "utf8")) as { readonly version: string }
 	process.stdout.write(`${pkg.version}\n`)
 	process.exit(0)
 }

@@ -43,7 +43,7 @@ Options:
   --view details|diff|comments|runs  Open a pull request view (default: details)
 
 Commands:
-  upgrade                            Upgrade phui to the latest npm release
+  upgrade                            Upgrade phui to the latest release
   -v, --version                      Print the installed version
   -h, --help                         Show this help message
 `
@@ -55,6 +55,29 @@ const run = (target, args = process.argv.slice(2)) => {
 		process.exit(1)
 	}
 	process.exit(typeof result.status === "number" ? result.status : 0)
+}
+
+const scriptPath = fs.realpathSync(__filename)
+const scriptDir = path.dirname(scriptPath)
+
+const resolveScriptEntry = () => {
+	if (process.env.PHUI_BIN_PATH) return null
+	const sourceEntry = path.join(scriptDir, "..", "src", "standalone.ts")
+	if (fs.existsSync(sourceEntry)) return sourceEntry
+	return null
+}
+
+const resolveBinary = () => {
+	const platform = platformMap[os.platform()]
+	const arch = archMap[os.arch()]
+	if (!platform || !arch) return null
+	const name = `${packageJson.name}-${platform}-${arch}`
+	try {
+		const packageJsonPath = requireFromHere.resolve(`${name}/package.json`)
+		return path.join(path.dirname(packageJsonPath), "bin", "phui")
+	} catch {
+		return null
+	}
 }
 
 if (process.env.PHUI_BIN_PATH) {
@@ -72,19 +95,21 @@ if (process.argv[2] === "-v" || process.argv[2] === "--version" || process.argv[
 }
 
 if (process.argv[2] === "upgrade") {
-	const result = childProcess.spawnSync("npm", ["install", "-g", `${packageJson.name}@latest`], { stdio: "inherit" })
-	if (result.error) {
-		console.error(result.error.message)
-		process.exit(1)
+	const sourceEntry = resolveScriptEntry()
+	const binaryPath = resolveBinary()
+
+	if (sourceEntry) {
+		run("bun", [sourceEntry, "upgrade"])
 	}
-	process.exit(typeof result.status === "number" ? result.status : 0)
+
+	if (binaryPath && fs.existsSync(binaryPath)) {
+		run(binaryPath, ["upgrade"])
+	}
+
+	console.error("Could not find a phui binary to upgrade.")
+	console.error(`  npm install -g ${packageJson.name}@latest`)
+	process.exit(1)
 }
-
-const scriptPath = fs.realpathSync(__filename)
-const scriptDir = path.dirname(scriptPath)
-
-const platform = platformMap[os.platform()]
-const arch = archMap[os.arch()]
 
 const isMusl = () => {
 	if (os.platform() !== "linux") return false
@@ -99,6 +124,9 @@ const isMusl = () => {
 	}
 }
 
+const platform = platformMap[os.platform()]
+const arch = archMap[os.arch()]
+
 if (!platform || !arch) {
 	console.error(`Unsupported platform for ${packageJson.name}: ${os.platform()}-${os.arch()}`)
 	process.exit(1)
@@ -110,27 +138,17 @@ if (platform === "linux" && isMusl()) {
 	process.exit(1)
 }
 
-const packageName = `${packageJson.name}-${platform}-${arch}`
-
-const resolveBinary = () => {
-	try {
-		const packageJsonPath = requireFromHere.resolve(`${packageName}/package.json`)
-		return path.join(path.dirname(packageJsonPath), "bin", "phui")
-	} catch {
-		return null
-	}
-}
-
 const binaryPath = resolveBinary()
 
 if (!binaryPath || !fs.existsSync(binaryPath)) {
-	const sourceEntry = path.join(scriptDir, "..", "src", "standalone.ts")
-	if (fs.existsSync(sourceEntry)) {
+	const sourceEntry = resolveScriptEntry()
+	if (sourceEntry) {
 		run("bun", [sourceEntry, ...process.argv.slice(2)])
 	}
 
-	console.error(`Could not find the ${packageName} binary package for this platform.`)
-	console.error(`Try reinstalling ${packageJson.name}, or install ${packageName} manually.`)
+	const fallbackName = `${packageJson.name}-${platform}-${arch}`
+	console.error(`Could not find the ${fallbackName} binary package for this platform.`)
+	console.error(`Try reinstalling ${packageJson.name}, or install ${fallbackName} manually.`)
 	process.exit(1)
 }
 
