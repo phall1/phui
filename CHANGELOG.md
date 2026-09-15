@@ -1,5 +1,12 @@
 # phui
 
+## [0.16.1](https://github.com/phall1/phui/compare/v0.16.0...v0.16.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* **bootstrap:** mount the app with Solid signals so v16 boots past the splash ([1632fb3](https://github.com/phall1/phui/commit/1632fb3e45c92674bd525a135e7a7b7c939814ae))
+
 ## [0.16.0](https://github.com/phall1/phui/compare/v0.15.0...v0.16.0) (2026-09-13)
 
 
