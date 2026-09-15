@@ -1,5 +1,12 @@
 # phui
 
+## [0.17.0](https://github.com/phall1/phui/compare/v0.16.1...v0.17.0) (2026-09-15)
+
+
+### Features
+
+* **cli:** channel-aware self-updater and TypeScript 7 ([c5bfda8](https://github.com/phall1/phui/commit/c5bfda861a942c67aeee768c078a809b1d321148))
+
 ## [0.16.1](https://github.com/phall1/phui/compare/v0.16.0...v0.16.1) (2026-09-15)
 
 
