@@ -1,4 +1,4 @@
-export { detectInstallChannel, type InstallChannel, platformAssetSuffix } from "./channel.js"
+export { channelFromPath, detectInstallChannel, type InstallChannel, platformAssetSuffix } from "./channel.js"
 export {
 	AlreadyUpToDateError,
 	ChecksumMismatchError,
