@@ -250,6 +250,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	)
 
 	const [activeWorkspaceSurface, setActiveWorkspaceSurface] = useAtom(workspaceSurfaceAtom)
+	const activeWorkspaceSurfaceLive = useAtomValueSolid(() => workspaceSurfaceAtom)
 	const visibleFilterText = filterMode ? filterDraft : filterQuery
 	const username = AsyncResult.isSuccess(usernameResult) ? usernameResult.value : null
 
@@ -261,10 +262,10 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		setSelectedIndex,
 		setQueueSelection,
 		visibleFilterText,
-		activeWorkspaceSurface,
-		detailFullView,
-		diffFullView,
-		commentsViewActive,
+		activeWorkspaceSurface: activeWorkspaceSurfaceLive,
+		detailFullView: viewMode.detailFullView,
+		diffFullView: viewMode.diffFullView,
+		commentsViewActive: viewMode.commentsViewActive,
 		flashNotice,
 		prListScrollRef,
 		prListScrollPersistedRef,
@@ -324,10 +325,10 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 
 	const issueSurface = useIssueSurface({
 		username,
-		activeWorkspaceSurface,
-		detailFullView,
-		diffFullView,
-		commentsViewActive,
+		activeWorkspaceSurface: activeWorkspaceSurfaceLive,
+		detailFullView: viewMode.detailFullView,
+		diffFullView: viewMode.diffFullView,
+		commentsViewActive: viewMode.commentsViewActive,
 		refreshGenerationRef,
 		flashNotice,
 		issueListScrollRef,

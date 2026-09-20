@@ -1,6 +1,6 @@
 import { useAtom, useAtomSet, useAtomValue } from "../../atom-solid.js"
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
-import { createEffect } from "solid-js"
+import { createEffect, type Accessor } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { Cause } from "effect"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
@@ -44,10 +44,10 @@ type SetState<T> = (next: T | ((prev: T) => T)) => void
 
 export interface UseIssueSurfaceInput {
 	readonly username: string | null
-	readonly activeWorkspaceSurface: WorkspaceSurface
-	readonly detailFullView: boolean
-	readonly diffFullView: boolean
-	readonly commentsViewActive: boolean
+	readonly activeWorkspaceSurface: Accessor<WorkspaceSurface>
+	readonly detailFullView: Accessor<boolean>
+	readonly diffFullView: Accessor<boolean>
+	readonly commentsViewActive: Accessor<boolean>
 	readonly refreshGenerationRef: MutableRefObject<number>
 	readonly flashNotice: (message: string) => void
 	readonly issueListScrollRef: MutableRefObject<ScrollBoxRenderable | null>
@@ -138,7 +138,11 @@ export const useIssueSurface = (input: UseIssueSurfaceInput): IssueSurfaceShell 
 
 	useClampedIndex(issues.length + (issueLoadMoreSlotAvailable ? 1 : 0), setSelectedIssueIndex)
 	useScrollFollowSelected(issueListScrollRef, () => (issues.length === 0 ? null : selectedIssueRowIndex))
-	useScrollPersistence(issueListScrollRef, issueListScrollPersistedRef, activeWorkspaceSurface === "issues" && !detailFullView && !diffFullView && !commentsViewActive)
+	useScrollPersistence(
+		issueListScrollRef,
+		issueListScrollPersistedRef,
+		() => activeWorkspaceSurface() === "issues" && !detailFullView() && !diffFullView() && !commentsViewActive(),
+	)
 
 	const pendingIssueSelection = useAtomValueSolid(() => pendingIssueSelectionAtom)
 	const issueListLive = useAtomValueSolid(() => issueListAtom)

@@ -1,18 +1,27 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
-import { useEffect, useLayoutEffect, type MutableRefObject } from "../solid-hooks.js"
+import { createEffect, onCleanup } from "solid-js"
+import { readMaybeAccessor, type MaybeAccessor, type MutableRefObject } from "../solid-hooks.js"
 
 /**
  * Persists a scrollbox's scrollTop across mount/unmount cycles by polling
  * while active and restoring on mount. Polling matches the diff view pattern
  * since opentui's ScrollBoxRenderable doesn't expose a scroll event.
  *
+ * `active` may be a plain boolean or an accessor; pass an accessor when the
+ * condition itself changes so the restore/poll effects start and stop with it.
+ *
  * Use one call per (scrollRef, persistedRef, active) tuple — the captured
  * `persisted` is closed over in the polling interval, so a hook can't track
  * a backing ref that switches between renders.
  */
-export const useScrollPersistence = (scrollRef: MutableRefObject<ScrollBoxRenderable | null>, persisted: MutableRefObject<number>, active: boolean, pollMs = 400): void => {
-	useLayoutEffect(() => {
-		if (!active) return
+export const useScrollPersistence = (
+	scrollRef: MutableRefObject<ScrollBoxRenderable | null>,
+	persisted: MutableRefObject<number>,
+	active: MaybeAccessor<boolean>,
+	pollMs = 400,
+): void => {
+	createEffect(() => {
+		if (!readMaybeAccessor(active)) return
 		const scroll = scrollRef.current
 		if (!scroll) return
 		let cancelled = false
@@ -33,20 +42,18 @@ export const useScrollPersistence = (scrollRef: MutableRefObject<ScrollBoxRender
 		// (modal open/close, surface switch) used to pile up `apply` calls
 		// that would land on a re-purposed scrollbox, sometimes writing
 		// `scrollTo` to the wrong element.
-		return () => {
+		onCleanup(() => {
 			cancelled = true
 			if (pendingTimeout !== null) globalThis.clearTimeout(pendingTimeout)
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [active])
+		})
+	})
 
-	useEffect(() => {
-		if (!active) return
+	createEffect(() => {
+		if (!readMaybeAccessor(active)) return
 		const interval = globalThis.setInterval(() => {
 			const top = scrollRef.current?.scrollTop
 			if (top !== undefined) persisted.current = top
 		}, pollMs)
-		return () => globalThis.clearInterval(interval)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [active])
+		onCleanup(() => globalThis.clearInterval(interval))
+	})
 }

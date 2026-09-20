@@ -63,10 +63,10 @@ export interface UsePullRequestSurfaceInput {
 	readonly setSelectedIndex: SetState<number>
 	readonly setQueueSelection: SetState<Partial<Record<string, number>>>
 	readonly visibleFilterText: string
-	readonly activeWorkspaceSurface: WorkspaceSurface
-	readonly detailFullView: boolean
-	readonly diffFullView: boolean
-	readonly commentsViewActive: boolean
+	readonly activeWorkspaceSurface: Accessor<WorkspaceSurface>
+	readonly detailFullView: Accessor<boolean>
+	readonly diffFullView: Accessor<boolean>
+	readonly commentsViewActive: Accessor<boolean>
 	readonly flashNotice: (message: string) => void
 	readonly prListScrollRef: MutableRefObject<ScrollBoxRenderable | null>
 	readonly prListScrollPersistedRef: MutableRefObject<number>
@@ -332,7 +332,11 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 			loadMoreRowSelected(),
 		),
 	)
-	useScrollPersistence(prListScrollRef, prListScrollPersistedRef, activeWorkspaceSurface === "pullRequests" && !detailFullView && !diffFullView && !commentsViewActive)
+	useScrollPersistence(
+		prListScrollRef,
+		prListScrollPersistedRef,
+		() => activeWorkspaceSurface() === "pullRequests" && !detailFullView() && !diffFullView() && !commentsViewActive(),
+	)
 
 	const selectPullRequestByUrl = (url: string) => {
 		const index = visiblePullRequests().findIndex((pullRequest) => pullRequest.url === url)
