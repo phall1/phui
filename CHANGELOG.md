@@ -1,5 +1,12 @@
 # phui
 
+## [0.18.2](https://github.com/phall1/phui/compare/v0.18.1...v0.18.2) (2026-09-20)
+
+
+### Bug Fixes
+
+* run source phui with the Solid JSX preload ([#28](https://github.com/phall1/phui/issues/28)) ([bed0391](https://github.com/phall1/phui/commit/bed039126b13fe816234b04baca99f4c983e4dd0))
+
 ## [0.18.1](https://github.com/phall1/phui/compare/v0.18.0...v0.18.1) (2026-09-20)
 
 
