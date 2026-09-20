@@ -452,16 +452,6 @@ export const MockGitHubService = {
 					return Effect.succeed(slicePage(filtered, input.cursor, input.pageSize))
 				},
 				listIssuePage: (input: ItemListInput<"issue">) => Effect.succeed(slicePage(filterIssuesByMode(input.mode, input.repository, issues), input.cursor, input.pageSize)),
-				listAllPullRequests: (input: {
-					readonly kind: "pullRequest"
-					readonly mode: "all" | "authored" | "review" | "assigned" | "mentioned"
-					readonly repository: string | null
-				}) => {
-					const queueMode = queueModeForListMode(input.mode)
-					return Effect.succeed(filterByView(queueMode, input.repository, pullRequestSource(queueMode, input.repository), username, strictUserScope))
-				},
-				listAllIssues: (input: { readonly kind: "issue"; readonly mode: "all" | "authored" | "assigned" | "mentioned"; readonly repository: string | null }) =>
-					Effect.succeed(filterIssuesByMode(input.mode, input.repository, issues)),
 			}),
 		)
 	},

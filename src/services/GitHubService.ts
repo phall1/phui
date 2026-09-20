@@ -1,5 +1,4 @@
-import { Context, Effect, Layer, Schema, Stream } from "effect"
-import * as Option from "effect/Option"
+import { Context, Effect, Layer, Schema } from "effect"
 import { config } from "../config.js"
 import {
 	type CreatePullRequestCommentInput,
@@ -109,8 +108,6 @@ export class GitHubService extends Context.Service<
 	{
 		readonly listPullRequestPage: (input: ItemListInput<"pullRequest">) => Effect.Effect<ItemPage<PullRequestItem>, GitHubError>
 		readonly listIssuePage: (input: ItemListInput<"issue">) => Effect.Effect<ItemPage<IssueItem>, GitHubError>
-		readonly listAllPullRequests: (input: Omit<ItemListInput<"pullRequest">, "cursor" | "pageSize">) => Effect.Effect<readonly PullRequestItem[], GitHubError>
-		readonly listAllIssues: (input: Omit<ItemListInput<"issue">, "cursor" | "pageSize">) => Effect.Effect<readonly IssueItem[], GitHubError>
 		readonly getPullRequestDetails: (repository: string, number: number) => Effect.Effect<PullRequestItem, GitHubError>
 		readonly getRepositoryDetails: (repository: string) => Effect.Effect<RepositoryDetails, GitHubError>
 		readonly getAuthenticatedUser: () => Effect.Effect<string, GitHubError>
@@ -268,35 +265,6 @@ export class GitHubService extends Context.Service<
 				const pageSize = Math.max(1, Math.min(100, input.pageSize))
 				return yield* listIssueSearchPage({ ...input, pageSize })
 			})
-
-			// Drain every page for an item query into a single array, using
-			// `Stream.paginate`. Interrupting the surrounding fiber stops mid-flight.
-			const drainItemPages = <K extends "pullRequest" | "issue", Item>(
-				query: Omit<ItemListInput<K>, "cursor" | "pageSize">,
-				pageFetch: (input: ItemListInput<K>) => Effect.Effect<ItemPage<Item>, GitHubError>,
-				limit: number,
-			): Effect.Effect<readonly Item[], GitHubError> => {
-				type State = { readonly cursor: string | null; readonly fetched: number }
-				const stream = Stream.paginate<State, Item, GitHubError>({ cursor: null, fetched: 0 }, ({ cursor, fetched }) => {
-					const remaining = limit - fetched
-					if (remaining <= 0) return Effect.succeed([[], Option.none()] as const)
-					const pageSize = Math.min(100, remaining)
-					return pageFetch({ ...query, cursor, pageSize } as ItemListInput<K>).pipe(
-						Effect.map((page): readonly [readonly Item[], Option.Option<State>] => {
-							const items = page.items.slice(0, remaining)
-							const nextFetched = fetched + items.length
-							const next: Option.Option<State> =
-								page.hasNextPage && page.endCursor && nextFetched < limit ? Option.some({ cursor: page.endCursor, fetched: nextFetched }) : Option.none()
-							return [items, next]
-						}),
-					)
-				})
-				return Stream.runCollect(stream).pipe(Effect.map((chunk) => Array.from(chunk)))
-			}
-
-			const listAllPullRequests = (input: Omit<ItemListInput<"pullRequest">, "cursor" | "pageSize">) =>
-				drainItemPages<"pullRequest", PullRequestItem>(input, listPullRequestPage, config.prFetchLimit)
-			const listAllIssues = (input: Omit<ItemListInput<"issue">, "cursor" | "pageSize">) => drainItemPages<"issue", IssueItem>(input, listIssuePage, config.prFetchLimit)
 
 			const getPullRequestDetails = Effect.fn("GitHubService.getPullRequestDetails")(function* (repository: string, number: number) {
 				const repo = repositoryParts(repository)
@@ -745,8 +713,6 @@ export class GitHubService extends Context.Service<
 			return GitHubService.of({
 				listPullRequestPage,
 				listIssuePage,
-				listAllPullRequests,
-				listAllIssues,
 				getPullRequestDetails,
 				getRepositoryDetails,
 				getAuthenticatedUser,

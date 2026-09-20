@@ -23,6 +23,9 @@ coverage/
 # local mock snapshots
 .phui/
 
+# playwright / tui capture leftovers
+test-results/
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db

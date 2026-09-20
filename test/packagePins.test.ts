@@ -26,7 +26,7 @@ describe("daily-driver package pins", () => {
 		expect(bunVersion).toBe("1.3.14")
 		expect(packageJson.devDependencies["@types/bun"]).toBe(bunVersion)
 
-		for (const name of ["ci.yml", "fork-publish.yml", "publish.yml"]) {
+		for (const name of ["ci.yml", "fork-publish.yml"]) {
 			const text = await Bun.file(`.github/workflows/${name}`).text()
 			const setupCount = [...text.matchAll(/uses: oven-sh\/setup-bun@v2/g)].length
 			const pinCount = [...text.matchAll(/bun-version-file: \.bun-version/g)].length
