@@ -271,7 +271,7 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 	const { terminalFocusedRef } = useFocusReturnRefresh({
 		renderer,
 		lastRefreshAtRef: lastPullRequestRefreshAtRef,
-		refreshGeneration: pullRequestLoad()?.fetchedAt?.getTime(),
+		refreshGeneration: createMemo(() => pullRequestLoad()?.fetchedAt?.getTime()),
 		focusReturnMinMs: FOCUS_RETURN_REFRESH_MIN_MS,
 		idleAfterMs: FOCUSED_IDLE_REFRESH_MS,
 		jitterMs: AUTO_REFRESH_JITTER_MS,

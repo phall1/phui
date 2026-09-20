@@ -1,3 +1,4 @@
+import { type Accessor } from "solid-js"
 import { type MutableRefObject } from "../solid-hooks.js"
 import { useTerminalFocus } from "../ui/useTerminalFocus.js"
 import { useIdleRefresh } from "../ui/pullRequests/useIdleRefresh.js"
@@ -10,7 +11,7 @@ interface RendererFocusEvents {
 export interface UseFocusReturnRefreshInput {
 	readonly renderer: RendererFocusEvents
 	readonly lastRefreshAtRef: MutableRefObject<number>
-	readonly refreshGeneration: number | undefined
+	readonly refreshGeneration: Accessor<number | undefined>
 	readonly focusReturnMinMs: number
 	readonly idleAfterMs: number
 	readonly jitterMs: number
@@ -18,7 +19,7 @@ export interface UseFocusReturnRefreshInput {
 }
 
 export interface UseFocusReturnRefreshResult {
-	readonly terminalFocused: boolean
+	readonly terminalFocused: Accessor<boolean>
 	readonly terminalFocusedRef: MutableRefObject<boolean>
 }
 
