@@ -46,6 +46,15 @@ for (const target of selectedTargets()) {
 	if (target.id === hostTargetId) {
 		const version = Bun.spawnSync({ cmd: [binaryPath, "--version"], cwd: root, stdout: "pipe", stderr: "pipe" })
 		if (version.exitCode !== 0) throw new Error(`Standalone smoke failed for ${target.id}: ${version.stderr.toString()}`)
+		const boot = Bun.spawnSync({
+			cmd: ["python3", join(root, "dev/boot-smoke.py"), binaryPath],
+			cwd: root,
+			stdout: "pipe",
+			stderr: "pipe",
+		})
+		if (boot.exitCode !== 0) {
+			throw new Error(`Standalone PTY boot smoke failed for ${target.id}:\n${boot.stdout.toString()}${boot.stderr.toString()}`)
+		}
 	}
 
 	run(["tar", "-czf", assetPath, "-C", stageDir, "phui"])
