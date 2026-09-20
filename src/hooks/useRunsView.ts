@@ -1,7 +1,8 @@
 import { RegistryContext, useAtom, useAtomSet } from "../atom-solid.js"
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { createEffect, onCleanup } from "solid-js"
-import { useContext, useState } from "../solid-hooks.js"
+import { createSignal } from "solid-js"
+import { useContext } from "../solid-hooks.js"
 import { selectedPullRequestAtom } from "../ui/pullRequests/atoms.js"
 import { selectedRepositoryAtom, workspaceSurfaceAtom } from "../workspace/atoms.js"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
@@ -85,7 +86,7 @@ export const useRunsView = (
 	const openUrl = useAtomSet(openUrlAtom, { mode: "promise" })
 	const rerunWorkflowRun = useAtomSet(rerunWorkflowRunAtom, { mode: "promise" })
 	const cancelWorkflowRun = useAtomSet(cancelWorkflowRunAtom, { mode: "promise" })
-	const [actionPending, setActionPending] = useState(false)
+	const [actionPending, setActionPending] = createSignal(false)
 	const selectedRepositoryLive = useAtomValueSolid(() => selectedRepositoryAtom)
 	const selectedPullRequestLive = useAtomValueSolid(() => selectedPullRequestAtom)
 	const workspaceSurfaceLive = useAtomValueSolid(() => workspaceSurfaceAtom)
@@ -230,7 +231,7 @@ export const useRunsView = (
 		const repositoryName = repository()
 		const state = detailStateLive()
 		const detailRun = state?.status === "ready" ? state.value : null
-		if (!repositoryName || !detailRun || actionPending) return
+		if (!repositoryName || !detailRun || actionPending()) return
 		if (!canRerunRun(detailRun)) {
 			flashNotice("Only completed workflow runs can be rerun")
 			return
@@ -255,7 +256,7 @@ export const useRunsView = (
 		const repositoryName = repository()
 		const state = detailStateLive()
 		const detailRun = state?.status === "ready" ? state.value : null
-		if (!repositoryName || !detailRun || actionPending) return
+		if (!repositoryName || !detailRun || actionPending()) return
 		if (!canCancelRun(detailRun)) {
 			flashNotice("Only queued or in-progress workflow runs can be cancelled")
 			return

@@ -1,5 +1,5 @@
 import { TextAttributes, type MouseEvent } from "@opentui/core"
-import { useEffect, useMemo, useState } from "../solid-hooks.js"
+import { createEffect, createMemo, createSignal } from "solid-js"
 import type { AppCommand } from "../commands.js"
 import { clampCommandIndex } from "../commands.js"
 import { colors } from "./colors.js"
@@ -87,10 +87,10 @@ export const CommandPalette = ({
 }) => {
 	const { bodyHeight: listHeight, rowWidth } = searchModalDims(modalWidth, modalHeight)
 	const clampedIndex = clampCommandIndex(selectedIndex, commands)
-	const [scrollTop, setScrollTop] = useState(0)
-	const rows = useMemo(() => buildCommandPaletteRows(commands), [commands])
-	const selectedRowIndex = commandPaletteSelectedRowIndex(rows, clampedIndex)
-	const visibleRows = rows.slice(scrollTop, scrollTop + listHeight)
+	const [scrollTop, setScrollTop] = createSignal(0)
+	const rows = createMemo(() => buildCommandPaletteRows(commands))
+	const selectedRowIndex = commandPaletteSelectedRowIndex(rows(), clampedIndex)
+	const visibleRows = rows().slice(scrollTop(), scrollTop() + listHeight)
 	const bottomPaddingRows = Math.max(0, listHeight - visibleRows.length)
 	const countText = commands.length === 1 ? "1 command" : `${commands.length} commands`
 	const emptyTopRows = Math.max(0, Math.floor((listHeight - 1) / 2))
@@ -106,15 +106,15 @@ export const CommandPalette = ({
 		event.stopPropagation()
 	}
 	const handleMouseScroll = (event: MouseEvent) => {
-		if (!event.scroll || rows.length <= listHeight) return
+		if (!event.scroll || rows().length <= listHeight) return
 		const delta = Math.max(1, Math.ceil(event.scroll.delta))
 		const direction = event.scroll.direction === "down" || event.scroll.direction === "right" ? 1 : -1
-		setScrollTop((current) => commandPaletteClampScrollTop(rows.length, listHeight, current + direction * delta))
+		setScrollTop((current) => commandPaletteClampScrollTop(rows().length, listHeight, current + direction * delta))
 		event.preventDefault()
 		event.stopPropagation()
 	}
 	const content =
-		rows.length === 0 ? (
+		rows().length === 0 ? (
 			<>
 				<Filler rows={emptyTopRows} prefix="top" />
 				<PlainLine text={centerCell("No matching command", rowWidth)} fg={colors.muted} />
@@ -123,7 +123,7 @@ export const CommandPalette = ({
 		) : (
 			<>
 				{visibleRows.map((row, index) => {
-					const rowIndex = scrollTop + index
+					const rowIndex = scrollTop() + index
 					if (row._tag === "spacer") {
 						return <PlainLine key={`spacer-${rowIndex}`} text="" />
 					}
@@ -163,9 +163,9 @@ export const CommandPalette = ({
 				<Filler rows={bottomPaddingRows} prefix="pad" />
 			</>
 		)
-	useEffect(() => {
-		setScrollTop((current) => commandPaletteScrollTop({ current, rowsLength: rows.length, listHeight, selectedRowIndex }))
-	}, [listHeight, rows.length, selectedRowIndex])
+	createEffect(() => {
+		setScrollTop((current) => commandPaletteScrollTop({ current, rowsLength: rows().length, listHeight, selectedRowIndex }))
+	})
 	return (
 		<SearchModalFrame
 			left={offsetLeft}
