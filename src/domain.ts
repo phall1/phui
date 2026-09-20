@@ -60,6 +60,7 @@ export type PullRequestMergeAction =
 	| {
 			readonly kind: PullRequestMergeMethodKind
 			readonly method: PullRequestMergeMethod
+			readonly mergeQueueEnabled: boolean
 	  }
 	| {
 			readonly kind: "disable-auto"
@@ -306,4 +307,5 @@ export interface PullRequestMergeInfo {
 	readonly checkSummary: string | null
 	readonly autoMergeEnabled: boolean
 	readonly viewerCanMergeAsAdmin: boolean
+	readonly mergeQueueEnabled: boolean
 }

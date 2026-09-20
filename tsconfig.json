@@ -3,7 +3,6 @@
 		"target": "ES2022",
 		"module": "NodeNext",
 		"moduleDetection": "force",
-		"lib": ["ES2022"],
 		"verbatimModuleSyntax": true,
 		"rewriteRelativeImportExtensions": true,
 		"jsx": "react-jsx",

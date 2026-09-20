@@ -398,23 +398,28 @@ describe("parsePullRequestMergeInfo", () => {
 	}
 
 	test("derives state/mergeable/reviewStatus and threads admin boolean", () => {
-		const merge = parsePullRequestMergeInfo("owner/repo", info, true)
+		const merge = parsePullRequestMergeInfo("owner/repo", info, true, false)
 		expect(merge.repository).toBe("owner/repo")
 		expect(merge.state).toBe("open")
 		expect(merge.mergeable).toBe("mergeable")
 		expect(merge.reviewStatus).toBe("approved")
 		expect(merge.viewerCanMergeAsAdmin).toBe(true)
 		expect(merge.autoMergeEnabled).toBe(false)
+		expect(merge.mergeQueueEnabled).toBe(false)
 	})
 
 	test("auto-merge enabled when request is non-null", () => {
-		const merge = parsePullRequestMergeInfo("owner/repo", { ...info, autoMergeRequest: { something: true } }, false)
+		const merge = parsePullRequestMergeInfo("owner/repo", { ...info, autoMergeRequest: { something: true } }, false, false)
 		expect(merge.autoMergeEnabled).toBe(true)
 	})
 
 	test("closed state for anything but OPEN", () => {
-		expect(parsePullRequestMergeInfo("owner/repo", { ...info, state: "CLOSED" }, false).state).toBe("closed")
-		expect(parsePullRequestMergeInfo("owner/repo", { ...info, state: "MERGED" }, false).state).toBe("closed")
+		expect(parsePullRequestMergeInfo("owner/repo", { ...info, state: "CLOSED" }, false, false).state).toBe("closed")
+		expect(parsePullRequestMergeInfo("owner/repo", { ...info, state: "MERGED" }, false, false).state).toBe("closed")
+	})
+
+	test("threads merge-queue presence from the admin graphql payload", () => {
+		expect(parsePullRequestMergeInfo("owner/repo", info, false, true).mergeQueueEnabled).toBe(true)
 	})
 })
 
