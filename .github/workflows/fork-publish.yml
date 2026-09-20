@@ -277,14 +277,25 @@ jobs:
           work="$(mktemp -d)"
           cd "$work"
           npm init -y >/dev/null 2>&1
-          npm install --no-audit --no-fund "${name}@${version}"
 
+          # npm view succeeding is not enough: optionalDependencies 404
+          # silently, so a just-published platform binary can be skipped
+          # even after the metadata is readable. Install the binary
+          # package explicitly and retry until the executable is present.
           bin="./node_modules/${bin_pkg}/bin/phui"
-          if [ ! -x "$bin" ]; then
-            echo "::error title=Platform binary missing::npm install did not pull ${bin_pkg}."
-            ls -la node_modules node_modules/@phall 2>/dev/null || true
-            exit 1
-          fi
+          for attempt in $(seq 1 15); do
+            npm install --no-audit --no-fund "${name}@${version}" "${bin_pkg}@${version}"
+            if [ -x "$bin" ]; then
+              echo "installed ${name}@${version} and ${bin_pkg}@${version} after $(( (attempt - 1) * 15 ))s"
+              break
+            fi
+            if [ "$attempt" = 15 ]; then
+              echo "::error title=Platform binary missing::npm install did not pull ${bin_pkg}."
+              ls -la node_modules node_modules/@phall 2>/dev/null || true
+              exit 1
+            fi
+            sleep 15
+          done
 
           got="$("$bin" --version)"
           echo "${bin_pkg} --version -> ${got}"
