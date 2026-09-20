@@ -1,5 +1,5 @@
+import { Index, createSignal } from "solid-js"
 import { TextAttributes } from "@opentui/core"
-import { useState } from "../solid-hooks.js"
 import { colors, mixHex, rowHoverBackground } from "./colors.js"
 import { fitCell, TextLine } from "./primitives.js"
 import { workspaceSurfaceLabels, workspaceSurfaces, type WorkspaceSurface } from "../workspaceSurfaces.js"
@@ -23,6 +23,12 @@ export const workspaceTabSeparatorColumns = (counts: WorkspaceSurfaceCounts, sur
 	return columns
 }
 
+/**
+ * Rendered with `<Index>` over the (stable) surface list so a change to
+ * `counts` updates the count text in place instead of rebuilding every tab
+ * renderable. Rebuilding on every selection change tripped a native
+ * TextBufferView allocation storm under rapid key bursts.
+ */
 export const WorkspaceTabs = (props: {
 	activeSurface: WorkspaceSurface
 	width: number
@@ -30,112 +36,62 @@ export const WorkspaceTabs = (props: {
 	counts?: WorkspaceSurfaceCounts
 	onSelect: (surface: WorkspaceSurface) => void
 }) => {
-	const [hoveredSurface, setHoveredSurface] = useState<WorkspaceSurface | null>(null)
+	const [hoveredSurface, setHoveredSurface] = createSignal<WorkspaceSurface | null>(null)
 	const activeCountColor = mixHex(colors.separator, colors.accent, 0.45)
+	const surfaces = () => props.surfaces ?? workspaceSurfaces
+	const counts = () => props.counts ?? {}
+	const textWidth = () => surfaces().reduce((sum, surface) => sum + tabText(surface, counts()).length, 0) + surfaces().length
+	const filler = () => Math.max(0, props.width - textWidth())
 
 	return (
 		<box width={props.width} height={1} flexDirection="row">
-			{(() => {
-				const surfaces = props.surfaces ?? workspaceSurfaces
-				const counts = props.counts ?? {}
-				const rendered = surfaces.map((surface) => {
-					const active = surface === props.activeSurface
-					const label = workspaceSurfaceLabels[surface]
-					const count = counts[surface]
-					const text = tabText(surface, counts)
-					return { surface, active, label, count, text }
-				})
-				const textWidth = rendered.reduce((sum, tab) => sum + tab.text.length, 0) + rendered.length
-				const filler = Math.max(0, props.width - textWidth)
-				return (
-					<>
-						{rendered.flatMap((tab, index) => [
-							...(index > 0
-								? [
-										<box key={`separator-${tab.surface}`} width={1} height={1}>
-											<text wrapMode="none" truncate fg={colors.separator}>
-												│
-											</text>
-										</box>,
-									]
-								: []),
+			<Index each={surfaces()}>
+				{(surface, index) => {
+					const active = () => surface() === props.activeSurface
+					const hovered = () => hoveredSurface() === surface()
+					const count = () => counts()[surface()]
+					return (
+						<>
+							{index > 0 ? (
+								<box width={1} height={1}>
+									<text wrapMode="none" truncate fg={colors.separator}>
+										│
+									</text>
+								</box>
+							) : null}
 							<box
-								key={tab.surface}
-								width={tab.text.length}
+								width={tabText(surface(), counts()).length}
 								height={1}
-								onMouseDown={() => props.onSelect(tab.surface)}
-								onMouseOver={() => setHoveredSurface(tab.surface)}
-								onMouseOut={() => setHoveredSurface((current) => (current === tab.surface ? null : current))}
+								onMouseDown={() => props.onSelect(surface())}
+								onMouseOver={() => setHoveredSurface(surface())}
+								onMouseOut={() => setHoveredSurface((current) => (current === surface() ? null : current))}
 							>
 								<text wrapMode="none" truncate>
 									<span> </span>
-									<span
-										fg={tab.active ? colors.accent : colors.muted}
-										attributes={tab.active ? TextAttributes.BOLD : 0}
-										{...(hoveredSurface === tab.surface ? { bg: rowHoverBackground() } : {})}
-									>
-										{tab.label}
+									<span fg={active() ? colors.accent : colors.muted} attributes={active() ? TextAttributes.BOLD : 0} {...(hovered() ? { bg: rowHoverBackground() } : {})}>
+										{workspaceSurfaceLabels[surface()]}
 									</span>
-									{tab.count === undefined ? null : (
+									{count() === undefined ? null : (
 										<>
-											<span {...(hoveredSurface === tab.surface ? { bg: rowHoverBackground() } : {})}> </span>
-											<span fg={tab.active ? activeCountColor : colors.separator} {...(hoveredSurface === tab.surface ? { bg: rowHoverBackground() } : {})}>
-												{tab.count}
+											<span {...(hovered() ? { bg: rowHoverBackground() } : {})}> </span>
+											<span fg={active() ? activeCountColor : colors.separator} {...(hovered() ? { bg: rowHoverBackground() } : {})}>
+												{count()}
 											</span>
 										</>
 									)}
 									<span> </span>
 								</text>
-							</box>,
-						])}
-						<box width={1} height={1}>
-							<text wrapMode="none" truncate fg={colors.separator}>
-								│
-							</text>
-						</box>
-						{filler > 0 ? <TextLine width={filler}>{fitCell("", filler)}</TextLine> : null}
-					</>
-				)
-			})()}
-		</box>
-	)
-}
-
-export const IssuesPlaceholder = ({ width, height, repository }: { width: number; height: number; repository: string | null }) => {
-	const rowWidth = Math.max(1, width - 2)
-	const context = repository ? repository : "No repository selected"
-	const fillerRows = Math.max(0, height - 8)
-
-	return (
-		<box width={width} height={height} flexDirection="column" paddingLeft={1} paddingRight={1}>
-			<TextLine width={rowWidth}>
-				<span fg={colors.accent} attributes={TextAttributes.BOLD}>
-					ISSUES
-				</span>
-			</TextLine>
-			<TextLine width={rowWidth}>
-				<span fg={colors.muted}>Project </span>
-				<span fg={colors.text}>{context}</span>
-			</TextLine>
-			<box height={1} />
-			<TextLine width={rowWidth}>
-				<span fg={colors.text}>Issue list/detail will live here.</span>
-			</TextLine>
-			<TextLine width={rowWidth}>
-				<span fg={colors.muted}>This keeps the new workspace shell visible while PRs stay fully usable.</span>
-			</TextLine>
-			<box height={1} />
-			<TextLine width={rowWidth}>
-				<span fg={colors.count}>1</span>
-				<span fg={colors.muted}> pull requests </span>
-				<span fg={colors.count}>2</span>
-				<span fg={colors.muted}> issues </span>
-				<span fg={colors.count}>tab</span>
-				<span fg={colors.muted}> switch surface</span>
-			</TextLine>
-			{Array.from({ length: fillerRows }, (_, index) => (
-				<box key={index} height={1} />
-			))}
+							</box>
+						</>
+					)
+				}}
+			</Index>
+			<box width={1} height={1}>
+				<text wrapMode="none" truncate fg={colors.separator}>
+					│
+				</text>
+			</box>
+			{filler() > 0 ? <TextLine width={filler()}>{fitCell("", filler())}</TextLine> : null}
 		</box>
 	)
 }
