@@ -131,6 +131,46 @@ swapping the shim for raw registry reads.
 
 ## Status
 
-In progress. Step 1 shipped 2026-09-20. Steps 2–7 not started. The shim is still
-load-bearing and still non-reactive; the app's live updates continue to come
-from the hand-maintained `App.tsx` overrides.
+In progress. Landed on `perf/solid-reactivity` 2026-09-20:
+
+- **Step 1** — diff viewport windowing + diff scroll ownership (see
+  `diff-rendering-performance.md`).
+- **Step 2** — `useAppShell` returns a `createMemo` accessor; layout, terminal
+  size, view-mode, and loading are live. **Terminal resize now relayouts.**
+- **Step 3** — `useSpinnerFrame` / `useLoadingStatus` return accessors and the
+  spinner is fed live inputs, so it actually advances.
+- **Step 4 (partial)** — `useViewModeState`, `useDiffViewState`,
+  `useSelectionDerivations`, `useDiffCommentDerivations` return accessors.
+- **Step 5 (partial)** — `usePullRequestSurface` returns accessors;
+  `useDetailHydration` takes accessors and uses real `createEffect`s, so
+  **selected-PR detail hydration and neighbour prefetch now actually run**
+  (under the shim they ran once and never re-fired).
+- **Step 6 (partial)** — all shim `useState` sites are gone (0 remaining);
+  `useTerminalFocus`, `useIdleRefresh`, `usePullRequestRefresh`,
+  `useScrollPersistence`, `useCommandPalette` scroll, `useRunsView` pending, and
+  the shell's startup state are Solid primitives. `useScrollPersistence` is
+  reactive, so list scroll position is restored again.
+
+Deliberately NOT done: the shell memo does **not** read the PR/Issue surface
+accessors. Doing so re-rendered the whole content tree per keypress and tripped
+a native `TextBuffer` allocation storm under rapid key bursts. `App.tsx`'s
+overrides still keep the list/detail live. The follow-up that removes that split
+is per-prop accessors on the shell return (or dissolving the shell into
+per-Surface shells).
+
+Remaining (mechanical): 70 shim `useEffect` sites (the non-empty-dep ones are
+the broken ones), 12 `useMemo`, 33 `useAtomValue`, 26 `useAtom`; then delete
+`src/solid-hooks.ts` and `src/atom-solid.ts`. `useIssueSurface` /
+`useRepoSurface` still return values; `useScrollPersistence` is wired for them
+via accessor inputs.
+
+## Open questions
+
+- Should `useAppShell` return a function-of-accessors, or an object of
+  accessors? A function keeps the current shape and one spread site; an object
+  of accessors is more idiomatic Solid but touches every field read in `App.tsx`.
+- Per-prop accessors vs. one memo: the memo must not track selection without
+  also making the tab/row renderables reuse-safe (`WorkspaceTabs` now uses
+  `<Index>`; other lists may need the same).
+- How much of `useAppShell` should dissolve into per-Surface shells at the same
+  time (`app-shell-deepening.md` steps 4c/5)?
