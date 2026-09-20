@@ -1,5 +1,12 @@
 # phui
 
+## [0.17.4](https://github.com/phall1/phui/compare/v0.17.3...v0.17.4) (2026-09-20)
+
+
+### Bug Fixes
+
+* restore copied metadata and support merge queues ([#21](https://github.com/phall1/phui/issues/21)) ([173bf9e](https://github.com/phall1/phui/commit/173bf9e5a2a123e5cd681bf7ac0dd362ddd4be9a))
+
 ## [0.17.3](https://github.com/phall1/phui/compare/v0.17.2...v0.17.3) (2026-09-15)
 
 
