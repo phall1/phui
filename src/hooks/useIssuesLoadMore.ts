@@ -1,7 +1,6 @@
-import { useAtomSet } from "../atom-solid.js"
-import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { type Accessor } from "solid-js"
-import type { MutableRefObject } from "../solid-hooks.js"
+import type { MutableRefObject } from "../solid-utils.js"
 import { config } from "../config.js"
 import { useItemLoadMore } from "./useItemLoadMore.js"
 import { type IssueView, issueViewToListInput } from "../issueViews.js"
@@ -41,9 +40,9 @@ export const useIssuesLoadMore = ({
 	flashNotice,
 	setIssueQueueLoadCache,
 }: UseIssuesLoadMoreInput): UseIssuesLoadMoreResult => {
-	const loadIssuePage = useAtomSet(listIssuePageAtom, { mode: "promise" })
-	const writeIssueQueue = useAtomSet(writeIssueQueueAtom, { mode: "promise" })
-	const [loadingMoreKey, setLoadingMoreKey] = [useAtomValueSolid(() => loadingMoreIssueKeyAtom), useAtomSet(loadingMoreIssueKeyAtom)] as const
+	const loadIssuePage = useAtomSetSolid(() => listIssuePageAtom, { mode: "promise" })
+	const writeIssueQueue = useAtomSetSolid(() => writeIssueQueueAtom, { mode: "promise" })
+	const [loadingMoreKey, setLoadingMoreKey] = [useAtomValueSolid(() => loadingMoreIssueKeyAtom), useAtomSetSolid(() => loadingMoreIssueKeyAtom)] as const
 	const { loadMore, isLoadingMore, resetLoadingMore } = useItemLoadMore({
 		cacheKey: currentIssueCacheKey,
 		load: issueLoad,

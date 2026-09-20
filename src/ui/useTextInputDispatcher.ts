@@ -1,5 +1,5 @@
 import { useKeyboard } from "@opentui/solid"
-import { useRef } from "../solid-hooks.js"
+import { useRef } from "../solid-utils.js"
 import type { WorkspaceSurface } from "../workspaceSurfaces.js"
 import { type CommentEditorValue, insertText } from "./commentEditor.js"
 import type { ChangedFilesModalState, CommandPaletteState, LabelModalState, OpenRepositoryModalState, PromptModalState, SubmitReviewModalState, ThemeModalState } from "./modals.js"

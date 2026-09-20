@@ -1,5 +1,5 @@
 import { type Accessor } from "solid-js"
-import { type MutableRefObject } from "../solid-hooks.js"
+import { type MutableRefObject } from "../solid-utils.js"
 import { useTerminalFocus } from "../ui/useTerminalFocus.js"
 import { useIdleRefresh } from "../ui/pullRequests/useIdleRefresh.js"
 

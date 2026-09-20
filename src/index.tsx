@@ -116,7 +116,7 @@ try {
 	// Syntax highlighting is optional; still mount the app.
 }
 
-const [{ RegistryProvider }, { App }] = await Promise.all([import("./atom-solid.js"), import("./App.js")])
+const [{ RegistryProvider }, { App }] = await Promise.all([import("@effect/atom-solid"), import("./App.js")])
 
 const Root = () => {
 	const [systemThemeGeneration, setSystemThemeGeneration] = createSignal(0)

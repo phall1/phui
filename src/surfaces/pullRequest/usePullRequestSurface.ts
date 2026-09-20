@@ -1,10 +1,10 @@
-import { RegistryContext, useAtomSet, useAtomRefresh } from "../../atom-solid.js"
+import { RegistryContext, useAtomSet as useAtomSetSolid, useAtomRefresh as useAtomRefreshSolid } from "@effect/atom-solid"
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { createEffect, createMemo, type Accessor } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
 import { Cause } from "effect"
-import { type MutableRefObject, useContext, useRef } from "../../solid-hooks.js"
+import { type MutableRefObject, useContext, useRef } from "../../solid-utils.js"
 import type { LoadStatus, PullRequestItem } from "../../domain.js"
 import { errorMessage } from "../../errors.js"
 import { type PullRequestView, viewCacheKey } from "../../pullRequestViews.js"
@@ -158,20 +158,20 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 	// The queue atom tracks `activeViewAtom`; view changes interrupt the old
 	// request and start the new query while keyed queue data remains cached.
 	const activeView = useAtomValueSolid(() => activeViewAtom)
-	const setActiveView = useAtomSet(activeViewAtom)
+	const setActiveView = useAtomSetSolid(() => activeViewAtom)
 	const pullRequestResult = useAtomValueSolid(() => pullRequestsAtom)
-	const refreshCurrentPullRequestsAtom = useAtomRefresh(pullRequestsAtom)
+	const refreshCurrentPullRequestsAtom = useAtomRefreshSolid(() => pullRequestsAtom)
 	const refreshPullRequestsAtom = () => {
 		if (registry.get(pullRequestsAtom).waiting) return
 		refreshCurrentPullRequestsAtom()
 	}
 	const queueLoadCache = useAtomValueSolid(() => queueLoadCacheAtom)
-	const setQueueLoadCache = useAtomSet(queueLoadCacheAtom)
-	const setPullRequestOverrides = useAtomSet(pullRequestOverridesAtom)
-	const setRecentlyCompletedPullRequests = useAtomSet(recentlyCompletedPullRequestsAtom)
-	const setPullRequestComments = useAtomSet(pullRequestCommentsAtom)
-	const setPullRequestCommentsLoaded = useAtomSet(pullRequestCommentsLoadedAtom)
-	const setNotice = useAtomSet(noticeAtom)
+	const setQueueLoadCache = useAtomSetSolid(() => queueLoadCacheAtom)
+	const setPullRequestOverrides = useAtomSetSolid(() => pullRequestOverridesAtom)
+	const setRecentlyCompletedPullRequests = useAtomSetSolid(() => recentlyCompletedPullRequestsAtom)
+	const setPullRequestComments = useAtomSetSolid(() => pullRequestCommentsAtom)
+	const setPullRequestCommentsLoaded = useAtomSetSolid(() => pullRequestCommentsLoadedAtom)
+	const setNotice = useAtomSetSolid(() => noticeAtom)
 	const retryProgress = useAtomValueSolid(() => retryProgressAtom)
 
 	const pullRequestLoad = createMemo(() => resolveLoad(activeView(), queueLoadCache(), pullRequestResult()))
@@ -286,11 +286,11 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 	})
 
 	const { armRefreshToast, cancelRefreshToast } = useRefreshCompletionToast({
-		pullRequestStatus: pullRequestStatus(),
-		pullRequestError: pullRequestError(),
-		fetchedAt: pullRequestLoad()?.fetchedAt?.getTime(),
-		pullRequestLoad: pullRequestLoad(),
-		selectedPullRequest: selectedPullRequest(),
+		pullRequestStatus,
+		pullRequestError,
+		fetchedAt: createMemo(() => pullRequestLoad()?.fetchedAt?.getTime()),
+		pullRequestLoad,
+		selectedPullRequest,
 		lastPullRequestRefreshAtRef,
 		flashNotice,
 	})

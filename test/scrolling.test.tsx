@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test"
-import { act } from "../src/solid-hooks.js"
+import { act } from "../src/solid-utils.js"
 
 // Quiet React's "update outside act" warnings from atom-driven loading frames and
 // timers we can't synchronously enclose. Real correctness is asserted via captured
@@ -36,7 +36,7 @@ process.env.PHUI_PR_PAGE_SIZE = "100"
 
 const loadApp = async () => {
 	const { testRender } = await import("@opentui/solid")
-	const { RegistryProvider } = await import("../src/atom-solid.js")
+	const { RegistryProvider } = await import("@effect/atom-solid")
 	const { App } = await import("../src/App.tsx")
 	return { testRender, RegistryProvider, App }
 }

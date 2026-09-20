@@ -1,6 +1,6 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { createEffect, onCleanup } from "solid-js"
-import { readMaybeAccessor, type MaybeAccessor, type MutableRefObject } from "../solid-hooks.js"
+import { readMaybeAccessor, type MaybeAccessor, type MutableRefObject } from "../solid-utils.js"
 
 /**
  * Persists a scrollbox's scrollTop across mount/unmount cycles by polling

@@ -2,7 +2,7 @@ import type { KeyEvent } from "@opentui/core"
 import { useKeyboard } from "@opentui/solid"
 import type { ParsedStroke } from "@phui/keymap"
 import type { KeySubscribe } from "@phui/keymap/solid"
-import { useMemo, useRef } from "../solid-hooks.js"
+import { useRef } from "../solid-utils.js"
 
 const normalizeKeyName = (name: string) => {
 	const key = name.toLowerCase()
@@ -43,13 +43,11 @@ export const useOpenTuiSubscribe = (): KeySubscribe => {
 
 	useKeyboard((event) => onKey.current(event as KeyEvent))
 
-	return useMemo<KeySubscribe>(
-		() => (handler) => {
-			handlersRef.current.add(handler)
-			return () => {
-				handlersRef.current.delete(handler)
-			}
-		},
-		[],
-	)
+	const subscribe: KeySubscribe = (handler) => {
+		handlersRef.current.add(handler)
+		return () => {
+			handlersRef.current.delete(handler)
+		}
+	}
+	return subscribe
 }

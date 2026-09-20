@@ -13,7 +13,7 @@ import {
 	pendingReviewKey,
 	replyToReviewCommentAtom,
 } from "./atoms.js"
-import { useAtomSet } from "../../atom-solid.js"
+import { useAtomSet as useAtomSetSolid } from "@effect/atom-solid"
 import type { CommentModalState, DeleteCommentModalState, FrozenCommentSubject } from "../modals.js"
 import { initialCommentModalState } from "../modals.js"
 
@@ -97,15 +97,15 @@ export interface UseCommentMutationsResult {
  * cache touches (diff thread map, issue commentCount).
  */
 export const useCommentMutations = (input: UseCommentMutationsInput): UseCommentMutationsResult => {
-	const createPullRequestComment = useAtomSet(createPullRequestCommentAtom, { mode: "promise" })
-	const queuePendingDiffComment = useAtomSet(queuePendingDiffCommentAtom, { mode: "promise" })
-	const setPendingReviewByPr = useAtomSet(pendingReviewByPrAtom)
-	const createPullRequestIssueComment = useAtomSet(createPullRequestIssueCommentAtom, { mode: "promise" })
-	const replyToReviewComment = useAtomSet(replyToReviewCommentAtom, { mode: "promise" })
-	const editPullRequestIssueComment = useAtomSet(editPullRequestIssueCommentAtom, { mode: "promise" })
-	const editReviewComment = useAtomSet(editReviewCommentAtom, { mode: "promise" })
-	const deletePullRequestIssueComment = useAtomSet(deletePullRequestIssueCommentAtom, { mode: "promise" })
-	const deleteReviewComment = useAtomSet(deleteReviewCommentAtom, { mode: "promise" })
+	const createPullRequestComment = useAtomSetSolid(() => createPullRequestCommentAtom, { mode: "promise" })
+	const queuePendingDiffComment = useAtomSetSolid(() => queuePendingDiffCommentAtom, { mode: "promise" })
+	const setPendingReviewByPr = useAtomSetSolid(() => pendingReviewByPrAtom)
+	const createPullRequestIssueComment = useAtomSetSolid(() => createPullRequestIssueCommentAtom, { mode: "promise" })
+	const replyToReviewComment = useAtomSetSolid(() => replyToReviewCommentAtom, { mode: "promise" })
+	const editPullRequestIssueComment = useAtomSetSolid(() => editPullRequestIssueCommentAtom, { mode: "promise" })
+	const editReviewComment = useAtomSetSolid(() => editReviewCommentAtom, { mode: "promise" })
+	const deletePullRequestIssueComment = useAtomSetSolid(() => deletePullRequestIssueCommentAtom, { mode: "promise" })
+	const deleteReviewComment = useAtomSetSolid(() => deleteReviewCommentAtom, { mode: "promise" })
 
 	const {
 		selectedCommentSubject,

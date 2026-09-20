@@ -1,7 +1,7 @@
 import type { DiffRenderable, MouseEvent, ScrollBoxRenderable } from "@opentui/core"
 import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
-import { onCleanup, onMount } from "solid-js"
-import { useMemo, type Ref } from "../solid-hooks.js"
+import { createMemo, onCleanup, onMount } from "solid-js"
+import { type Ref } from "../solid-utils.js"
 import { diffCommentAnchorIndexAtom, diffFileIndexAtom, diffScrollTopAtom } from "./diff/atoms.js"
 import type { DiffCommentSide, PullRequestItem, PullRequestReviewComment } from "../domain.js"
 import { colors, lineNumberTextColor, type ThemeId } from "./colors.js"
@@ -116,8 +116,6 @@ export const PullRequestDiffPane = (props: {
 		setDiffRef,
 		selectedCommentThread,
 		onSelectCommentLine,
-		themeId,
-		themeGeneration,
 		showScrollbar,
 	} = props
 	const commentAnchorIndex = useAtomValueSolid(() => diffCommentAnchorIndexAtom)
@@ -151,7 +149,11 @@ export const PullRequestDiffPane = (props: {
 		onCleanup(() => globalThis.clearInterval(interval))
 	})
 	const readyFiles = diffState?._tag === "Ready" ? diffState.files : []
-	const syntaxStyle = useMemo(() => createDiffSyntaxStyle(), [themeId, themeGeneration])
+	const syntaxStyle = createMemo(() => {
+		void props.themeId
+		void props.themeGeneration
+		return createDiffSyntaxStyle()
+	})
 
 	if (!pullRequest) {
 		return <LoadingPane content={{ title: "No pull request selected", hint: "Press esc to go back" }} width={paneWidth} height={height} />
@@ -273,7 +275,7 @@ export const PullRequestDiffPane = (props: {
 								view={view}
 								syncScroll
 								filetype={stackedFile.file.filetype ?? "text"}
-								syntaxStyle={syntaxStyle}
+								syntaxStyle={syntaxStyle()}
 								fg={colors.text}
 								showLineNumbers
 								wrapMode={wrapMode}

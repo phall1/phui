@@ -1,7 +1,7 @@
 import type { DiffRenderable, ScrollBoxRenderable } from "@opentui/core"
 import { createMemo, type JSX } from "solid-js"
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
-import type { ComponentProps, MutableRefObject } from "../solid-hooks.js"
+import type { ComponentProps, MutableRefObject } from "../solid-utils.js"
 import { runsFullViewAtom } from "../ui/runs/atoms.js"
 import { diffCommentAnchorIndexAtom, diffScrollTopAtom, readyDiffFilesAtom, selectedDiffStateAtom } from "../ui/diff/atoms.js"
 import type { DiffCommentSide, IssueItem, PullRequestComment, PullRequestItem, PullRequestReviewComment } from "../domain.js"

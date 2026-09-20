@@ -1,5 +1,6 @@
 import { TextAttributes, type BoxRenderable, type MouseEvent } from "@opentui/core"
-import { useEffect, useMemo, useState, type ReactNode } from "../solid-hooks.js"
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js"
+import { type ReactNode } from "../solid-utils.js"
 import { useRenderer } from "@opentui/solid"
 import { daysOpen, formatRelativeDate } from "../date.js"
 import type { IssueItem, LoadStatus } from "../domain.js"
@@ -221,40 +222,39 @@ export const IssueDetailPane = ({
 	onLinkOpen?: (url: string) => void
 }) => {
 	const renderer = useRenderer()
-	const [hoveredUrl, setHoveredUrl] = useState<string | null>(null)
+	const [hoveredUrl, setHoveredUrl] = createSignal<string | null>(null)
 	const contentWidth = paneContentWidth(width)
 	const titleLines = issue ? wrapText(issue.title, Math.max(1, contentWidth)) : []
 	const labelRows = issue ? labelChipRows(issue.labels, contentWidth) : []
 	const resolvedBodyLineLimit = bodyLineLimit ?? Math.max(1, height - titleLines.length - labelRows.length - 2)
-	const visibleBodyLines = useMemo(
-		() => bodyPreview(issue?.body ?? "", contentWidth, resolvedBodyLineLimit, { tableMode: "truncate", issueReferenceRepository: issue?.repository ?? null }),
-		[issue?.body, issue?.repository, contentWidth, resolvedBodyLineLimit],
+	const visibleBodyLines = createMemo(() =>
+		bodyPreview(issue?.body ?? "", contentWidth, resolvedBodyLineLimit, { tableMode: "truncate", issueReferenceRepository: issue?.repository ?? null }),
 	)
-	const urlPositions = useMemo(() => collectUrlPositions(visibleBodyLines), [visibleBodyLines])
+	const urlPositions = createMemo(() => collectUrlPositions(visibleBodyLines()))
 
-	useEffect(() => {
-		if (hoveredUrl === null) return
+	createEffect(() => {
+		if (hoveredUrl() === null) return
 		renderer.setMousePointer("pointer")
-		return () => renderer.setMousePointer("default")
-	}, [hoveredUrl, renderer])
+		onCleanup(() => renderer.setMousePointer("default"))
+	})
 
 	const handleMouseMove = function (this: BoxRenderable, event: MouseEvent) {
-		if (urlPositions.length === 0) return
+		if (urlPositions().length === 0) return
 		const localX = event.x - this.x - 1
 		const localY = event.y - this.y
-		const next = findUrlAt(urlPositions, localY, localX)
-		if (next !== hoveredUrl) setHoveredUrl(next)
+		const next = findUrlAt(urlPositions(), localY, localX)
+		if (next !== hoveredUrl()) setHoveredUrl(next)
 	}
 
 	const handleMouseOut = () => {
-		if (hoveredUrl !== null) setHoveredUrl(null)
+		if (hoveredUrl() !== null) setHoveredUrl(null)
 	}
 
 	const handleMouseDown = function (this: BoxRenderable, event: MouseEvent) {
 		if (!onLinkOpen || event.button !== 0) return
 		const localX = event.x - this.x - 1
 		const localY = event.y - this.y
-		const url = findUrlAt(urlPositions, localY, localX)
+		const url = findUrlAt(urlPositions(), localY, localX)
 		if (url === null) return
 		event.stopPropagation()
 		onLinkOpen(url)
@@ -273,7 +273,7 @@ export const IssueDetailPane = ({
 
 	const commentsText = issue.commentCount > 0 ? `${issue.commentCount} ${issue.commentCount === 1 ? "comment" : "comments"}` : null
 	const opened = formatRelativeDate(issue.createdAt)
-	const usedRows = titleLines.length + 1 + labelRows.length + 1 + visibleBodyLines.length
+	const usedRows = titleLines.length + 1 + labelRows.length + 1 + visibleBodyLines().length
 	const contentHeight = Math.max(height, usedRows)
 
 	return (
@@ -295,9 +295,9 @@ export const IssueDetailPane = ({
 			))}
 			<PaneDivider width={width} />
 			<box flexDirection="column" onMouseMove={handleMouseMove} onMouseOut={handleMouseOut} onMouseDown={handleMouseDown}>
-				{visibleBodyLines.map((line, index) => (
+				{visibleBodyLines().map((line, index) => (
 					<IssueDetailLine key={index} width={width}>
-						<CommentSegments segments={line.segments} hoveredUrl={hoveredUrl} />
+						<CommentSegments segments={line.segments} hoveredUrl={hoveredUrl()} />
 					</IssueDetailLine>
 				))}
 			</box>

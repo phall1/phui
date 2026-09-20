@@ -1,6 +1,6 @@
 import { Match, Switch } from "solid-js"
 import type { ScrollBoxRenderable, DiffRenderable } from "@opentui/core"
-import type { MutableRefObject } from "../solid-hooks.js"
+import type { MutableRefObject } from "../solid-utils.js"
 import type { DiffCommentSide, IssueItem, PullRequestComment, PullRequestItem, PullRequestReviewComment, RepositoryDetails } from "../domain.js"
 import type { ThemeId } from "../ui/colors.js"
 import type { DetailCommentsStatus, DetailPlaceholderContent } from "../ui/DetailsPane.js"

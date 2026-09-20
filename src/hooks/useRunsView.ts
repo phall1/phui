@@ -1,8 +1,7 @@
-import { RegistryContext, useAtom, useAtomSet } from "../atom-solid.js"
-import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { RegistryContext, useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { createEffect, onCleanup } from "solid-js"
 import { createSignal } from "solid-js"
-import { useContext } from "../solid-hooks.js"
+import { useContext } from "../solid-utils.js"
 import { selectedPullRequestAtom } from "../ui/pullRequests/atoms.js"
 import { selectedRepositoryAtom, workspaceSurfaceAtom } from "../workspace/atoms.js"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
@@ -79,13 +78,14 @@ export const useRunsView = (
 	const closeRepositoryView = repositoryOptions?.onClose
 	const switchRepositorySurface = repositoryOptions?.switchWorkspaceSurface
 	const cycleRepositorySurface = repositoryOptions?.cycleWorkspaceSurface
-	const [pullRequestRunsFullView, setPullRequestRunsFullView] = useAtom(runsFullViewAtom)
-	const [, setSelectedRunId] = useAtom(repositoryMode ? repositorySelectedRunIdAtom : selectedRunIdAtom)
-	const [, setRunsSelection] = useAtom(repositoryMode ? repositoryRunsListSelectionAtom : runsListSelectionAtom)
-	const [, setDetailSelection] = useAtom(repositoryMode ? repositoryRunDetailSelectionAtom : runDetailSelectionAtom)
-	const openUrl = useAtomSet(openUrlAtom, { mode: "promise" })
-	const rerunWorkflowRun = useAtomSet(rerunWorkflowRunAtom, { mode: "promise" })
-	const cancelWorkflowRun = useAtomSet(cancelWorkflowRunAtom, { mode: "promise" })
+	const pullRequestRunsFullView = useAtomValueSolid(() => runsFullViewAtom)()
+	const setPullRequestRunsFullView = useAtomSetSolid(() => runsFullViewAtom)
+	const setSelectedRunId = useAtomSetSolid(() => (repositoryMode ? repositorySelectedRunIdAtom : selectedRunIdAtom))
+	const setRunsSelection = useAtomSetSolid(() => (repositoryMode ? repositoryRunsListSelectionAtom : runsListSelectionAtom))
+	const setDetailSelection = useAtomSetSolid(() => (repositoryMode ? repositoryRunDetailSelectionAtom : runDetailSelectionAtom))
+	const openUrl = useAtomSetSolid(() => openUrlAtom, { mode: "promise" })
+	const rerunWorkflowRun = useAtomSetSolid(() => rerunWorkflowRunAtom, { mode: "promise" })
+	const cancelWorkflowRun = useAtomSetSolid(() => cancelWorkflowRunAtom, { mode: "promise" })
 	const [actionPending, setActionPending] = createSignal(false)
 	const selectedRepositoryLive = useAtomValueSolid(() => selectedRepositoryAtom)
 	const selectedPullRequestLive = useAtomValueSolid(() => selectedPullRequestAtom)

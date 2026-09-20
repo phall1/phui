@@ -1,5 +1,5 @@
 import { createMemo, type Accessor } from "solid-js"
-import { type MutableRefObject, useRef } from "../solid-hooks.js"
+import { type MutableRefObject, useRef } from "../solid-utils.js"
 import { errorMessage } from "../errors.js"
 
 type LoadMoreLoad = {

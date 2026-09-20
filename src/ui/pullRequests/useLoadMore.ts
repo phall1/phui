@@ -1,7 +1,7 @@
-import { useAtomSet } from "../../atom-solid.js"
+import { useAtomSet as useAtomSetSolid } from "@effect/atom-solid"
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { type Accessor } from "solid-js"
-import type { MutableRefObject } from "../../solid-hooks.js"
+import type { MutableRefObject } from "../../solid-utils.js"
 import { config } from "../../config.js"
 import { useItemLoadMore } from "../../hooks/useItemLoadMore.js"
 import { itemQueueCacheViewer } from "../../item/queue.js"
@@ -50,10 +50,10 @@ export const useLoadMore = ({
 	flashNotice,
 	setQueueLoadCache,
 }: UseLoadMoreInput): UseLoadMoreResult => {
-	const loadPullRequestPage = useAtomSet(listOpenPullRequestPageAtom, { mode: "promise" })
-	const writeQueueCache = useAtomSet(writeQueueCacheAtom, { mode: "promise" })
+	const loadPullRequestPage = useAtomSetSolid(() => listOpenPullRequestPageAtom, { mode: "promise" })
+	const writeQueueCache = useAtomSetSolid(() => writeQueueCacheAtom, { mode: "promise" })
 	const loadingMoreKey = useAtomValueSolid(() => loadingMoreKeyAtom)
-	const setLoadingMoreKey = useAtomSet(loadingMoreKeyAtom)
+	const setLoadingMoreKey = useAtomSetSolid(() => loadingMoreKeyAtom)
 	const targetedPullRequestCount = pullRequestLoad ? pullRequestLoad.data.length - pullRequestQueueItemCount(pullRequestLoad) : 0
 	const { loadMore, isLoadingMore, resetLoadingMore } = useItemLoadMore({
 		cacheKey: currentQueueCacheKey,

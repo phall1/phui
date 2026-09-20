@@ -1,4 +1,5 @@
-import { useEffect } from "../solid-hooks.js"
+import { createEffect } from "solid-js"
+import { readMaybeAccessor, type MaybeAccessor } from "../solid-utils.js"
 import { devLog } from "../devLog.js"
 import type { IssueItem, PullRequestItem } from "../domain.js"
 import type { RepoRollupRow } from "../services/CacheService.js"
@@ -12,15 +13,15 @@ interface IssueLoadShape {
 }
 
 export interface UseStartupTasksInput {
-	readonly username: string | null
-	readonly recentRepositories: readonly string[]
-	readonly favoriteRepositories: Readonly<Record<string, boolean>>
-	readonly detectedRepository: string | null
-	readonly pullRequestLoad: PullRequestLoadShape | null
-	readonly issueLoad: IssueLoadShape | null
-	readonly currentQueueCacheKey: string
-	readonly selectedIndex: number
-	readonly persistQueueSelection: boolean
+	readonly username: MaybeAccessor<string | null>
+	readonly recentRepositories: MaybeAccessor<readonly string[]>
+	readonly favoriteRepositories: MaybeAccessor<Readonly<Record<string, boolean>>>
+	readonly detectedRepository: MaybeAccessor<string | null>
+	readonly pullRequestLoad: MaybeAccessor<PullRequestLoadShape | null>
+	readonly issueLoad: MaybeAccessor<IssueLoadShape | null>
+	readonly currentQueueCacheKey: MaybeAccessor<string>
+	readonly selectedIndex: MaybeAccessor<number>
+	readonly persistQueueSelection: MaybeAccessor<boolean>
 	readonly readRepoRollup: (username: string) => Promise<readonly RepoRollupRow[]>
 	readonly setRepoRollup: (rows: readonly RepoRollupRow[]) => void
 	readonly prewarmRepositoryDetails: (repositories: readonly string[]) => Promise<unknown>
@@ -41,42 +42,37 @@ void {} as IssueItem | PullRequestItem | undefined
  *   - Persist queue selection per cache key so PR list scroll position
  *     restores when switching between views.
  */
-export const useStartupTasks = ({
-	username,
-	recentRepositories,
-	favoriteRepositories,
-	detectedRepository,
-	pullRequestLoad,
-	issueLoad,
-	currentQueueCacheKey,
-	selectedIndex,
-	persistQueueSelection,
-	readRepoRollup,
-	setRepoRollup,
-	prewarmRepositoryDetails,
-	pruneCache,
-	setQueueSelection,
-}: UseStartupTasksInput): void => {
-	useEffect(() => {
-		void pruneCache().catch((cause) => devLog("useStartupTasks:pruneCacheFailed", { cause: String(cause) }))
-	}, [pruneCache])
+export const useStartupTasks = (input: UseStartupTasksInput): void => {
+	createEffect(() => {
+		void input.pruneCache().catch((cause) => devLog("useStartupTasks:pruneCacheFailed", { cause: String(cause) }))
+	})
 
-	useEffect(() => {
+	createEffect(() => {
+		const username = readMaybeAccessor(input.username)
+		void readMaybeAccessor(input.pullRequestLoad)?.fetchedAt
+		void readMaybeAccessor(input.issueLoad)?.fetchedAt
 		if (!username) return
-		void readRepoRollup(username)
-			.then((rows) => setRepoRollup(rows))
+		void input
+			.readRepoRollup(username)
+			.then((rows) => input.setRepoRollup(rows))
 			.catch((cause) => devLog("useStartupTasks:readRepoRollupFailed", { username, cause: String(cause) }))
-	}, [username, pullRequestLoad?.fetchedAt, issueLoad?.fetchedAt, readRepoRollup, setRepoRollup])
+	})
 
-	useEffect(() => {
+	createEffect(() => {
+		const username = readMaybeAccessor(input.username)
 		if (!username) return
+		const recentRepositories = readMaybeAccessor(input.recentRepositories)
+		const favoriteRepositories = readMaybeAccessor(input.favoriteRepositories)
+		const detectedRepository = readMaybeAccessor(input.detectedRepository)
 		const repositories = Array.from(new Set([...recentRepositories, ...Object.keys(favoriteRepositories), ...(detectedRepository ? [detectedRepository] : [])]))
 		if (repositories.length === 0) return
-		void prewarmRepositoryDetails(repositories).catch((cause) => devLog("useStartupTasks:prewarmFailed", { repositories, cause: String(cause) }))
-	}, [username, recentRepositories, favoriteRepositories, detectedRepository, prewarmRepositoryDetails])
+		void input.prewarmRepositoryDetails(repositories).catch((cause) => devLog("useStartupTasks:prewarmFailed", { repositories, cause: String(cause) }))
+	})
 
-	useEffect(() => {
-		if (!persistQueueSelection) return
-		setQueueSelection((current) => (current[currentQueueCacheKey] === selectedIndex ? current : { ...current, [currentQueueCacheKey]: selectedIndex }))
-	}, [currentQueueCacheKey, persistQueueSelection, selectedIndex, setQueueSelection])
+	createEffect(() => {
+		if (!readMaybeAccessor(input.persistQueueSelection)) return
+		const currentQueueCacheKey = readMaybeAccessor(input.currentQueueCacheKey)
+		const selectedIndex = readMaybeAccessor(input.selectedIndex)
+		input.setQueueSelection((current) => (current[currentQueueCacheKey] === selectedIndex ? current : { ...current, [currentQueueCacheKey]: selectedIndex }))
+	})
 }

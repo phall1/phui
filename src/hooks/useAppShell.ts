@@ -1,9 +1,8 @@
-import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "../atom-solid.js"
-import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { RegistryContext, useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
-import { createMemo, createSignal } from "solid-js"
-import { useCallback, useContext, useEffect, useRef, useState } from "../solid-hooks.js"
+import { createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { useContext, useRef } from "../solid-utils.js"
 import type { AppCommand } from "../commands.js"
 import type { PhuiLaunchIntent, PhuiLaunchView } from "../launchIntent.js"
 import { applyLaunchIntent, findLaunchPullRequestIndex, pullRequestLaunchViewState } from "../launchBootstrap.js"
@@ -86,13 +85,18 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	const dimensions = useTerminalDimensions()
 	const registry = useContext(RegistryContext)
 
-	const setQueueSelection = useAtomSet(queueSelectionAtom)
-	const setPendingIssueSelection = useAtomSet(pendingIssueSelectionAtom)
-	const [selectedIndex, setSelectedIndex] = useAtom(selectedIndexAtom)
-	const [notice, setNotice] = useAtom(noticeAtom)
-	const [filterQuery, setFilterQuery] = useAtom(filterQueryAtom)
-	const [filterDraft, setFilterDraft] = useAtom(filterDraftAtom)
-	const [filterMode, setFilterMode] = useAtom(filterModeAtom)
+	const setQueueSelection = useAtomSetSolid(() => queueSelectionAtom)
+	const setPendingIssueSelection = useAtomSetSolid(() => pendingIssueSelectionAtom)
+	const selectedIndex = useAtomValueSolid(() => selectedIndexAtom)()
+	const setSelectedIndex = useAtomSetSolid(() => selectedIndexAtom)
+	const notice = useAtomValueSolid(() => noticeAtom)()
+	const setNotice = useAtomSetSolid(() => noticeAtom)
+	const filterQuery = useAtomValueSolid(() => filterQueryAtom)()
+	const setFilterQuery = useAtomSetSolid(() => filterQueryAtom)
+	const filterDraft = useAtomValueSolid(() => filterDraftAtom)()
+	const setFilterDraft = useAtomSetSolid(() => filterDraftAtom)
+	const filterMode = useAtomValueSolid(() => filterModeAtom)()
+	const setFilterMode = useAtomSetSolid(() => filterModeAtom)
 	const viewMode = useViewModeState()
 	const detailFullView = viewMode.detailFullView()
 	const setDetailFullView = viewMode.setDetailFullView
@@ -122,10 +126,10 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	const setDiffCommentThreads = diffView.setDiffCommentThreads
 	const setDiffCommentsLoaded = diffView.setDiffCommentsLoaded
 	const setPullRequestDiffCache = diffView.setPullRequestDiffCache
-	const setPullRequestComments = useAtomSet(pullRequestCommentsAtom)
-	const setPullRequestCommentsLoaded = useAtomSet(pullRequestCommentsLoadedAtom)
-	const themeId = useAtomValue(themeIdAtom)
-	const showScrollbars = useAtomValue(showScrollbarsAtom)
+	const setPullRequestComments = useAtomSetSolid(() => pullRequestCommentsAtom)
+	const setPullRequestCommentsLoaded = useAtomSetSolid(() => pullRequestCommentsLoadedAtom)
+	const themeId = useAtomValueSolid(() => themeIdAtom)()
+	const showScrollbars = useAtomValueSolid(() => showScrollbarsAtom)()
 	const {
 		activeModal,
 		closeActiveModal,
@@ -172,12 +176,12 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	const [startupLoadComplete, setStartupLoadComplete] = createSignal(false)
 	const [homeCrumbHovered, setHomeCrumbHovered] = createSignal(false)
 	const launchIntentAppliedRef = useRef(false)
-	const [pendingLaunchPullRequest, setPendingLaunchPullRequest] = useState<{
+	const [pendingLaunchPullRequest, setPendingLaunchPullRequest] = createSignal<{
 		readonly repository: string
 		readonly number: number
 		readonly view: PhuiLaunchView
 	} | null>(null)
-	const usernameResult = useAtomValue(usernameAtom)
+	const usernameResult = useAtomValueSolid(() => usernameAtom)()
 	const {
 		addPullRequestLabel,
 		removePullRequestLabel,
@@ -236,20 +240,18 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 
 	const flashNotice = useFlashNotice()
 
-	useEffect(() => {
+	onMount(() => {
 		renderer.setBackgroundColor(colors.background)
-	}, [renderer, themeId, systemThemeGeneration])
+	})
 
 	const themeModalActions = useThemeModal({ themeModal, setThemeModal, closeActiveModal, flashNotice })
 
-	useEffect(
-		() => () => {
-			refreshGenerationRef.current += 1
-		},
-		[],
-	)
+	onCleanup(() => {
+		refreshGenerationRef.current += 1
+	})
 
-	const [activeWorkspaceSurface, setActiveWorkspaceSurface] = useAtom(workspaceSurfaceAtom)
+	const activeWorkspaceSurface = useAtomValueSolid(() => workspaceSurfaceAtom)()
+	const setActiveWorkspaceSurface = useAtomSetSolid(() => workspaceSurfaceAtom)
 	const activeWorkspaceSurfaceLive = useAtomValueSolid(() => workspaceSurfaceAtom)
 	const visibleFilterText = filterMode ? filterDraft : filterQuery
 	const username = AsyncResult.isSuccess(usernameResult) ? usernameResult.value : null
@@ -315,11 +317,11 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// Atom-side notices do not pass through `useFlashNotice`'s timer. Start their
 	// fallback timeout only once the normal notice surface is visible, so an
 	// early launch failure gets the full 2.5s interval without becoming sticky.
-	useEffect(() => {
+	createEffect(() => {
 		if (visibleNotice === null) return
 		const handle = globalThis.setTimeout(() => setNotice((current) => expireNotice(current, visibleNotice)), NOTICE_TIMEOUT_MS)
-		return () => globalThis.clearTimeout(handle)
-	}, [setNotice, visibleNotice])
+		onCleanup(() => globalThis.clearTimeout(handle))
+	})
 
 	const issueSurface = useIssueSurface({
 		username,
@@ -332,30 +334,28 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		issueListScrollRef,
 		issueListScrollPersistedRef,
 	})
-	const {
-		issues,
-		allIssues,
-		issueLoad,
-		issuesStatus,
-		issuesError,
-		selectedIssue,
-		selectedIssueIndex,
-		setSelectedIssueIndex,
-		activeIssueView,
-		setActiveIssueView,
-		hasMoreIssues,
-		loadedIssueCount,
-		loadMoreIssueRowSelected,
-		issueLoadMoreSlotAvailable,
-		issueFetchInFlight,
-		retryProgress: issueRetryProgress,
-		issueActiveFilterLabel,
-		setIssueOverrides,
-		showIssueRepositoryGroups,
-		loadMoreIssues,
-		isLoadingMoreIssues,
-		resetLoadingMoreIssues,
-	} = issueSurface
+	const issues = issueSurface.issues()
+	const allIssues = issueSurface.allIssues()
+	const issueLoad = issueSurface.issueLoad()
+	const issuesStatus = issueSurface.issuesStatus()
+	const issuesError = issueSurface.issuesError()
+	const selectedIssue = issueSurface.selectedIssue()
+	const selectedIssueIndex = issueSurface.selectedIssueIndex()
+	const setSelectedIssueIndex = issueSurface.setSelectedIssueIndex
+	const activeIssueView = issueSurface.activeIssueView()
+	const setActiveIssueView = issueSurface.setActiveIssueView
+	const hasMoreIssues = issueSurface.hasMoreIssues()
+	const loadedIssueCount = issueSurface.loadedIssueCount()
+	const loadMoreIssueRowSelected = issueSurface.loadMoreIssueRowSelected()
+	const issueLoadMoreSlotAvailable = issueSurface.issueLoadMoreSlotAvailable()
+	const issueFetchInFlight = issueSurface.issueFetchInFlight()
+	const issueRetryProgress = issueSurface.retryProgress()
+	const issueActiveFilterLabel = issueSurface.issueActiveFilterLabel()
+	const setIssueOverrides = issueSurface.setIssueOverrides
+	const showIssueRepositoryGroups = issueSurface.showIssueRepositoryGroups()
+	const loadMoreIssues = issueSurface.loadMoreIssues
+	const isLoadingMoreIssues = issueSurface.isLoadingMoreIssues()
+	const resetLoadingMoreIssues = issueSurface.resetLoadingMoreIssues
 	const retryProgress = activeWorkspaceSurface === "issues" ? issueRetryProgress : pullRequestRetryProgress
 	const refreshIssuesIfIdle = () => {
 		if (!issueFetchInFlight && !isLoadingMoreIssues) refreshIssues()
@@ -365,7 +365,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// Subscribed here rather than inside the Inbox so the tab badge is live
 	// before you ever open the surface — the whole point being that phui, not
 	// github.com, is where you notice you have been asked for a review.
-	const notificationsResult = useAtomValue(notificationsReportAtom)
+	const notificationsResult = useAtomValueSolid(() => notificationsReportAtom)()
 	const notificationsUnreadCount = AsyncResult.isSuccess(notificationsResult) ? unreadCount(notificationsResult.value.items) : null
 	const repo = useRepoSurface({
 		pullRequests,
@@ -376,22 +376,20 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		mockRepositoryCatalog,
 		flashNotice,
 	})
-	const {
-		repositoryItems,
-		selectedRepositoryItem,
-		selectedRepositoryDetails,
-		selectedRepositoryIndex,
-		setSelectedRepositoryIndex,
-		favoriteRepositories,
-		setFavoriteRepositories,
-		recentRepositories,
-		setRecentRepositories,
-		setRepoRollup,
-	} = repo
+	const repositoryItems = repo.repositoryItems()
+	const selectedRepositoryItem = repo.selectedRepositoryItem()
+	const selectedRepositoryDetails = repo.selectedRepositoryDetails()
+	const selectedRepositoryIndex = repo.selectedRepositoryIndex()
+	const setSelectedRepositoryIndex = repo.setSelectedRepositoryIndex
+	const favoriteRepositories = repo.favoriteRepositories()
+	const setFavoriteRepositories = repo.setFavoriteRepositories
+	const recentRepositories = repo.recentRepositories()
+	const setRecentRepositories = repo.setRecentRepositories
+	const setRepoRollup = repo.setRepoRollup
 	const { toggleFavoriteRepository, removeSelectedRepository } = repo.actions
-	const pullRequestComments = useAtomValue(pullRequestCommentsAtom)
-	const selectedDiffKey = useAtomValue(selectedDiffKeyAtom)
-	const selectedDiffState = useAtomValue(selectedDiffStateAtom)
+	const pullRequestComments = useAtomValueSolid(() => pullRequestCommentsAtom)()
+	const selectedDiffKey = useAtomValueSolid(() => selectedDiffKeyAtom)()
+	const selectedDiffState = useAtomValueSolid(() => selectedDiffStateAtom)()
 	const selection = useSelectionDerivations({
 		diffRenderView: diffView.diffRenderView,
 		contentWidth: () => contentWidth,
@@ -544,41 +542,38 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// The `phui owner/repo#123` startup path and the Inbox's `enter` want exactly
 	// the same thing — scope to the repository, hydrate the PR, select it, open a
 	// view — so the actions are named once and both callers drive them.
-	const openLaunchTarget = useCallback(
-		(intent: PhuiLaunchIntent) =>
-			applyLaunchIntent(intent, {
-				openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
-				hydratePullRequest: hydrateTargetedPullRequest,
-				selectPullRequest: (pullRequest) => {
-					const repositoryView = { _tag: "Repository", repository: pullRequest.repository } as const
-					const index = findLaunchPullRequestIndex(registry.get(visiblePullRequestsAtom), pullRequest)
-					if (index < 0) return false
-					setSelectedIndex(index)
-					setQueueSelection((current) => ({ ...current, [viewCacheKey(repositoryView)]: index }))
-					return true
-				},
-				showNotice: setNotice,
-			}).then((result) => {
-				if (result._tag !== "PullRequestReady") return result
-				setPendingLaunchPullRequest({
-					repository: result.pullRequest.repository,
-					number: result.pullRequest.number,
-					view: result.view,
-				})
-				return result
-			}),
-		[hydrateTargetedPullRequest, registry, setNotice, setQueueSelection, setSelectedIndex, switchViewTo],
-	)
+	const openLaunchTarget = (intent: PhuiLaunchIntent) =>
+		applyLaunchIntent(intent, {
+			openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
+			hydratePullRequest: hydrateTargetedPullRequest,
+			selectPullRequest: (pullRequest) => {
+				const repositoryView = { _tag: "Repository", repository: pullRequest.repository } as const
+				const index = findLaunchPullRequestIndex(registry.get(visiblePullRequestsAtom), pullRequest)
+				if (index < 0) return false
+				setSelectedIndex(index)
+				setQueueSelection((current) => ({ ...current, [viewCacheKey(repositoryView)]: index }))
+				return true
+			},
+			showNotice: setNotice,
+		}).then((result) => {
+			if (result._tag !== "PullRequestReady") return result
+			setPendingLaunchPullRequest({
+				repository: result.pullRequest.repository,
+				number: result.pullRequest.number,
+				view: result.view,
+			})
+			return result
+		})
 
-	useEffect(() => {
+	onMount(() => {
 		if (launchIntentAppliedRef.current) return
 		launchIntentAppliedRef.current = true
 		void openLaunchTarget(launchIntent)
-	}, [launchIntent, openLaunchTarget])
+	})
 
 	// Publish the navigation bridge the Inbox surface calls into. See
 	// src/notifications/navigation.ts for why the dependency points this way.
-	useEffect(() => {
+	onMount(() => {
 		const navigator: InboxNavigator = {
 			openPullRequest: async (target) => {
 				const result = await openLaunchTarget({ _tag: "PullRequest", repository: target.repository, number: target.number, view: "details" })
@@ -592,8 +587,8 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 			openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
 		}
 		setInboxNavigator(navigator)
-		return () => clearInboxNavigator(navigator)
-	}, [openLaunchTarget, setActiveWorkspaceSurface, setPendingIssueSelection, switchViewTo])
+		onCleanup(() => clearInboxNavigator(navigator))
+	})
 
 	// Keep list scroll position when toggling between surfaces. Each list's
 	// scrollbox remounts on surface switch; without persistence it starts at
@@ -642,12 +637,11 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// Scroll the selected line into view when the diff view is opened. Previously
 	// opentui's `focused` scrollbox did this auto-scroll on mount; with the keymap
 	// migration the scrollbox is `focusable={false}` so we have to scroll explicitly.
-	useEffect(() => {
+	createEffect(() => {
 		if (!diffFullView) return
 		if (!selectedDiffCommentAnchor) return
 		ensureDiffLineVisible(selectedDiffCommentAnchor.renderLine)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [diffFullView])
+	})
 	const loadingStatus = useLoadingStatus({
 		selectedPullRequestDetailKey: () => {
 			const pullRequest = prSurface.selectedPullRequest()
@@ -732,9 +726,9 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// the comment under the cursor is the one immediately below the previously
 	// highlighted row, regardless of where it lives in the flat array. Derived
 	// in `ui/comments/atoms.ts` and read here as plain atom values.
-	const orderedComments = useAtomValue(orderedCommentsAtom)
-	const selectedOrderedComment = useAtomValue(selectedOrderedCommentAtom)
-	const commentsRowCount = useAtomValue(commentsRowCountAtom)
+	const orderedComments = useAtomValueSolid(() => orderedCommentsAtom)()
+	const selectedOrderedComment = useAtomValueSolid(() => selectedOrderedCommentAtom)()
+	const commentsRowCount = useAtomValueSolid(() => commentsRowCountAtom)()
 	const { scrollDetailPreviewBy, scrollDetailPreviewTo, scrollDetailFullViewBy, scrollDetailFullViewTo, setCommentEditorValue, editSubmitReview, openDiffView } =
 		useImperativeActions({
 			contentWidth,
@@ -854,40 +848,25 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 			flashNotice,
 		})
 
-	useEffect(() => {
-		if (
-			pendingLaunchPullRequest === null ||
-			selectedPullRequest === null ||
-			selectedPullRequest.repository !== pendingLaunchPullRequest.repository ||
-			selectedPullRequest.number !== pendingLaunchPullRequest.number
-		) {
+	createEffect(() => {
+		const pending = pendingLaunchPullRequest()
+		if (pending === null || selectedPullRequest === null || selectedPullRequest.repository !== pending.repository || selectedPullRequest.number !== pending.number) {
 			return
 		}
 
 		switchWorkspaceSurface("pullRequests")
-		const viewState = pullRequestLaunchViewState(pendingLaunchPullRequest.view)
+		const viewState = pullRequestLaunchViewState(pending.view)
 		setDetailFullView(viewState.detailFullView)
 		setDiffFullView(viewState.diffFullView)
 		setCommentsViewActive(viewState.commentsViewActive)
 		setRunsFullView(viewState.runsFullView)
-		if (pendingLaunchPullRequest.view === "diff") openDiffView()
-		if (pendingLaunchPullRequest.view === "comments") {
+		if (pending.view === "diff") openDiffView()
+		if (pending.view === "comments") {
 			setCommentsViewSelection(0)
 			loadPullRequestComments(selectedPullRequest)
 		}
 		setPendingLaunchPullRequest(null)
-	}, [
-		loadPullRequestComments,
-		openDiffView,
-		pendingLaunchPullRequest,
-		selectedPullRequest,
-		setCommentsViewActive,
-		setCommentsViewSelection,
-		setDetailFullView,
-		setDiffFullView,
-		setRunsFullView,
-		switchWorkspaceSurface,
-	])
+	})
 
 	const { movePullRequestStateSelection, confirmPullRequestStateChange, confirmCloseModal, toggleLabelAtIndex, confirmSubmitReview } = useItemModalActions({
 		pullRequestStateModal,

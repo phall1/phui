@@ -1,4 +1,4 @@
-import { useAtom } from "../atom-solid.js"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { activeModalAtom } from "../ui/modals/atoms.js"
 import { Modal, type ModalState, type ModalTag } from "../ui/modals/types.js"
 import {
@@ -98,7 +98,8 @@ const makeModalSetter =
  * here keeps App.tsx free of ~48 lines of mechanical destructuring.
  */
 export const useModalStack = (): ModalStack => {
-	const [activeModal, setActiveModal] = useAtom(activeModalAtom)
+	const activeModal = useAtomValueSolid(() => activeModalAtom)()
+	const setActiveModal = useAtomSetSolid(() => activeModalAtom)
 	const closeActiveModal = () => setActiveModal(initialModal)
 	const labelModalActive = Modal.$is("Label")(activeModal)
 	const closeModalActive = Modal.$is("Close")(activeModal)

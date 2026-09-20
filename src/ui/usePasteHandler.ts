@@ -1,5 +1,6 @@
 import type { PasteEvent } from "@opentui/core"
-import { useEffect, useRef } from "../solid-hooks.js"
+import { createEffect, onCleanup } from "solid-js"
+import { useRef } from "../solid-utils.js"
 
 interface KeyInputPasteEvents {
 	on: (event: "paste", handler: (event: PasteEvent) => void) => void
@@ -28,14 +29,14 @@ export const usePasteHandler = ({ renderer, onPaste }: UsePasteHandlerInput): vo
 	const onPasteRef = useRef(onPaste)
 	onPasteRef.current = onPaste
 
-	useEffect(() => {
+	createEffect(() => {
 		const handlePaste = (event: PasteEvent) => {
 			if (onPasteRef.current(decodeText(event))) event.preventDefault()
 		}
 		const keyInput = renderer.keyInput as KeyInputPasteEvents
 		keyInput.on("paste", handlePaste)
-		return () => {
+		onCleanup(() => {
 			keyInput.off("paste", handlePaste)
-		}
-	}, [renderer])
+		})
+	})
 }

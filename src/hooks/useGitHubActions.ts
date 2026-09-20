@@ -1,5 +1,5 @@
-import { RegistryContext, useAtomSet } from "../atom-solid.js"
-import { useCallback, useContext } from "../solid-hooks.js"
+import { RegistryContext, useAtomSet as useAtomSetSolid } from "@effect/atom-solid"
+import { useContext } from "../solid-utils.js"
 import {
 	addPullRequestLabelAtom,
 	closePullRequestAtom,
@@ -21,25 +21,25 @@ import { readRepoRollupAtom, readWorkspacePreferencesAtom, writeWorkspacePrefere
  * file plus the consuming surface.
  */
 export const useGitHubActions = () => {
-	const addPullRequestLabel = useAtomSet(addPullRequestLabelAtom, { mode: "promise" })
-	const removePullRequestLabel = useAtomSet(removePullRequestLabelAtom, { mode: "promise" })
-	const addIssueLabel = useAtomSet(addIssueLabelAtom, { mode: "promise" })
-	const removeIssueLabel = useAtomSet(removeIssueLabelAtom, { mode: "promise" })
-	const toggleDraftStatus = useAtomSet(toggleDraftAtom, { mode: "promise" })
-	const hydrateTargetedPullRequest = useAtomSet(hydrateTargetedPullRequestAtom, { mode: "promise" })
-	const listPullRequestComments = useAtomSet(listPullRequestCommentsAtom, { mode: "promise" })
-	const listIssueComments = useAtomSet(listIssueCommentsAtom, { mode: "promise" })
-	const readWorkspacePreferences = useAtomSet(readWorkspacePreferencesAtom, { mode: "promise" })
-	const writeWorkspacePreferences = useAtomSet(writeWorkspacePreferencesAtom, { mode: "promise" })
-	const pruneCache = useAtomSet(pruneCacheAtom, { mode: "promise" })
-	const prewarmRepositoryDetails = useAtomSet(prewarmRepositoryDetailsAtom, { mode: "promise" })
-	const closePullRequest = useAtomSet(closePullRequestAtom, { mode: "promise" })
-	const closeIssue = useAtomSet(closeIssueAtom, { mode: "promise" })
+	const addPullRequestLabel = useAtomSetSolid(() => addPullRequestLabelAtom, { mode: "promise" })
+	const removePullRequestLabel = useAtomSetSolid(() => removePullRequestLabelAtom, { mode: "promise" })
+	const addIssueLabel = useAtomSetSolid(() => addIssueLabelAtom, { mode: "promise" })
+	const removeIssueLabel = useAtomSetSolid(() => removeIssueLabelAtom, { mode: "promise" })
+	const toggleDraftStatus = useAtomSetSolid(() => toggleDraftAtom, { mode: "promise" })
+	const hydrateTargetedPullRequest = useAtomSetSolid(() => hydrateTargetedPullRequestAtom, { mode: "promise" })
+	const listPullRequestComments = useAtomSetSolid(() => listPullRequestCommentsAtom, { mode: "promise" })
+	const listIssueComments = useAtomSetSolid(() => listIssueCommentsAtom, { mode: "promise" })
+	const readWorkspacePreferences = useAtomSetSolid(() => readWorkspacePreferencesAtom, { mode: "promise" })
+	const writeWorkspacePreferences = useAtomSetSolid(() => writeWorkspacePreferencesAtom, { mode: "promise" })
+	const pruneCache = useAtomSetSolid(() => pruneCacheAtom, { mode: "promise" })
+	const prewarmRepositoryDetails = useAtomSetSolid(() => prewarmRepositoryDetailsAtom, { mode: "promise" })
+	const closePullRequest = useAtomSetSolid(() => closePullRequestAtom, { mode: "promise" })
+	const closeIssue = useAtomSetSolid(() => closeIssueAtom, { mode: "promise" })
 	const registry = useContext(RegistryContext)
-	const refreshIssues = useCallback(() => registry.refresh(issuesAtom), [registry])
-	const submitPullRequestReview = useAtomSet(submitPullRequestReviewAtom, { mode: "promise" })
-	const openUrl = useAtomSet(openUrlAtom, { mode: "promise" })
-	const readRepoRollup = useAtomSet(readRepoRollupAtom, { mode: "promise" })
+	const refreshIssues = () => registry.refresh(issuesAtom)
+	const submitPullRequestReview = useAtomSetSolid(() => submitPullRequestReviewAtom, { mode: "promise" })
+	const openUrl = useAtomSetSolid(() => openUrlAtom, { mode: "promise" })
+	const readRepoRollup = useAtomSetSolid(() => readRepoRollupAtom, { mode: "promise" })
 	return {
 		addPullRequestLabel,
 		removePullRequestLabel,

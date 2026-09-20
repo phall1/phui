@@ -1,5 +1,6 @@
 import type { DiffRenderable } from "@opentui/core"
-import { type MutableRefObject, useEffect, useRef } from "../../solid-hooks.js"
+import { createEffect, onCleanup } from "solid-js"
+import { readMaybeAccessor, type MaybeAccessor, type MutableRefObject, useRef } from "../../solid-utils.js"
 import { colors, mixHex } from "../colors.js"
 import { type DiffCommentAnchor, type DiffCommentKind, type DiffView, type StackedDiffCommentAnchor } from "../diff.js"
 
@@ -77,11 +78,11 @@ const setDiffCommentLineColor = (diff: DiffRenderable, entry: AppliedDiffLineCol
 }
 
 export interface UseDiffLineColorsInput {
-	readonly diffLineColorContextKey: string | null
-	readonly effectiveDiffRenderView: DiffView
-	readonly selectedDiffCommentAnchor: StackedDiffCommentAnchor | null
-	readonly selectedDiffCommentRangeAnchors: readonly StackedDiffCommentAnchor[]
-	readonly diffCommentThreadAnchors: readonly StackedDiffCommentAnchor[]
+	readonly diffLineColorContextKey: MaybeAccessor<string | null>
+	readonly effectiveDiffRenderView: MaybeAccessor<DiffView>
+	readonly selectedDiffCommentAnchor: MaybeAccessor<StackedDiffCommentAnchor | null>
+	readonly selectedDiffCommentRangeAnchors: MaybeAccessor<readonly StackedDiffCommentAnchor[]>
+	readonly diffCommentThreadAnchors: MaybeAccessor<readonly StackedDiffCommentAnchor[]>
 	readonly suppressNextDiffCommentScrollRef: MutableRefObject<boolean>
 	readonly ensureDiffLineVisible: (line: number) => void
 }
@@ -102,15 +103,7 @@ export interface UseDiffLineColorsResult {
  * itself per file index; on register it re-applies cached colors so a
  * remount-then-color sequence stays visually stable.
  */
-export const useDiffLineColors = ({
-	diffLineColorContextKey,
-	effectiveDiffRenderView,
-	selectedDiffCommentAnchor,
-	selectedDiffCommentRangeAnchors,
-	diffCommentThreadAnchors,
-	suppressNextDiffCommentScrollRef,
-	ensureDiffLineVisible,
-}: UseDiffLineColorsInput): UseDiffLineColorsResult => {
+export const useDiffLineColors = (input: UseDiffLineColorsInput): UseDiffLineColorsResult => {
 	const diffRenderableRefs = useRef(new Map<number, DiffRenderable>())
 	const diffCommentLineColorsRef = useRef<AppliedDiffLineColorState>({ contextKey: null, entries: [] })
 	const diffLineColorRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -119,17 +112,19 @@ export const useDiffLineColors = ({
 	// excludes it from its dep array, so without this ref the effect would
 	// invoke a stale closure with the previous viewport height after a
 	// resize, scrolling the wrong amount.
-	const ensureDiffLineVisibleRef = useRef(ensureDiffLineVisible)
-	ensureDiffLineVisibleRef.current = ensureDiffLineVisible
+	const ensureDiffLineVisibleRef = useRef(input.ensureDiffLineVisible)
+	ensureDiffLineVisibleRef.current = input.ensureDiffLineVisible
 
-	useEffect(
-		() => () => {
-			if (diffLineColorRetryTimeoutRef.current !== null) clearTimeout(diffLineColorRetryTimeoutRef.current)
-		},
-		[],
-	)
+	onCleanup(() => {
+		if (diffLineColorRetryTimeoutRef.current !== null) clearTimeout(diffLineColorRetryTimeoutRef.current)
+	})
 
-	useEffect(() => {
+	createEffect(() => {
+		const diffLineColorContextKey = readMaybeAccessor(input.diffLineColorContextKey)
+		const effectiveDiffRenderView = readMaybeAccessor(input.effectiveDiffRenderView)
+		const selectedDiffCommentAnchor = readMaybeAccessor(input.selectedDiffCommentAnchor)
+		const selectedDiffCommentRangeAnchors = readMaybeAccessor(input.selectedDiffCommentRangeAnchors)
+		const diffCommentThreadAnchors = readMaybeAccessor(input.diffCommentThreadAnchors)
 		const applyEntries = (entries: readonly AppliedDiffLineColor[]) => {
 			for (const entry of entries) {
 				const diff = diffRenderableRefs.current.get(entry.anchor.fileIndex)
@@ -170,13 +165,13 @@ export const useDiffLineColors = ({
 		}
 		if (selectedDiffCommentAnchor) {
 			applyLineColor(selectedDiffCommentAnchor, diffCommentLineColor(selectedDiffCommentAnchor, "selected"), true)
-			if (suppressNextDiffCommentScrollRef.current) {
-				suppressNextDiffCommentScrollRef.current = false
+			if (input.suppressNextDiffCommentScrollRef.current) {
+				input.suppressNextDiffCommentScrollRef.current = false
 			} else {
 				ensureDiffLineVisibleRef.current(selectedDiffCommentAnchor.renderLine)
 			}
 		} else {
-			suppressNextDiffCommentScrollRef.current = false
+			input.suppressNextDiffCommentScrollRef.current = false
 		}
 		diffCommentLineColorsRef.current = { contextKey: diffLineColorContextKey, entries: nextEntries }
 		if (contextChanged && diffLineColorRetryTimeoutRef.current !== null) clearTimeout(diffLineColorRetryTimeoutRef.current)
@@ -198,17 +193,7 @@ export const useDiffLineColors = ({
 			}
 			diffLineColorRetryTimeoutRef.current = globalThis.setTimeout(reapplyLineColors, DIFF_LAYOUT_RETRY_MS)
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [
-		selectedDiffCommentAnchor?.renderLine,
-		selectedDiffCommentAnchor?.colorLine,
-		selectedDiffCommentAnchor?.side,
-		selectedDiffCommentAnchor?.fileIndex,
-		selectedDiffCommentRangeAnchors,
-		diffLineColorContextKey,
-		effectiveDiffRenderView,
-		diffCommentThreadAnchors,
-	])
+	})
 
 	const setDiffRenderableRef = (index: number, diff: DiffRenderable | null) => {
 		if (diff) {

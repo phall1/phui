@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from "../solid-hooks.js"
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
+import { createEffect, createMemo } from "solid-js"
+import { useRef } from "../solid-utils.js"
 import type { PullRequestComment } from "../domain.js"
 import { colors } from "./colors.js"
 import {
@@ -181,7 +182,7 @@ export const CommentsPane = ({
 	paneWidth,
 	height,
 	loadingIndicator,
-	themeGeneration,
+	themeGeneration: _themeGeneration,
 	showScrollbar,
 }: {
 	item: { readonly repository: string; readonly number: number } | null
@@ -196,11 +197,11 @@ export const CommentsPane = ({
 	themeGeneration: number
 	showScrollbar: boolean
 }) => {
-	const realBlocks = useMemo(() => buildBlocks(orderedComments, contentWidth), [orderedComments, contentWidth, themeGeneration])
-	const blocks = useMemo<readonly CommentBlock[]>(() => [...realBlocks, placeholderBlock], [realBlocks])
-	const offsets = useMemo(() => blockOffsets(blocks), [blocks])
+	const realBlocks = createMemo(() => buildBlocks(orderedComments, contentWidth))
+	const blocks = createMemo<readonly CommentBlock[]>(() => [...realBlocks(), placeholderBlock])
+	const offsets = createMemo(() => blockOffsets(blocks()))
 	const scrollboxRef = useRef<ScrollBoxRenderable | null>(null)
-	const safeIndex = Math.max(0, Math.min(selectedIndex, blocks.length - 1))
+	const safeIndex = Math.max(0, Math.min(selectedIndex, blocks().length - 1))
 	const headerLine =
 		item == null
 			? null
@@ -220,24 +221,24 @@ export const CommentsPane = ({
 	const paneMode = commentsPaneMode(loadState)
 	const error = loadState.status === "error" ? loadState.error : null
 	const errorRows = error !== null && paneMode === "comments" ? 2 : 0
-	const blockRows = blocks.reduce((total, block) => total + block.height, 0) + errorRows
+	const blockRows = blocks().reduce((total, block) => total + block.height, 0) + errorRows
 	const commentsNeedScroll = paneMode === "comments" && blockRows > bodyHeight
 
-	useEffect(() => {
+	createEffect(() => {
 		if (!commentsNeedScroll) return
 		const scrollbox = scrollboxRef.current
 		if (!scrollbox) return
-		const blockTop = (offsets[safeIndex] ?? 0) + errorRows
-		const blockBottom = blockTop + (blocks[safeIndex]?.height ?? 1)
+		const blockTop = (offsets()[safeIndex] ?? 0) + errorRows
+		const blockBottom = blockTop + (blocks()[safeIndex]?.height ?? 1)
 		const viewportTop = scrollbox.scrollTop
 		const viewportBottom = viewportTop + bodyHeight
 		if (blockTop < viewportTop) scrollbox.scrollTo({ x: 0, y: blockTop })
 		else if (blockBottom > viewportBottom) scrollbox.scrollTo({ x: 0, y: Math.max(0, blockBottom - bodyHeight) })
-	}, [safeIndex, blocks, offsets, bodyHeight, commentsNeedScroll, errorRows])
+	})
 
 	if (item == null || headerLine == null) return null
 
-	const renderedBlocks = blocks.map((block, index) => {
+	const renderedBlocks = blocks().map((block, index) => {
 		const isSelected = index === safeIndex
 		if (block.isPlaceholder) {
 			return (

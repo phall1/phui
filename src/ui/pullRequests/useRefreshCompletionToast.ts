@@ -1,13 +1,14 @@
-import { type MutableRefObject, useEffect, useState } from "../../solid-hooks.js"
+import { createEffect, createSignal } from "solid-js"
+import { readMaybeAccessor, type MaybeAccessor, type MutableRefObject } from "../../solid-utils.js"
 import type { LoadStatus, PullRequestItem } from "../../domain.js"
 import type { PullRequestLoad } from "../../pullRequestLoad.js"
 
 export interface UseRefreshCompletionToastInput {
-	readonly pullRequestStatus: LoadStatus
-	readonly pullRequestError: string | null
-	readonly fetchedAt: number | undefined
-	readonly pullRequestLoad: PullRequestLoad | null
-	readonly selectedPullRequest: PullRequestItem | null
+	readonly pullRequestStatus: MaybeAccessor<LoadStatus>
+	readonly pullRequestError: MaybeAccessor<string | null>
+	readonly fetchedAt: MaybeAccessor<number | undefined>
+	readonly pullRequestLoad: MaybeAccessor<PullRequestLoad | null>
+	readonly selectedPullRequest: MaybeAccessor<PullRequestItem | null>
 	readonly lastPullRequestRefreshAtRef: MutableRefObject<number>
 	readonly flashNotice: (message: string) => void
 }
@@ -37,8 +38,8 @@ export const useRefreshCompletionToast = ({
 	lastPullRequestRefreshAtRef,
 	flashNotice,
 }: UseRefreshCompletionToastInput): UseRefreshCompletionToastResult => {
-	const [refreshCompletionMessage, setRefreshCompletionMessage] = useState<string | null>(null)
-	const [refreshStartedAt, setRefreshStartedAt] = useState<number | null>(null)
+	const [refreshCompletionMessage, setRefreshCompletionMessage] = createSignal<string | null>(null)
+	const [refreshStartedAt, setRefreshStartedAt] = createSignal<number | null>(null)
 
 	const armRefreshToast = (message: string) => {
 		setRefreshCompletionMessage(message)
@@ -50,25 +51,24 @@ export const useRefreshCompletionToast = ({
 		setRefreshStartedAt(null)
 	}
 
-	useEffect(() => {
-		if (!refreshCompletionMessage || refreshStartedAt === null) return
-		const isHydratingDetails = pullRequestStatus === "ready" && selectedPullRequest?.state === "open" && !selectedPullRequest.detailLoaded
-		if (pullRequestStatus === "ready" && fetchedAt !== undefined && fetchedAt !== refreshStartedAt && !isHydratingDetails) {
-			flashNotice(`✓ ${refreshCompletionMessage}`)
+	createEffect(() => {
+		const message = refreshCompletionMessage()
+		const startedAt = refreshStartedAt()
+		if (!message || startedAt === null) return
+		const status = readMaybeAccessor(pullRequestStatus)
+		const selected = readMaybeAccessor(selectedPullRequest)
+		const isHydratingDetails = status === "ready" && selected?.state === "open" && !selected.detailLoaded
+		const fetched = readMaybeAccessor(fetchedAt)
+		if (status === "ready" && fetched !== undefined && fetched !== startedAt && !isHydratingDetails) {
+			flashNotice(`✓ ${message}`)
 			setRefreshCompletionMessage(null)
 			setRefreshStartedAt(null)
-		} else if (pullRequestStatus === "error" || pullRequestError) {
-			flashNotice(pullRequestLoad ? "Refresh failed; showing cached data" : "Refresh failed")
+		} else if (status === "error" || readMaybeAccessor(pullRequestError)) {
+			flashNotice(readMaybeAccessor(pullRequestLoad) ? "Refresh failed; showing cached data" : "Refresh failed")
 			setRefreshCompletionMessage(null)
 			setRefreshStartedAt(null)
 		}
-		// Re-runs when hydration finishes (`selectedPullRequest.detailLoaded`
-		// flips true) so the queued `✓ Refreshed` toast can finally fire. The
-		// previous version listed `pullRequests` here, which is the queue array
-		// reference and doesn't necessarily change identity when an individual
-		// PR's detail lands — that left the toast silently stuck.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [refreshCompletionMessage, refreshStartedAt, pullRequestStatus, pullRequestError, fetchedAt, selectedPullRequest?.detailLoaded])
+	})
 
 	return { armRefreshToast, cancelRefreshToast }
 }

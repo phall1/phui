@@ -1,4 +1,4 @@
-import type { MutableRefObject } from "../solid-hooks.js"
+import type { MutableRefObject } from "../solid-utils.js"
 import type { IssueItem, PullRequestComment, PullRequestItem } from "../domain.js"
 import { errorMessage } from "../errors.js"
 import { capRecord } from "../recordCap.js"

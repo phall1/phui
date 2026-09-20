@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { testRender } from "@opentui/solid"
 import { createSignal } from "solid-js"
-import { act } from "../src/solid-hooks.js"
+import { act } from "../src/solid-utils.js"
 import { useItemLoadMore, type UseItemLoadMoreResult } from "../src/hooks/useItemLoadMore.ts"
 
 interface TestLoad {

@@ -1,5 +1,5 @@
 import { createEffect, onCleanup, type Accessor } from "solid-js"
-import { type MutableRefObject, useRef } from "../../solid-hooks.js"
+import { type MutableRefObject, useRef } from "../../solid-utils.js"
 
 export interface UseIdleRefreshInput {
 	readonly enabled: Accessor<boolean>

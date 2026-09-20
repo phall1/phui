@@ -1,5 +1,5 @@
 import { TextAttributes, type MouseEvent } from "@opentui/core"
-import type { ReactNode } from "../solid-hooks.js"
+import type { ReactNode } from "../solid-utils.js"
 import { colors } from "./colors.js"
 
 export const fitCell = (text: string, width: number, align: "left" | "right" = "left") => {
