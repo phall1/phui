@@ -2,8 +2,8 @@ import { mkdir } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
 import { Effect, Schema } from "effect"
-import { isThemeId, type ThemeId } from "./ui/colors.js"
-import { normalizeThemeConfig, type ThemeConfig } from "./themeConfig.js"
+import type { ThemeId } from "./ui/colors.js"
+import { normalizeThemeConfig, resolveStoredThemeId, type ThemeConfig } from "./themeConfig.js"
 import { DiffWhitespaceMode } from "./ui/diff.js"
 
 interface StoredConfig {
@@ -76,7 +76,7 @@ const writeStoredConfig = async (config: StoredConfig) => {
 export const loadStoredThemeId: Effect.Effect<ThemeId> = Effect.catchCause(
 	Effect.tryPromise(async () => {
 		const config = await readStoredConfig()
-		return isThemeId(config.theme) ? config.theme : "phui"
+		return resolveStoredThemeId(config.theme)
 	}),
 	() => Effect.succeed("phui" satisfies ThemeId),
 )

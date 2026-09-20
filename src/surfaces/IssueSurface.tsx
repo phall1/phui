@@ -6,6 +6,7 @@ import { DETAIL_BODY_SCROLL_LIMIT } from "../ui/DetailsPane.js"
 import { getIssueDetailContentHeight, IssueDetailPane, IssueList } from "../ui/IssueList.js"
 import { SplitPane } from "../ui/paneLayout.js"
 import { Divider } from "../ui/primitives.js"
+import { shouldShowNarrowDetailPreview } from "../workspace/layout.js"
 
 export interface IssueSurfaceProps {
 	readonly showScrollbars: boolean
@@ -132,22 +133,36 @@ export const IssueSurface = ({
 		)
 	}
 
-	return (
-		<box key="narrow-issues" height={wideBodyHeight} flexDirection="column">
-			<box height={narrowIssueListHeight} flexDirection="column">
-				{narrowFilterBar}
-				{narrowIssueListNeedsScroll ? (
-					<scrollbox ref={issueListScrollRef} focusable={false} height={narrowIssueRowsHeight} flexGrow={0} verticalScrollbarOptions={{ visible: showScrollbars }}>
-						<box flexDirection="column" paddingLeft={sectionPadding} paddingRight={sectionPadding}>
-							<IssueList {...issueListProps} contentWidth={fullscreenContentWidth} />
-						</box>
-					</scrollbox>
-				) : (
-					<box height={narrowIssueRowsHeight} flexDirection="column" paddingLeft={sectionPadding} paddingRight={sectionPadding}>
+	const showPreview = shouldShowNarrowDetailPreview(narrowIssueDetailHeight)
+	const issueListHeight = showPreview ? narrowIssueListHeight : wideBodyHeight
+	const issueRowsHeight = showPreview ? narrowIssueRowsHeight : Math.max(1, wideBodyHeight - filterBarHeight)
+	const issueListPane = (
+		<box height={issueListHeight} flexDirection="column">
+			{narrowFilterBar}
+			{narrowIssueListNeedsScroll || !showPreview ? (
+				<scrollbox ref={issueListScrollRef} focusable={false} height={issueRowsHeight} flexGrow={0} verticalScrollbarOptions={{ visible: showScrollbars }}>
+					<box flexDirection="column" paddingLeft={sectionPadding} paddingRight={sectionPadding}>
 						<IssueList {...issueListProps} contentWidth={fullscreenContentWidth} />
 					</box>
-				)}
+				</scrollbox>
+			) : (
+				<box height={issueRowsHeight} flexDirection="column" paddingLeft={sectionPadding} paddingRight={sectionPadding}>
+					<IssueList {...issueListProps} contentWidth={fullscreenContentWidth} />
+				</box>
+			)}
+		</box>
+	)
+	if (!showPreview) {
+		return (
+			<box key="narrow-issues" height={wideBodyHeight} flexDirection="column">
+				{issueListPane}
 			</box>
+		)
+	}
+
+	return (
+		<box key="narrow-issues" height={wideBodyHeight} flexDirection="column">
+			{issueListPane}
 			<Divider width={contentWidth} />
 			<scrollbox
 				ref={detailPreviewScrollRef}

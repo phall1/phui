@@ -22,7 +22,16 @@ import {
 import { clearInboxViewHandle, setInboxViewHandle, type InboxViewHandle } from "./keymap.js"
 import { inboxNavigator } from "./navigation.js"
 import { bucketLabel, clampSelection, notificationsRows, selectedNotification, visibleNotifications, type NotificationsRow } from "./rows.js"
-import { isOpenableInApp, notificationReasonLabels, notificationSubjectGlyphs, unreadCount, type NotificationBucket, type NotificationItem } from "./types.js"
+import {
+	isOpenableInApp,
+	MARK_ALL_READ_CONFIRM_MS,
+	markAllReadConfirmNotice,
+	notificationReasonLabels,
+	notificationSubjectGlyphs,
+	unreadCount,
+	type NotificationBucket,
+	type NotificationItem,
+} from "./types.js"
 
 export interface NotificationsViewProps {
 	readonly contentWidth: number
@@ -192,6 +201,7 @@ export const NotificationsView = ({ contentWidth, height, loadingIndicator, show
 	const markDone = useAtomSet(markNotificationDoneAtom, { mode: "promise" })
 	const unsubscribe = useAtomSet(unsubscribeNotificationAtom, { mode: "promise" })
 	const markAll = useAtomSet(markAllNotificationsReadAtom, { mode: "promise" })
+	const markAllReadArmedUntilRef = useRef(0)
 
 	// Chrome above the body: summary row + subline row + divider row = 3.
 	const bodyHeight = Math.max(1, height - 3)
@@ -309,9 +319,17 @@ export const NotificationsView = ({ contentWidth, height, loadingIndicator, show
 				if (!report) return
 				const count = unreadCount(visibleNotifications(report.items, { unreadOnly: false, dismissed, read }))
 				if (count === 0) {
+					markAllReadArmedUntilRef.current = 0
 					onNotice("Nothing unread.")
 					return
 				}
+				const now = Date.now()
+				if (now >= markAllReadArmedUntilRef.current) {
+					markAllReadArmedUntilRef.current = now + MARK_ALL_READ_CONFIRM_MS
+					onNotice(markAllReadConfirmNotice(count))
+					return
+				}
+				markAllReadArmedUntilRef.current = 0
 				setRead(new Set(report.items.map((item) => item.id)))
 				void markAll(report.fetchedAt)
 					.then(() => onNotice(`Marked ${count} ${count === 1 ? "notification" : "notifications"} read.`))

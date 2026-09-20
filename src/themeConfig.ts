@@ -23,7 +23,14 @@ export const fallbackThemeForTone = (sourceTheme: ThemeId, tone: ThemeTone): The
 	return pairedThemeId(sourceTheme, tone) ?? firstThemeForTone(tone) ?? (tone === "dark" ? defaultDarkThemeId : defaultLightThemeId)
 }
 
-const storedThemeId = (value: unknown, fallback: ThemeId) => (isThemeId(value) ? value : fallback)
+const LEGACY_THEME_IDS: Record<string, ThemeId> = { ghui: "phui" }
+
+export const resolveStoredThemeId = (value: unknown, fallback: ThemeId = defaultDarkThemeId): ThemeId => {
+	if (typeof value === "string" && value in LEGACY_THEME_IDS) return LEGACY_THEME_IDS[value]!
+	return isThemeId(value) ? value : fallback
+}
+
+const storedThemeId = (value: unknown, fallback: ThemeId) => resolveStoredThemeId(value, fallback)
 
 const storedThemeIdForTone = (value: unknown, tone: ThemeTone, fallback: ThemeId) => {
 	const id = storedThemeId(value, fallback)

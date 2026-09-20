@@ -5,6 +5,7 @@ import { DETAIL_BODY_SCROLL_LIMIT } from "../ui/DetailsPane.js"
 import { SplitPane } from "../ui/paneLayout.js"
 import { Divider } from "../ui/primitives.js"
 import { getRepoDetailJunctionRows, RepoDetailPane, RepoList, type RepositoryListItem } from "../ui/RepoList.js"
+import { shouldShowNarrowDetailPreview } from "../workspace/layout.js"
 
 export interface RepoSurfaceProps {
 	readonly showScrollbars: boolean
@@ -73,19 +74,31 @@ export const RepoSurface = ({
 		)
 	}
 
-	return (
-		<box key="narrow-repos" height={wideBodyHeight} flexDirection="column">
-			{narrowRepoListNeedsScroll ? (
-				<scrollbox focusable={false} height={narrowRepoListHeight} flexGrow={0} verticalScrollbarOptions={{ visible: showScrollbars }}>
-					<box flexDirection="column" paddingLeft={sectionPadding} paddingRight={sectionPadding}>
-						<RepoList {...repoListProps} contentWidth={fullscreenContentWidth} />
-					</box>
-				</scrollbox>
-			) : (
-				<box height={narrowRepoListHeight} flexDirection="column" paddingLeft={sectionPadding} paddingRight={sectionPadding}>
+	const showPreview = shouldShowNarrowDetailPreview(narrowRepoDetailHeight)
+	const repoListHeight = showPreview ? narrowRepoListHeight : wideBodyHeight
+	const repoListPane =
+		narrowRepoListNeedsScroll || !showPreview ? (
+			<scrollbox focusable={false} height={repoListHeight} flexGrow={0} verticalScrollbarOptions={{ visible: showScrollbars }}>
+				<box flexDirection="column" paddingLeft={sectionPadding} paddingRight={sectionPadding}>
 					<RepoList {...repoListProps} contentWidth={fullscreenContentWidth} />
 				</box>
-			)}
+			</scrollbox>
+		) : (
+			<box height={repoListHeight} flexDirection="column" paddingLeft={sectionPadding} paddingRight={sectionPadding}>
+				<RepoList {...repoListProps} contentWidth={fullscreenContentWidth} />
+			</box>
+		)
+	if (!showPreview) {
+		return (
+			<box key="narrow-repos" height={wideBodyHeight} flexDirection="column">
+				{repoListPane}
+			</box>
+		)
+	}
+
+	return (
+		<box key="narrow-repos" height={wideBodyHeight} flexDirection="column">
+			{repoListPane}
 			<Divider width={contentWidth} />
 			<RepoDetailPane
 				repository={selectedRepositoryItem}

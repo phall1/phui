@@ -1,4 +1,6 @@
 import { useAtom, useAtomSet, useAtomValue } from "../../atom-solid.js"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { createEffect } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { Cause } from "effect"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
@@ -20,6 +22,7 @@ import {
 	issueOverridesAtom,
 	issueQueueLoadCacheAtom,
 	issuesAtom,
+	pendingIssueSelectionAtom,
 	issueViewRepository,
 	loadMoreIssueRowSelectedAtom,
 	loadedIssueCountAtom,
@@ -34,6 +37,7 @@ import { selectedIssueIndexAtom } from "../../ui/listSelection/atoms.js"
 import { useClampedIndex } from "../../ui/useClampedIndex.js"
 import { useScrollFollowSelected } from "../../ui/useScrollFollowSelected.js"
 import { useScrollPersistence } from "../../ui/useScrollPersistence.js"
+import { workspaceSurfaceAtom } from "../../workspace/atoms.js"
 import type { WorkspaceSurface } from "../../workspaceSurfaces.js"
 
 type SetState<T> = (next: T | ((prev: T) => T)) => void
@@ -135,6 +139,24 @@ export const useIssueSurface = (input: UseIssueSurfaceInput): IssueSurfaceShell 
 	useClampedIndex(issues.length + (issueLoadMoreSlotAvailable ? 1 : 0), setSelectedIssueIndex)
 	useScrollFollowSelected(issueListScrollRef, () => (issues.length === 0 ? null : selectedIssueRowIndex))
 	useScrollPersistence(issueListScrollRef, issueListScrollPersistedRef, activeWorkspaceSurface === "issues" && !detailFullView && !diffFullView && !commentsViewActive)
+
+	const pendingIssueSelection = useAtomValueSolid(() => pendingIssueSelectionAtom)
+	const issueListLive = useAtomValueSolid(() => issueListAtom)
+	const issuesResultLive = useAtomValueSolid(() => issuesAtom)
+	const issueViewLive = useAtomValueSolid(() => activeIssueViewAtom)
+	const surfaceLive = useAtomValueSolid(() => workspaceSurfaceAtom)
+	const setPendingIssueSelection = useAtomSet(pendingIssueSelectionAtom)
+	createEffect(() => {
+		const pending = pendingIssueSelection()
+		if (!pending) return
+		if (surfaceLive() !== "issues") return
+		if (issueViewRepository(issueViewLive()) !== pending.repository) return
+		const result = issuesResultLive()
+		if (result.waiting) return
+		const index = issueListLive().findIndex((issue) => issue.repository === pending.repository && issue.number === pending.number)
+		if (index >= 0) setSelectedIssueIndex(index)
+		setPendingIssueSelection(null)
+	})
 
 	return {
 		// The Issue Surface itself is never the source of fullscreen modes

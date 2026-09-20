@@ -27,6 +27,8 @@ export { initialIssueView, issueViewMode, issueViewRepository, issueViewToQuery,
 
 export const activeIssueViewAtom = Atom.make<IssueView>(initialIssueView(null)).pipe(Atom.keepAlive)
 export const issueOverridesAtom = Atom.make<Record<string, IssueItem>>({}).pipe(Atom.keepAlive)
+/** Inbox `enter` on an Issue: the Issues surface consumes this once the list is ready. */
+export const pendingIssueSelectionAtom = Atom.make<{ readonly repository: string; readonly number: number } | null>(null).pipe(Atom.keepAlive)
 export const issueRetryProgressAtom = Atom.make<RetryProgress>(initialRetryProgress).pipe(Atom.keepAlive)
 
 // In-memory mirror of `queue_snapshots` for issues, keyed by `issueViewCacheKey`.

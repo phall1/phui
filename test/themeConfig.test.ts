@@ -1,7 +1,25 @@
 import { describe, expect, test } from "bun:test"
-import { normalizeThemeConfig, resolveThemeId, systemThemeConfigForTheme, themeConfigWithSelection } from "../src/themeConfig.js"
+import { normalizeThemeConfig, resolveStoredThemeId, resolveThemeId, systemThemeConfigForTheme, themeConfigWithSelection } from "../src/themeConfig.js"
+
+describe("resolveStoredThemeId", () => {
+	test("maps the pre-rename ghui id onto phui", () => {
+		expect(resolveStoredThemeId("ghui")).toBe("phui")
+	})
+
+	test("keeps a current theme id", () => {
+		expect(resolveStoredThemeId("catppuccin")).toBe("catppuccin")
+	})
+
+	test("falls back when the value is unknown", () => {
+		expect(resolveStoredThemeId("not-a-theme")).toBe("phui")
+	})
+})
 
 describe("normalizeThemeConfig", () => {
+	test("maps the legacy ghui theme onto phui", () => {
+		expect(normalizeThemeConfig({ theme: "ghui" })).toEqual({ mode: "fixed", theme: "phui" })
+	})
+
 	test("keeps existing fixed theme config as the default", () => {
 		expect(normalizeThemeConfig({ theme: "catppuccin" })).toEqual({ mode: "fixed", theme: "catppuccin" })
 	})

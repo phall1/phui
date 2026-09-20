@@ -31,6 +31,7 @@ import { PullRequestList } from "../ui/PullRequestList.js"
 import { PullRequestRunsPane } from "../ui/runs/RunsPane.js"
 import type { RunsViewModel } from "../hooks/useRunsView.js"
 import type { DiffFilePanelBundle } from "./WorkspaceContent.js"
+import { shouldShowNarrowDetailPreview } from "../workspace/layout.js"
 
 export interface PullRequestSurfaceProps {
 	readonly showScrollbars: boolean
@@ -610,20 +611,34 @@ const PullRequestListDetail = (props: PullRequestSurfaceProps) => {
 		)
 	}
 
+	const showPreview = shouldShowNarrowDetailPreview(narrowDetailsPaneHeight)
+	const listHeight = showPreview ? narrowPullRequestListHeight : wideBodyHeight
+	const rowsHeight = showPreview ? narrowPullRequestRowsHeight : Math.max(1, wideBodyHeight - (activeFilterLabel ? ACTIVE_FILTER_BAR_HEIGHT : 0))
+	const listPane = (
+		<box height={listHeight} flexDirection="column">
+			{narrowPullRequestFilterBar}
+			{narrowPullRequestListNeedsScroll || !showPreview ? (
+				<scrollbox ref={prListScrollRef} focusable={false} height={rowsHeight} flexGrow={0} verticalScrollbarOptions={{ visible: showScrollbars }}>
+					{narrowPullRequestList}
+				</scrollbox>
+			) : (
+				<box height={rowsHeight} flexDirection="column">
+					{narrowPullRequestList}
+				</box>
+			)}
+		</box>
+	)
+	if (!showPreview) {
+		return (
+			<box key="narrow-main" height={wideBodyHeight} flexDirection="column">
+				{listPane}
+			</box>
+		)
+	}
+
 	return (
 		<box key="narrow-main" height={wideBodyHeight} flexDirection="column">
-			<box height={narrowPullRequestListHeight} flexDirection="column">
-				{narrowPullRequestFilterBar}
-				{narrowPullRequestListNeedsScroll ? (
-					<scrollbox ref={prListScrollRef} focusable={false} height={narrowPullRequestRowsHeight} flexGrow={0} verticalScrollbarOptions={{ visible: showScrollbars }}>
-						{narrowPullRequestList}
-					</scrollbox>
-				) : (
-					<box height={narrowPullRequestRowsHeight} flexDirection="column">
-						{narrowPullRequestList}
-					</box>
-				)}
-			</box>
+			{listPane}
 			<Divider width={contentWidth} />
 			<box height={narrowDetailsPaneHeight} flexDirection="column">
 				{isSelectedPullRequestDetailError && props.selectedPullRequest ? (

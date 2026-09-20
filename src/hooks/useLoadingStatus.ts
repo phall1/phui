@@ -41,6 +41,9 @@ export interface UseLoadingStatusInput {
 	readonly setStartupLoadComplete: (next: boolean) => void
 	readonly selectedPullRequest: PullRequestItem | null
 	readonly loadPullRequestComments: (pr: PullRequestItem) => void
+	readonly commentsViewActive: boolean
+	readonly detailFullView: boolean
+	readonly isWideLayout: boolean
 }
 
 export interface LoadingStatus {
@@ -84,14 +87,18 @@ export const useLoadingStatus = ({
 	setStartupLoadComplete,
 	selectedPullRequest: _selectedPullRequest,
 	loadPullRequestComments,
+	commentsViewActive,
+	detailFullView,
+	isWideLayout,
 }: UseLoadingStatusInput): LoadingStatus => {
 	const selectedPullRequestDetailHydrationState = selectedPullRequestDetailKey ? (detailHydrationState[selectedPullRequestDetailKey] ?? null) : null
 	const selectedPullRequestDetailError = selectedPullRequestDetailHydrationState?._tag === "Error" ? (selectedPullRequestDetailHydrationState.message ?? null) : null
 	const isHydratingPullRequestDetails = selectedPullRequestDetailHydrationState?._tag === "Loading"
 	const isRefreshingPullRequests = pullRequestResult.waiting && pullRequestLoad !== null
+	// Background refresh of an already-painted list must not steal the footer.
 	const isActiveSurfaceLoading =
-		(activeWorkspaceSurface === "pullRequests" && (pullRequestStatus === "loading" || isRefreshingPullRequests || isHydratingPullRequestDetails || isLoadingMorePullRequests)) ||
-		(activeWorkspaceSurface === "issues" && (issuesStatus === "loading" || issueFetchInFlight || isLoadingMoreIssues))
+		(activeWorkspaceSurface === "pullRequests" && (pullRequestStatus === "loading" || isHydratingPullRequestDetails || isLoadingMorePullRequests)) ||
+		(activeWorkspaceSurface === "issues" && (issuesStatus === "loading" || isLoadingMoreIssues))
 	const hasActiveLoadingIndicator =
 		pullRequestResult.waiting ||
 		isHydratingPullRequestDetails ||
@@ -117,6 +124,7 @@ export const useLoadingStatus = ({
 	createEffect(() => {
 		const current = selectedPullRequestLive()
 		if (pullRequestStatus !== "ready" || !current) return
+		if (!commentsViewActive && !detailFullView && !isWideLayout) return
 		loadPullRequestComments(current)
 	})
 
