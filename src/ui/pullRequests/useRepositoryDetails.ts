@@ -1,5 +1,5 @@
-import { useAtomSet, useAtomValue } from "../../atom-solid.js"
-import { useEffect } from "../../solid-hooks.js"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { createEffect, createMemo, onCleanup, untrack, type Accessor } from "solid-js"
 import type { RepositoryDetails } from "../../domain.js"
 import { fetchRepositoryDetailsAtom, readCachedRepositoryDetailsAtom, repositoryDetailsCacheAtom, writeRepositoryDetailsAtom } from "./atoms.js"
 
@@ -12,38 +12,41 @@ import { fetchRepositoryDetailsAtom, readCachedRepositoryDetailsAtom, repository
  * fetch; the SQLite read is best-effort and only used to show last-known
  * data immediately while the network call lands.
  */
-export const useRepositoryDetails = (repository: string | null): RepositoryDetails | null => {
-	const cache = useAtomValue(repositoryDetailsCacheAtom)
-	const setCache = useAtomSet(repositoryDetailsCacheAtom)
-	const readCached = useAtomSet(readCachedRepositoryDetailsAtom, { mode: "promise" })
-	const fetchDetails = useAtomSet(fetchRepositoryDetailsAtom, { mode: "promise" })
-	const writeCached = useAtomSet(writeRepositoryDetailsAtom, { mode: "promise" })
+export const useRepositoryDetails = (repository: Accessor<string | null>): Accessor<RepositoryDetails | null> => {
+	const cache = useAtomValueSolid(() => repositoryDetailsCacheAtom)
+	const setCache = useAtomSetSolid(() => repositoryDetailsCacheAtom)
+	const readCached = useAtomSetSolid(() => readCachedRepositoryDetailsAtom, { mode: "promise" })
+	const fetchDetails = useAtomSetSolid(() => fetchRepositoryDetailsAtom, { mode: "promise" })
+	const writeCached = useAtomSetSolid(() => writeRepositoryDetailsAtom, { mode: "promise" })
 
-	const cached = repository ? (cache[repository] ?? null) : null
+	const cached = createMemo(() => {
+		const repo = repository()
+		return repo ? (cache()[repo] ?? null) : null
+	})
 
-	useEffect(() => {
-		if (!repository) return
+	createEffect(() => {
+		const repo = repository()
+		if (!repo) return
 		let cancelled = false
+		onCleanup(() => {
+			cancelled = true
+		})
 		void (async () => {
-			if (!cache[repository]) {
-				const fromDisk = await readCached(repository).catch(() => null)
+			if (!untrack(() => cache()[repo])) {
+				const fromDisk = await readCached(repo).catch(() => null)
 				if (cancelled) return
-				if (fromDisk) setCache((current) => (current[repository] ? current : { ...current, [repository]: fromDisk }))
+				if (fromDisk) setCache((current) => (current[repo] ? current : { ...current, [repo]: fromDisk }))
 			}
 			try {
-				const fresh = await fetchDetails(repository)
+				const fresh = await fetchDetails(repo)
 				if (cancelled) return
-				setCache((current) => ({ ...current, [repository]: fresh }))
+				setCache((current) => ({ ...current, [repo]: fresh }))
 				void writeCached(fresh).catch(() => {})
 			} catch {
 				// Fall back to whatever's already in the cache.
 			}
 		})()
-		return () => {
-			cancelled = true
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [repository])
+	})
 
 	return cached
 }

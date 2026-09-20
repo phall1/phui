@@ -1,6 +1,6 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { createEffect, onCleanup } from "solid-js"
-import type { MutableRefObject } from "../solid-hooks.js"
+import type { MutableRefObject } from "../solid-utils.js"
 import { scrollTopForVisibleLine } from "./diff.js"
 
 const DEFAULT_STICKY_HEADER = 2

@@ -1,5 +1,6 @@
-import { useAtomSet, useAtomValue } from "../atom-solid.js"
-import { useEffect, useMemo, useRef, type MutableRefObject } from "../solid-hooks.js"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { createEffect, createMemo } from "solid-js"
+import { readMaybeAccessor, useRef, type MaybeAccessor, type MutableRefObject } from "../solid-utils.js"
 import type { AppCommand } from "../commands.js"
 import { clampCommandIndex, type CommandScope, commandEnabled, defineCommand, filterCommands, sortCommandsByActiveScope } from "../commands.js"
 import { commandSnapshotsAtom } from "../commands/atoms.js"
@@ -15,6 +16,18 @@ interface CommandPaletteShape {
 	readonly selectedIndex: number
 }
 
+interface CommandRuntimeSnapshot {
+	readonly readyDiffFileCount: number
+	readonly diffFileIndex: number
+	readonly selectedDiffCommentAnchorLabel: string | null
+	readonly selectedDiffCommentThreadCount: number
+	readonly hasDiffCommentThreads: boolean
+	readonly diffRangeActive: boolean
+	readonly selectedCommentsStatus: "idle" | "loading" | "ready" | "error"
+	readonly selectedOrderedComment: PullRequestComment | null
+	readonly username: string | null
+}
+
 export interface UseCommandRegistryInput {
 	readonly commandPaletteActive: boolean
 	readonly commandPalette: CommandPaletteShape
@@ -23,17 +36,7 @@ export interface UseCommandRegistryInput {
 	readonly commentsViewActive: boolean
 	readonly diffFullView: boolean
 	readonly detailFullView: boolean
-	readonly runtimeSnapshot: {
-		readonly readyDiffFileCount: number
-		readonly diffFileIndex: number
-		readonly selectedDiffCommentAnchorLabel: string | null
-		readonly selectedDiffCommentThreadCount: number
-		readonly hasDiffCommentThreads: boolean
-		readonly diffRangeActive: boolean
-		readonly selectedCommentsStatus: "idle" | "loading" | "ready" | "error"
-		readonly selectedOrderedComment: PullRequestComment | null
-		readonly username: string | null
-	}
+	readonly runtimeSnapshot: MaybeAccessor<CommandRuntimeSnapshot>
 }
 
 export interface CommandRegistry {
@@ -59,39 +62,27 @@ export interface UseCommandRegistryFlow extends CommandRegistry {
  * `runCommandById` is exposed via ref so callers downstream can fire
  * a command without re-running the effect that installs them.
  */
-export const useCommandRegistry = ({
-	commandPaletteActive,
-	commandPalette,
-	selectedRepository,
-	switchViewTo,
-	commentsViewActive,
-	diffFullView,
-	detailFullView,
-	runtimeSnapshot,
-	closeActiveModal,
-	flashNotice,
-}: UseCommandRegistryInput & { readonly closeActiveModal: () => void; readonly flashNotice: (msg: string) => void }): CommandRegistry => {
-	const dispatchCommand = useAtomSet(dispatchCommandAtom, { mode: "promise" })
-	const commandSnapshots = useAtomValue(commandSnapshotsAtom)
-	const registeredCommands = useMemo<readonly AppCommand[]>(
-		() =>
-			commandSnapshots.map((snapshot) => ({
-				id: snapshot.id,
-				title: snapshot.title,
-				scope: snapshot.scope,
-				...(snapshot.subtitle !== undefined && { subtitle: snapshot.subtitle }),
-				...(snapshot.shortcut !== undefined && { shortcut: snapshot.shortcut }),
-				...(snapshot.keywords !== undefined && { keywords: snapshot.keywords }),
-				disabledReason: snapshot.disabledReason,
-				run: () => {
-					void dispatchCommand(snapshot.id)
-				},
-			})),
-		[commandSnapshots, dispatchCommand],
+export const useCommandRegistry = (input: UseCommandRegistryInput & { readonly closeActiveModal: () => void; readonly flashNotice: (msg: string) => void }): CommandRegistry => {
+	const dispatchCommand = useAtomSetSolid(() => dispatchCommandAtom, { mode: "promise" })
+	const commandSnapshots = useAtomValueSolid(() => commandSnapshotsAtom)
+	const registeredCommands = createMemo<readonly AppCommand[]>(() =>
+		commandSnapshots().map((snapshot) => ({
+			id: snapshot.id,
+			title: snapshot.title,
+			scope: snapshot.scope,
+			...(snapshot.subtitle !== undefined && { subtitle: snapshot.subtitle }),
+			...(snapshot.shortcut !== undefined && { shortcut: snapshot.shortcut }),
+			...(snapshot.keywords !== undefined && { keywords: snapshot.keywords }),
+			disabledReason: snapshot.disabledReason,
+			run: () => {
+				void dispatchCommand(snapshot.id)
+			},
+		})),
 	)
 
-	const setCommandRuntime = useAtomSet(commandRuntimeAtom)
-	useEffect(() => {
+	const setCommandRuntime = useAtomSetSolid(() => commandRuntimeAtom)
+	createEffect(() => {
+		const runtimeSnapshot = readMaybeAccessor(input.runtimeSnapshot)
 		setCommandRuntime({
 			readyDiffFileCount: runtimeSnapshot.readyDiffFileCount,
 			diffFileIndex: runtimeSnapshot.diffFileIndex,
@@ -103,26 +94,15 @@ export const useCommandRegistry = ({
 				runtimeSnapshot.selectedCommentsStatus !== "idle" && runtimeSnapshot.selectedCommentsStatus !== "loading" && runtimeSnapshot.selectedOrderedComment !== null,
 			canEditSelectedComment: canEditComment(runtimeSnapshot.selectedOrderedComment, runtimeSnapshot.username),
 		})
-	}, [
-		setCommandRuntime,
-		runtimeSnapshot.readyDiffFileCount,
-		runtimeSnapshot.diffFileIndex,
-		runtimeSnapshot.selectedDiffCommentAnchorLabel,
-		runtimeSnapshot.selectedDiffCommentThreadCount,
-		runtimeSnapshot.hasDiffCommentThreads,
-		runtimeSnapshot.diffRangeActive,
-		runtimeSnapshot.selectedCommentsStatus,
-		runtimeSnapshot.selectedOrderedComment,
-		runtimeSnapshot.username,
-	])
+	})
 
-	const appCommands = registeredCommands
+	const appCommands = registeredCommands()
 	const runCommand = (command: AppCommand, options: { readonly notifyDisabled?: boolean; readonly closePalette?: boolean } = {}) => {
 		if (!commandEnabled(command)) {
-			if (options.notifyDisabled && command.disabledReason) flashNotice(command.disabledReason)
+			if (options.notifyDisabled && command.disabledReason) input.flashNotice(command.disabledReason)
 			return false
 		}
-		if (options.closePalette) closeActiveModal()
+		if (options.closePalette) input.closeActiveModal()
 		command.run()
 		return true
 	}
@@ -134,30 +114,30 @@ export const useCommandRegistry = ({
 	runCommandByIdRef.current = runCommandById
 
 	const dynamicPaletteCommands: readonly AppCommand[] = (() => {
-		if (!commandPaletteActive) return []
-		const repository = parseRepositoryInput(commandPalette.query)
-		if (!repository || repository === selectedRepository) return []
+		if (!input.commandPaletteActive) return []
+		const repository = parseRepositoryInput(input.commandPalette.query)
+		if (!repository || repository === input.selectedRepository) return []
 		return [
 			defineCommand({
 				id: `view.repository.dynamic:${repository}`,
 				title: `Open ${repository}`,
 				scope: "View",
 				subtitle: "Switch to this repository",
-				run: () => switchViewTo({ _tag: "Repository", repository }),
+				run: () => input.switchViewTo({ _tag: "Repository", repository }),
 			}),
 		]
 	})()
-	const staticPaletteCommands = commandPaletteActive
+	const staticPaletteCommands = input.commandPaletteActive
 		? filterCommands(
 				appCommands.filter((command) => command.id !== "command.open" && commandEnabled(command)),
-				commandPalette.query,
+				input.commandPalette.query,
 			)
 		: []
-	const activePaletteScope: CommandScope | null = commentsViewActive ? "Comments" : diffFullView ? "Diff" : detailFullView ? "View" : null
-	const commandPaletteCommands = commandPaletteActive
-		? [...dynamicPaletteCommands, ...(commandPalette.query.trim().length > 0 ? staticPaletteCommands : sortCommandsByActiveScope(staticPaletteCommands, activePaletteScope))]
+	const activePaletteScope: CommandScope | null = input.commentsViewActive ? "Comments" : input.diffFullView ? "Diff" : input.detailFullView ? "View" : null
+	const commandPaletteCommands = input.commandPaletteActive
+		? [...dynamicPaletteCommands, ...(input.commandPalette.query.trim().length > 0 ? staticPaletteCommands : sortCommandsByActiveScope(staticPaletteCommands, activePaletteScope))]
 		: []
-	const selectedCommandIndex = clampCommandIndex(commandPalette.selectedIndex, commandPaletteCommands)
+	const selectedCommandIndex = clampCommandIndex(input.commandPalette.selectedIndex, commandPaletteCommands)
 	const selectedCommand = commandPaletteCommands[selectedCommandIndex] ?? null
 
 	return { appCommands, commandPaletteCommands, selectedCommandIndex, selectedCommand, runCommand, runCommandById, runCommandByIdRef }

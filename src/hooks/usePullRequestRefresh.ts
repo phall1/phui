@@ -1,4 +1,5 @@
-import { useEffect, type MutableRefObject } from "../solid-hooks.js"
+import { createEffect } from "solid-js"
+import { type MutableRefObject } from "../solid-utils.js"
 import type { PullRequestComment, PullRequestItem } from "../domain.js"
 import type { LoadStatus } from "../domain.js"
 import type { StoredCommentLoadState } from "../ui/comments/loadState.js"
@@ -91,12 +92,12 @@ export const usePullRequestRefresh = ({
 		refreshPullRequestsRef.current()
 	}
 
-	useEffect(() => {
+	createEffect(() => {
 		const fetchedAt = pullRequestLoad?.fetchedAt?.getTime()
 		if (fetchedAt !== undefined) {
 			lastPullRequestRefreshAtRef.current = fetchedAt
 		}
-	}, [pullRequestLoad?.fetchedAt, lastPullRequestRefreshAtRef])
+	})
 
 	return { refreshPullRequests }
 }

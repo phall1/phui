@@ -1,19 +1,17 @@
-import { useAtomSet } from "../../atom-solid.js"
-import { useEffect, useRef } from "../../solid-hooks.js"
+import { useAtomSet as useAtomSetSolid } from "@effect/atom-solid"
+import { onCleanup } from "solid-js"
+import { useRef } from "../../solid-utils.js"
 import { noticeAtom } from "./atoms.js"
 
 const NOTICE_TIMEOUT_MS = 2500
 
 export const useFlashNotice = (): ((message: string) => void) => {
-	const setNotice = useAtomSet(noticeAtom)
+	const setNotice = useAtomSetSolid(() => noticeAtom)
 	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-	useEffect(
-		() => () => {
-			if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
-		},
-		[],
-	)
+	onCleanup(() => {
+		if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
+	})
 
 	return (message: string) => {
 		if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)

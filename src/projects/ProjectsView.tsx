@@ -1,8 +1,9 @@
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
-import { useAtom, useAtomSet, useAtomValue } from "../atom-solid.js"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
 import * as Cause from "effect/Cause"
-import { useEffect, useRef } from "../solid-hooks.js"
+import { createEffect, createMemo, onCleanup } from "solid-js"
+import { useRef } from "../solid-utils.js"
 import { errorMessage } from "../errors.js"
 import { openUrlAtom } from "../services/systemAtoms.js"
 import { colors } from "../ui/colors.js"
@@ -231,41 +232,57 @@ const unconfiguredLines = (state: ProjectsSurfaceState): readonly { readonly tex
  * cursor in the viewport, and publishes its actions to the keymap layer.
  */
 export const ProjectsView = ({ contentWidth, height, loadingIndicator, showScrollbar }: ProjectsViewProps) => {
-	const result = useAtomValue(projectsReportAtom)
-	const [selection, setSelection] = useAtom(projectsSelectionAtom)
-	const [inventory, setInventory] = useAtom(projectsInventoryAtom)
-	const setRescans = useAtomSet(projectsRescanAtom)
-	const openUrl = useAtomSet(openUrlAtom, { mode: "promise" })
+	const result = useAtomValueSolid(() => projectsReportAtom)
+	const selection = useAtomValueSolid(() => projectsSelectionAtom)
+	const setSelection = useAtomSetSolid(() => projectsSelectionAtom)
+	const inventory = useAtomValueSolid(() => projectsInventoryAtom)
+	const setInventory = useAtomSetSolid(() => projectsInventoryAtom)
+	const setRescans = useAtomSetSolid(() => projectsRescanAtom)
+	const openUrl = useAtomSetSolid(() => openUrlAtom, { mode: "promise" })
 
 	// Chrome above the body: summary row + subline row + divider row = 3.
 	const bodyHeight = Math.max(1, height - 3)
 	const paneWidth = contentWidth + 2
 
-	const state = AsyncResult.isSuccess(result) ? result.value : null
-	const failure = AsyncResult.isFailure(result) ? errorMessage(Cause.squash(result.cause)) : null
-	const configured = state !== null && hasConfiguredRoots(state.config)
-	const model = state !== null && configured ? projectsRows(state.report, inventory) : { rows: [], selectable: [] }
-	const selectionIndex = clampSelection(selection, model.selectable.length)
-	const selectedRowIndex = model.selectable[selectionIndex] ?? -1
-	const selectedRow = selectedRowIndex >= 0 ? (model.rows[selectedRowIndex] ?? null) : null
+	const state = createMemo(() => {
+		const current = result()
+		return AsyncResult.isSuccess(current) ? current.value : null
+	})
+	const failure = createMemo(() => {
+		const current = result()
+		return AsyncResult.isFailure(current) ? errorMessage(Cause.squash(current.cause)) : null
+	})
+	const configured = createMemo(() => {
+		const current = state()
+		return current !== null && hasConfiguredRoots(current.config)
+	})
+	const model = createMemo(() => {
+		const current = state()
+		return current !== null && configured() ? projectsRows(current.report, inventory()) : { rows: [], selectable: [] }
+	})
+	const selectionIndex = createMemo(() => clampSelection(selection(), model().selectable.length))
+	const selectedRowIndex = createMemo(() => model().selectable[selectionIndex()] ?? -1)
+	const selectedRow = createMemo(() => (selectedRowIndex() >= 0 ? (model().rows[selectedRowIndex()] ?? null) : null))
 
-	// Publish the imperative half of the surface to the keymap layer. Re-run on
-	// every render so the closures always see the current rows; cleared on
-	// unmount so the layer deactivates instead of acting on a stale view. The
+	// Publish the imperative half of the surface to the keymap layer. Re-runs
+	// whenever the rows change so the closures always see current state; cleared
+	// on unmount so the layer deactivates instead of acting on a stale view. The
 	// clear is identity-guarded (see `clearProjectsViewHandle`) so one App's
 	// teardown cannot null out a second App's handle.
-	useEffect(() => {
+	createEffect(() => {
+		const currentSelectedRow = selectedRow()
+		const currentModel = model()
 		const handle: ProjectsViewHandle = {
-			hasSelection: selectedRow !== null,
-			moveSelection: (delta) => setSelection((current) => clampSelection(clampSelection(current, model.selectable.length) + delta, model.selectable.length)),
-			moveSelectionToBoundary: (boundary) => setSelection(boundary === "first" ? 0 : Math.max(0, model.selectable.length - 1)),
+			hasSelection: currentSelectedRow !== null,
+			moveSelection: (delta) => setSelection((current) => clampSelection(clampSelection(current, currentModel.selectable.length) + delta, currentModel.selectable.length)),
+			moveSelectionToBoundary: (boundary) => setSelection(boundary === "first" ? 0 : Math.max(0, currentModel.selectable.length - 1)),
 			// One affordance, two targets: `ciRed` is the only check that carries a
 			// URL, so everything else opens its directory. `BrowserOpener.openUrl`
 			// shells out to the platform opener (`open` / `xdg-open` / `start`),
 			// which handles a local path as happily as an https URL — no new
 			// service, and no PullRequestItem to fake for EditorOpener.
 			openSelected: () => {
-				const target = rowOpenTarget(selectedRow)
+				const target = rowOpenTarget(currentSelectedRow)
 				if (target) void openUrl(target).catch(() => undefined)
 			},
 			toggleInventory: () => {
@@ -280,59 +297,76 @@ export const ProjectsView = ({ contentWidth, height, loadingIndicator, showScrol
 			},
 		}
 		setProjectsViewHandle(handle)
-		return () => clearProjectsViewHandle(handle)
+		onCleanup(() => clearProjectsViewHandle(handle))
 	})
 
 	// Every row is height 1, so the row index is the scroll offset.
-	const needsScroll = model.rows.length > bodyHeight
+	const needsScroll = createMemo(() => model().rows.length > bodyHeight)
 	const scrollboxRef = useRef<ScrollBoxRenderable | null>(null)
-	useEffect(() => {
-		if (!needsScroll || selectedRowIndex < 0) return
+	createEffect(() => {
+		const currentNeedsScroll = needsScroll()
+		const currentSelectedRowIndex = selectedRowIndex()
+		if (!currentNeedsScroll || currentSelectedRowIndex < 0) return
 		const scrollbox = scrollboxRef.current
 		if (!scrollbox) return
 		const viewportTop = scrollbox.scrollTop
-		if (selectedRowIndex < viewportTop) scrollbox.scrollTo({ x: 0, y: selectedRowIndex })
-		else if (selectedRowIndex + 1 > viewportTop + bodyHeight) scrollbox.scrollTo({ x: 0, y: Math.max(0, selectedRowIndex + 1 - bodyHeight) })
-	}, [selectedRowIndex, needsScroll, bodyHeight, model.rows.length])
+		if (currentSelectedRowIndex < viewportTop) scrollbox.scrollTo({ x: 0, y: currentSelectedRowIndex })
+		else if (currentSelectedRowIndex + 1 > viewportTop + bodyHeight) scrollbox.scrollTo({ x: 0, y: Math.max(0, currentSelectedRowIndex + 1 - bodyHeight) })
+	})
 
 	const now = new Date()
-	const counts = state ? countBySeverity(state.report.findings) : { error: 0, warning: 0, info: 0 }
-	const findingCount = state?.report.findings.length ?? 0
+	const counts = createMemo(() => {
+		const current = state()
+		return current ? countBySeverity(current.report.findings) : { error: 0, warning: 0, info: 0 }
+	})
+	const findingCount = createMemo(() => state()?.report.findings.length ?? 0)
 
-	const summaryLeft = (() => {
-		if (failure) return "Scan failed"
-		if (!state) return `${loadingIndicator} Scanning projects`
-		if (!configured) return "Projects not configured"
-		if (findingCount === 0) return "All clear"
+	const summaryLeft = createMemo(() => {
+		const currentFailure = failure()
+		const currentState = state()
+		if (currentFailure) return "Scan failed"
+		if (!currentState) return `${loadingIndicator} Scanning projects`
+		if (!configured()) return "Projects not configured"
+		const currentCounts = counts()
+		if (findingCount() === 0) return "All clear"
 		const parts = [
-			counts.error > 0 ? `${counts.error} error${counts.error === 1 ? "" : "s"}` : null,
-			counts.warning > 0 ? `${counts.warning} warning${counts.warning === 1 ? "" : "s"}` : null,
+			currentCounts.error > 0 ? `${currentCounts.error} error${currentCounts.error === 1 ? "" : "s"}` : null,
+			currentCounts.warning > 0 ? `${currentCounts.warning} warning${currentCounts.warning === 1 ? "" : "s"}` : null,
 		]
 		return parts.filter((part) => part !== null).join(" · ")
-	})()
+	})
 
-	const summaryRight = (() => {
-		if (!state || !configured) return ""
-		const repos = scannedRepositoryCount(state.report)
-		return `${repos} ${repos === 1 ? "project" : "projects"} · scanned ${relativeAge(state.report.scannedAt, now)}`
-	})()
+	const summaryRight = createMemo(() => {
+		const currentState = state()
+		if (!currentState || !configured()) return ""
+		const repos = scannedRepositoryCount(currentState.report)
+		return `${repos} ${repos === 1 ? "project" : "projects"} · scanned ${relativeAge(currentState.report.scannedAt, now)}`
+	})
 
-	const subline = (() => {
-		if (failure) return failure
-		if (!state) return ""
-		if (!configured) return state.config.configPath ?? "config file loading disabled"
-		if (selectedRow?.kind === "finding" && selectedRow.finding.suggestion) return selectedRow.finding.suggestion
-		if (selectedRow?.kind === "project") return selectedRow.project.repo.path
-		const roots = state.config.roots.length
+	const subline = createMemo(() => {
+		const currentFailure = failure()
+		const currentState = state()
+		const currentSelectedRow = selectedRow()
+		if (currentFailure) return currentFailure
+		if (!currentState) return ""
+		if (!configured()) return currentState.config.configPath ?? "config file loading disabled"
+		if (currentSelectedRow?.kind === "finding" && currentSelectedRow.finding.suggestion) return currentSelectedRow.finding.suggestion
+		if (currentSelectedRow?.kind === "project") return currentSelectedRow.project.repo.path
+		const roots = currentState.config.roots.length
 		return `${roots} ${roots === 1 ? "root" : "roots"} · a all projects · r rescan · enter open`
-	})()
+	})
 
-	const body = (() => {
-		if (failure) return <Centered lines={[{ text: failure, fg: colors.error }]} width={contentWidth} height={bodyHeight} prefix="projects-error" />
-		if (!state) return <Centered lines={[{ text: `${loadingIndicator} Scanning projects`, fg: colors.muted }]} width={contentWidth} height={bodyHeight} prefix="projects-loading" />
-		if (!configured) return <Block lines={unconfiguredLines(state)} width={contentWidth} />
-		if (model.rows.length === 0) {
-			const repos = scannedRepositoryCount(state.report)
+	const body = createMemo(() => {
+		const currentFailure = failure()
+		const currentState = state()
+		const currentModel = model()
+		const currentSelectedRowIndex = selectedRowIndex()
+		if (currentFailure) return <Centered lines={[{ text: currentFailure, fg: colors.error }]} width={contentWidth} height={bodyHeight} prefix="projects-error" />
+		if (!currentState)
+			return <Centered lines={[{ text: `${loadingIndicator} Scanning projects`, fg: colors.muted }]} width={contentWidth} height={bodyHeight} prefix="projects-loading" />
+		if (!configured()) return <Block lines={unconfiguredLines(currentState)} width={contentWidth} />
+		if (currentModel.rows.length === 0) {
+			const repos = scannedRepositoryCount(currentState.report)
 			return (
 				<Centered
 					lines={[
@@ -345,37 +379,44 @@ export const ProjectsView = ({ contentWidth, height, loadingIndicator, showScrol
 				/>
 			)
 		}
-		return <Rows rows={model.rows} width={paneWidth} selectedRowIndex={selectedRowIndex} onSelect={(rowIndex) => setSelection(model.selectable.indexOf(rowIndex))} />
-	})()
+		return (
+			<Rows
+				rows={currentModel.rows}
+				width={paneWidth}
+				selectedRowIndex={currentSelectedRowIndex}
+				onSelect={(rowIndex) => setSelection(currentModel.selectable.indexOf(rowIndex))}
+			/>
+		)
+	})
 
-	const summaryRightWidth = Math.min(summaryRight.length, Math.max(0, Math.floor(contentWidth * 0.5)))
-	const summaryLeftWidth = Math.max(1, contentWidth - summaryRightWidth - 1)
+	const summaryRightWidth = createMemo(() => Math.min(summaryRight().length, Math.max(0, Math.floor(contentWidth * 0.5))))
+	const summaryLeftWidth = createMemo(() => Math.max(1, contentWidth - summaryRightWidth() - 1))
 
 	return (
 		<box flexDirection="column" height={height} backgroundColor={colors.background}>
 			<PaddedRow>
 				<TextLine>
-					<span fg={failure ? colors.error : counts.error > 0 ? colors.status.failing : colors.accent} attributes={TextAttributes.BOLD}>
-						{fitCell(summaryLeft, summaryLeftWidth)}
+					<span fg={failure() ? colors.error : counts().error > 0 ? colors.status.failing : colors.accent} attributes={TextAttributes.BOLD}>
+						{fitCell(summaryLeft(), summaryLeftWidth())}
 					</span>
 					<span> </span>
-					<span fg={colors.muted}>{fitCell(summaryRight, summaryRightWidth)}</span>
+					<span fg={colors.muted}>{fitCell(summaryRight(), summaryRightWidth())}</span>
 				</TextLine>
 			</PaddedRow>
 			<PaddedRow>
 				<TextLine>
-					<span fg={colors.muted}>{fitCell(subline, contentWidth)}</span>
+					<span fg={colors.muted}>{fitCell(subline(), contentWidth)}</span>
 				</TextLine>
 			</PaddedRow>
 			<Divider width={paneWidth} />
 			<box height={bodyHeight} flexDirection="column">
-				{needsScroll ? (
+				{needsScroll() ? (
 					<scrollbox ref={scrollboxRef} focusable={false} flexGrow={1} verticalScrollbarOptions={{ visible: showScrollbar }}>
-						{body}
+						{body()}
 					</scrollbox>
 				) : (
 					<box flexGrow={1} flexDirection="column">
-						{body}
+						{body()}
 					</box>
 				)}
 			</box>

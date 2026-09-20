@@ -1,7 +1,8 @@
 import { TextAttributes, type BoxRenderable, type MouseEvent } from "@opentui/core"
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { useRenderer } from "@opentui/solid"
-import { Fragment, useEffect, useMemo, useState } from "../solid-hooks.js"
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js"
+import { Fragment } from "../solid-utils.js"
 import { selectedCommentsAtom, selectedCommentsStatusAtom } from "./comments/atoms.js"
 import { selectedPullRequestAtom } from "./pullRequests/atoms.js"
 import { formatRelativeDate } from "../date.js"
@@ -597,8 +598,8 @@ export const DetailBody = ({
 	bodyLines = DETAIL_BODY_LINES,
 	bodyLineLimit = bodyLines,
 	loadingIndicator,
-	themeId,
-	themeGeneration,
+	themeId: _themeId,
+	themeGeneration: _themeGeneration,
 	onLinkOpen,
 }: {
 	pullRequest: PullRequestItem
@@ -611,20 +612,17 @@ export const DetailBody = ({
 	onLinkOpen?: (url: string) => void
 }) => {
 	const renderer = useRenderer()
-	const [hoveredUrl, setHoveredUrl] = useState<string | null>(null)
+	const [hoveredUrl, setHoveredUrl] = createSignal<string | null>(null)
 
-	const previewLines = useMemo(
-		() => bodyPreview(pullRequest.body, contentWidth, bodyLineLimit, { issueReferenceRepository: pullRequest.repository }),
-		[pullRequest, contentWidth, bodyLineLimit, themeId, themeGeneration],
-	)
+	const previewLines = createMemo(() => bodyPreview(pullRequest.body, contentWidth, bodyLineLimit, { issueReferenceRepository: pullRequest.repository }))
 
-	const urlPositions = useMemo(() => collectUrlPositions(previewLines), [previewLines])
+	const urlPositions = createMemo(() => collectUrlPositions(previewLines()))
 
-	useEffect(() => {
-		if (hoveredUrl === null) return
+	createEffect(() => {
+		if (hoveredUrl() === null) return
 		renderer.setMousePointer("pointer")
-		return () => renderer.setMousePointer("default")
-	}, [hoveredUrl, renderer])
+		onCleanup(() => renderer.setMousePointer("default"))
+	})
 
 	if (!pullRequest.detailLoaded) {
 		const topRows = Math.max(0, Math.floor((bodyLines - 1) / 2))
@@ -639,32 +637,32 @@ export const DetailBody = ({
 	}
 
 	const handleMouseMove = function (this: BoxRenderable, event: MouseEvent) {
-		if (urlPositions.length === 0) return
+		if (urlPositions().length === 0) return
 		const localX = event.x - this.x - BODY_PADDING_LEFT
 		const localY = event.y - this.y
-		const next = findUrlAt(urlPositions, localY, localX)
-		if (next !== hoveredUrl) setHoveredUrl(next)
+		const next = findUrlAt(urlPositions(), localY, localX)
+		if (next !== hoveredUrl()) setHoveredUrl(next)
 	}
 
 	const handleMouseOut = () => {
-		if (hoveredUrl !== null) setHoveredUrl(null)
+		if (hoveredUrl() !== null) setHoveredUrl(null)
 	}
 
 	const handleMouseDown = function (this: BoxRenderable, event: MouseEvent) {
 		if (!onLinkOpen || event.button !== 0) return
 		const localX = event.x - this.x - BODY_PADDING_LEFT
 		const localY = event.y - this.y
-		const url = findUrlAt(urlPositions, localY, localX)
+		const url = findUrlAt(urlPositions(), localY, localX)
 		if (url === null) return
 		event.stopPropagation()
 		onLinkOpen(url)
 	}
 
 	return (
-		<box flexDirection="column" height={previewLines.length} onMouseMove={handleMouseMove} onMouseOut={handleMouseOut} onMouseDown={handleMouseDown}>
-			{previewLines.map((line, index) => (
+		<box flexDirection="column" height={previewLines().length} onMouseMove={handleMouseMove} onMouseOut={handleMouseOut} onMouseDown={handleMouseDown}>
+			{previewLines().map((line, index) => (
 				<PaddedRow key={`${pullRequest.url}-${index}`}>
-					<CommentSegmentsLine segments={line.segments} hoveredUrl={hoveredUrl} />
+					<CommentSegmentsLine segments={line.segments} hoveredUrl={hoveredUrl()} />
 				</PaddedRow>
 			))}
 		</box>

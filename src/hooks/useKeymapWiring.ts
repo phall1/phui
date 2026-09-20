@@ -1,7 +1,8 @@
 import { useKeymap } from "@phui/keymap/solid"
 import type { KeySubscribe } from "@phui/keymap/solid"
-import { useContext, useMemo, useRef } from "../solid-hooks.js"
-import { RegistryContext } from "../atom-solid.js"
+import { createMemo } from "solid-js"
+import { useContext, useRef } from "../solid-utils.js"
+import { RegistryContext } from "@effect/atom-solid"
 import { appKeymap } from "../keymap/all.js"
 import { buildAppCtx, type BuildAppCtxInput } from "../keymap/contexts/appCtx.js"
 import { useOpenTuiSubscribe } from "../keyboard/opentuiAdapter.js"
@@ -36,7 +37,7 @@ export const useKeymapWiring = ({ disabled, ctxInput, textInput }: UseKeymapWiri
 	ctxInputRef.current = ctxInput
 	const disabledRef = useRef(disabled)
 	disabledRef.current = disabled
-	const gatedSubscribe = useMemo<KeySubscribe>(() => (handler) => subscribe((stroke) => disabledRef.current || handler(stroke)), [subscribe])
+	const gatedSubscribe = createMemo<KeySubscribe>(() => (handler) => subscribe((stroke) => disabledRef.current || handler(stroke)))
 	useKeymap(
 		appKeymap,
 		() => {
@@ -116,7 +117,7 @@ export const useKeymapWiring = ({ disabled, ctxInput, textInput }: UseKeymapWiri
 				return buildAppCtx(input)
 			}
 		},
-		gatedSubscribe,
+		gatedSubscribe(),
 	)
 	useTextInputDispatcher({
 		...textInput,

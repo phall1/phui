@@ -1,4 +1,5 @@
-import { type MutableRefObject, useRef } from "../solid-hooks.js"
+import { createMemo, type Accessor } from "solid-js"
+import { type MutableRefObject, useRef } from "../solid-utils.js"
 import { errorMessage } from "../errors.js"
 
 type LoadMoreLoad = {
@@ -16,7 +17,7 @@ export interface UseItemLoadMoreInput<Load extends LoadMoreLoad, Page> {
 	readonly itemLimit: number
 	readonly pageSize: number
 	readonly refreshGenerationRef: MutableRefObject<number>
-	readonly loadingMoreKey: string | null
+	readonly loadingMoreKey: Accessor<string | null>
 	readonly setLoadingMoreKey: SetLoadingMoreKey
 	readonly fetchPage: (cursor: string, pageSize: number) => Promise<Page>
 	readonly mergePage: (current: Load, page: Page) => Load
@@ -28,7 +29,7 @@ export interface UseItemLoadMoreInput<Load extends LoadMoreLoad, Page> {
 
 export interface UseItemLoadMoreResult {
 	readonly loadMore: () => boolean
-	readonly isLoadingMore: boolean
+	readonly isLoadingMore: Accessor<boolean>
 	readonly resetLoadingMore: () => void
 }
 
@@ -103,5 +104,5 @@ export const useItemLoadMore = <Load extends LoadMoreLoad, Page>({
 		setLoadingMoreKey(null)
 	}
 
-	return { loadMore, isLoadingMore: loadingMoreKey === cacheKey, resetLoadingMore }
+	return { loadMore, isLoadingMore: createMemo(() => loadingMoreKey() === cacheKey), resetLoadingMore }
 }

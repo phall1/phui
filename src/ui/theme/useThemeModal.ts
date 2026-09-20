@@ -1,6 +1,7 @@
-import { useAtomSet, useAtomValue } from "../../atom-solid.js"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { Effect } from "effect"
-import { useEffect, useRef } from "../../solid-hooks.js"
+import { createEffect, onCleanup } from "solid-js"
+import { useRef } from "../../solid-utils.js"
 import { errorMessage } from "../../errors.js"
 import { detectSystemAppearance } from "../../systemAppearance.js"
 import { fixedThemeConfig, resolveThemeId, systemThemeConfigForTheme, type ThemeConfig, themeConfigWithSelection, type ThemeMode } from "../../themeConfig.js"
@@ -40,12 +41,12 @@ export interface UseThemeModalResult {
  * is a single seam.
  */
 export const useThemeModal = ({ themeModal, setThemeModal, closeActiveModal, flashNotice }: UseThemeModalInput): UseThemeModalResult => {
-	const themeConfig = useAtomValue(themeConfigAtom)
-	const setThemeConfig = useAtomSet(themeConfigAtom)
-	const systemAppearance = useAtomValue(systemAppearanceAtom)
-	const setSystemAppearance = useAtomSet(systemAppearanceAtom)
-	const themeId = useAtomValue(themeIdAtom)
-	const setThemeId = useAtomSet(themeIdAtom)
+	const themeConfig = useAtomValueSolid(() => themeConfigAtom)()
+	const setThemeConfig = useAtomSetSolid(() => themeConfigAtom)
+	const systemAppearance = useAtomValueSolid(() => systemAppearanceAtom)()
+	const setSystemAppearance = useAtomSetSolid(() => systemAppearanceAtom)
+	const themeId = useAtomValueSolid(() => themeIdAtom)()
+	const setThemeId = useAtomSetSolid(() => themeIdAtom)
 
 	const themeIdRef = useRef(themeId)
 	const themeConfigRef = useRef(themeConfig)
@@ -71,7 +72,7 @@ export const useThemeModal = ({ themeModal, setThemeModal, closeActiveModal, fla
 	// System-appearance polling: while themeConfig.mode === "system", re-check
 	// the OS appearance and re-resolve the theme id when it flips.
 	const enabled = themeConfig.mode === "system"
-	useEffect(() => {
+	createEffect(() => {
 		if (!enabled) return
 		let cancelled = false
 		const refresh = () => {
@@ -84,12 +85,11 @@ export const useThemeModal = ({ themeModal, setThemeModal, closeActiveModal, fla
 		}
 		const interval = globalThis.setInterval(refresh, SYSTEM_APPEARANCE_POLL_MS)
 		refresh()
-		return () => {
+		onCleanup(() => {
 			cancelled = true
 			globalThis.clearInterval(interval)
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [enabled])
+		})
+	})
 
 	const openThemeModal = () => {
 		const systemConfig = themeConfig.mode === "system" ? themeConfig : systemThemeConfigForTheme(themeConfig.theme)

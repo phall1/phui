@@ -1,5 +1,6 @@
 import type { TextareaOptions, TextareaRenderable } from "@opentui/core"
-import { useEffect, useRef } from "../../solid-hooks.js"
+import { createEffect } from "solid-js"
+import { useRef } from "../../solid-utils.js"
 import { colors } from "../colors.js"
 import { fitCell, HintRow, PlainLine, standardModalDims, StandardModal } from "../primitives.js"
 import type { CommentModalState } from "./types.js"
@@ -47,11 +48,11 @@ export const CommentModal = ({
 		onChange(textarea.plainText, textarea.cursorOffset)
 	}
 
-	useEffect(() => {
+	createEffect(() => {
 		const textarea = textareaRef.current
 		if (!textarea) return
 		textarea.cursorOffset = state.cursor
-	}, [editorKey, state.cursor])
+	})
 
 	return (
 		<StandardModal

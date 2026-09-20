@@ -24,7 +24,7 @@ describe("solid keyboard", () => {
 	})
 
 	test("j advances selectedIndexAtom in App", async () => {
-		const { RegistryProvider } = await import("../src/atom-solid.js")
+		const { RegistryProvider } = await import("@effect/atom-solid")
 		const { useAtomValue: useAtomValueSolid } = await import("@effect/atom-solid")
 		const { selectedIndexAtom } = await import("../src/ui/listSelection/atoms.js")
 		const { selectedPullRequestAtom } = await import("../src/ui/pullRequests/atoms.js")

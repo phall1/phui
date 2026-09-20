@@ -31,8 +31,9 @@ interface AppProps {
 /**
  * Top-level render manifest. All state, hooks, derivations, atom
  * subscriptions, keymap wiring, and side-effects live inside
- * `useAppShell`; this component is purely the JSX layout that
- * consumes the shell bundle.
+ * `useAppShell`; this component is purely the JSX layout that consumes the
+ * shell bundle. `shell` is a Solid accessor over a memo, so its values (and
+ * the terminal size they are derived from) stay live.
  */
 export const App = ({ systemThemeGeneration = 0, launchIntent = defaultLaunchIntent }: AppProps) => {
 	const dimensions = useTerminalDimensions()
@@ -69,32 +70,32 @@ export const App = ({ systemThemeGeneration = 0, launchIntent = defaultLaunchInt
 		>
 			<box width={dimensions().width} height={dimensions().height} flexDirection="column" backgroundColor={colors.background}>
 				<box paddingLeft={1} paddingRight={1} flexDirection="column" backgroundColor={colors.background}>
-					<box width={shell.headerFooterWidth} height={1} flexDirection="row">
-						<WorkspaceHeader {...shell.headerProps} />
-						{shell.headerRight ? (
-							<TextLine width={shell.headerRight.length}>
-								<span fg={colors.muted}>{shell.headerRight}</span>
+					<box width={shell().headerFooterWidth} height={1} flexDirection="row">
+						<WorkspaceHeader {...shell().headerProps} />
+						{shell().headerRight ? (
+							<TextLine width={shell().headerRight.length}>
+								<span fg={colors.muted}>{shell().headerRight}</span>
 							</TextLine>
 						) : null}
 					</box>
 				</box>
-				<Divider width={shell.contentWidth} junctions={shell.workspaceTopDividerJunctions} />
+				<Divider width={shell().contentWidth} junctions={shell().workspaceTopDividerJunctions} />
 				{showWorkspaceTabs() ? (
 					<>
 						<box paddingRight={1} backgroundColor={colors.background}>
 							<WorkspaceTabs
 								activeSurface={activeWorkspaceSurface()}
-								width={Math.max(24, shell.contentWidth - 1)}
+								width={Math.max(24, shell().contentWidth - 1)}
 								surfaces={workspaceTabSurfaces()}
-								counts={shell.workspaceTabCounts}
-								onSelect={shell.switchWorkspaceSurface}
+								counts={shell().workspaceTabCounts}
+								onSelect={shell().switchWorkspaceSurface}
 							/>
 						</box>
-						<Divider width={shell.contentWidth} junctions={shell.workspaceBottomDividerJunctions} />
+						<Divider width={shell().contentWidth} junctions={shell().workspaceBottomDividerJunctions} />
 					</>
 				) : null}
 				<WorkspaceContent
-					{...shell.contentProps}
+					{...shell().contentProps}
 					activeWorkspaceSurface={activeWorkspaceSurface()}
 					selectedRepository={selectedRepository()}
 					selectedPullRequest={selectedPullRequest()}
@@ -115,30 +116,30 @@ export const App = ({ systemThemeGeneration = 0, launchIntent = defaultLaunchInt
 					}
 					stackedDiffFiles={buildStackedDiffFiles(
 						readyDiffFiles(),
-						shell.contentProps.effectiveDiffRenderView,
-						shell.contentProps.diffWrapMode,
-						shell.contentProps.diffFilePanel.visible ? shell.contentProps.diffFilePanel.diffPaneWidth : shell.contentWidth,
+						shell().contentProps.effectiveDiffRenderView,
+						shell().contentProps.diffWrapMode,
+						shell().contentProps.diffFilePanel.visible ? shell().contentProps.diffFilePanel.diffPaneWidth : shell().contentWidth,
 					)}
 					derivations={{
-						...shell.contentProps.derivations,
+						...shell().contentProps.derivations,
 						prListProps: {
-							...shell.contentProps.derivations.prListProps,
+							...shell().contentProps.derivations.prListProps,
 							groups: visibleGroups(),
-							selectedUrl: selectedPullRequest()?.url ?? shell.contentProps.derivations.prListProps.selectedUrl,
+							selectedUrl: selectedPullRequest()?.url ?? shell().contentProps.derivations.prListProps.selectedUrl,
 							filterText: filterMode() ? filterDraft() : filterQuery(),
 							showRepositoryGroups: selectedRepository() === null,
 						},
 					}}
 				/>
-				<Divider width={shell.contentWidth} junctions={shell.preFooterDividerJunctions} />
+				<Divider width={shell().contentWidth} junctions={shell().preFooterDividerJunctions} />
 				<WorkspaceFooter
-					{...shell.footerProps}
+					{...shell().footerProps}
 					filterMode={filterMode()}
 					visibleFilterText={filterMode() ? filterDraft() : filterQuery()}
 					detailFullView={detailFullView()}
 					diffFullView={diffFullView()}
 				/>
-				<WorkspaceModals {...shell.modalsProps} activeModal={activeModal()} />
+				<WorkspaceModals {...shell().modalsProps} activeModal={activeModal()} />
 			</box>
 		</Show>
 	)

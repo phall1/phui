@@ -1,5 +1,5 @@
-import { useContext, type MutableRefObject } from "../solid-hooks.js"
-import { RegistryContext } from "../atom-solid.js"
+import { useContext, type MutableRefObject } from "../solid-utils.js"
+import { RegistryContext } from "@effect/atom-solid"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { diffCommentAnchorIndexAtom, diffPreferredSideAtom, diffRenderViewAtom, diffWrapModeAtom, readyDiffFilesAtom } from "../ui/diff/atoms.js"
 import type { DiffCommentSide, PullRequestItem } from "../domain.js"

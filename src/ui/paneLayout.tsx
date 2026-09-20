@@ -1,4 +1,4 @@
-import type { ReactNode } from "../solid-hooks.js"
+import type { ReactNode } from "../solid-utils.js"
 import { Divider, fitCell, SeparatorColumn, TextLine } from "./primitives.js"
 
 export const normalizeJunctionRows = (height: number, rows: readonly number[] = []): readonly number[] => {

@@ -1,5 +1,5 @@
-import { useAtom, useAtomSet, useAtomValue } from "../../atom-solid.js"
-import { useMemo } from "../../solid-hooks.js"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { createMemo, type Accessor } from "solid-js"
 import type { IssueItem, PullRequestItem, RepositoryDetails } from "../../domain.js"
 import { repositoryFilterScore } from "../../ui/filter/scoring.js"
 import { useRepositoryDetails } from "../../ui/pullRequests/useRepositoryDetails.js"
@@ -10,9 +10,7 @@ import { favoriteRepositoriesAtom, recentRepositoriesAtom, repoRollupAtom, selec
 import type { WorkspaceSurface } from "../../workspaceSurfaces.js"
 import type { RepoRollupRow } from "../../services/CacheService.js"
 
-// Match @effect/atom-react's polymorphic setter: accepts either a value
-// or an updater. Both forms are used across consumers (preferences
-// persistence passes values; workspace nav passes updaters).
+// Match the polymorphic setter: accepts either a value or an updater.
 type SetState<T> = (next: T | ((prev: T) => T)) => void
 
 export interface UseRepoSurfaceInput {
@@ -32,62 +30,58 @@ export interface RepoSurfaceActions {
 
 export interface RepoSurfaceShell {
 	readonly isFullscreen: false
-	readonly repositoryItems: readonly RepositoryListItem[]
-	readonly selectedRepositoryItem: RepositoryListItem | null
-	readonly selectedRepositoryDetails: RepositoryDetails | null
-	readonly selectedRepositoryIndex: number
+	readonly repositoryItems: Accessor<readonly RepositoryListItem[]>
+	readonly selectedRepositoryItem: Accessor<RepositoryListItem | null>
+	readonly selectedRepositoryDetails: Accessor<RepositoryDetails | null>
+	readonly selectedRepositoryIndex: Accessor<number>
 	readonly setSelectedRepositoryIndex: SetState<number>
-	readonly favoriteRepositories: Readonly<Record<string, true>>
+	readonly favoriteRepositories: Accessor<Readonly<Record<string, true>>>
 	readonly setFavoriteRepositories: SetState<Readonly<Record<string, true>>>
-	readonly recentRepositories: readonly string[]
+	readonly recentRepositories: Accessor<readonly string[]>
 	readonly setRecentRepositories: SetState<readonly string[]>
-	readonly repoRollup: readonly RepoRollupRow[]
+	readonly repoRollup: Accessor<readonly RepoRollupRow[]>
 	readonly setRepoRollup: (next: readonly RepoRollupRow[]) => void
 	readonly actions: RepoSurfaceActions
 }
 
 // Repo Surface shell. Owns the repository list derivation, the in-flight
 // repository-details fetch, selection clamping, and the repo-specific
-// favorite/remove actions. `openSelectedRepository` is App-shell glue
-// (it's just `switchViewTo({ _tag: "Repository", ... })`) and lives there
-// to avoid cycling with `useWorkspaceNavigation`. Cross-surface concerns
-// (preferences persistence, repo-rollup hydration on startup,
-// navigation-driven recents updates) read the atoms or setters exposed
-// in the return value.
+// favorite/remove actions. Everything reactive is returned as an accessor.
 export const useRepoSurface = (input: UseRepoSurfaceInput): RepoSurfaceShell => {
 	const { pullRequests, allIssues, visibleFilterText, activeWorkspaceSurface, detectedRepository, mockRepositoryCatalog, flashNotice } = input
 
-	const [selectedRepositoryIndex, setSelectedRepositoryIndex] = useAtom(selectedRepositoryIndexAtom)
-	const [favoriteRepositories, setFavoriteRepositories] = useAtom(favoriteRepositoriesAtom)
-	const [recentRepositories, setRecentRepositories] = useAtom(recentRepositoriesAtom)
-	const repoRollup = useAtomValue(repoRollupAtom)
-	const setRepoRollup = useAtomSet(repoRollupAtom)
+	const selectedRepositoryIndex = useAtomValueSolid(() => selectedRepositoryIndexAtom)
+	const setSelectedRepositoryIndex = useAtomSetSolid(() => selectedRepositoryIndexAtom)
+	const favoriteRepositories = useAtomValueSolid(() => favoriteRepositoriesAtom)
+	const setFavoriteRepositories = useAtomSetSolid(() => favoriteRepositoriesAtom)
+	const recentRepositories = useAtomValueSolid(() => recentRepositoriesAtom)
+	const setRecentRepositories = useAtomSetSolid(() => recentRepositoriesAtom)
+	const repoRollup = useAtomValueSolid(() => repoRollupAtom)
+	const setRepoRollup = useAtomSetSolid(() => repoRollupAtom)
 
-	const allRepositoryItems = useMemo(
-		(): readonly RepositoryListItem[] =>
-			buildRepositoryItems({
-				recentRepositories,
-				favoriteRepositories,
-				detectedRepository,
-				repoRollup,
-				pullRequests,
-				allIssues,
-				mockRepositoryCatalog,
-			}),
-		[favoriteRepositories, recentRepositories, pullRequests, allIssues, repoRollup, detectedRepository, mockRepositoryCatalog],
+	const allRepositoryItems = createMemo((): readonly RepositoryListItem[] =>
+		buildRepositoryItems({
+			recentRepositories: recentRepositories(),
+			favoriteRepositories: favoriteRepositories(),
+			detectedRepository,
+			repoRollup: repoRollup(),
+			pullRequests,
+			allIssues,
+			mockRepositoryCatalog,
+		}),
 	)
-	const repositoryItems = useMemo(
-		() => (activeWorkspaceSurface === "repos" ? allRepositoryItems.filter((repository) => repositoryFilterScore(repository, visibleFilterText) !== null) : allRepositoryItems),
-		[activeWorkspaceSurface, allRepositoryItems, visibleFilterText],
+	const repositoryItems = createMemo(() =>
+		activeWorkspaceSurface === "repos" ? allRepositoryItems().filter((repository) => repositoryFilterScore(repository, visibleFilterText) !== null) : allRepositoryItems(),
 	)
-	const selectedRepositoryItem = repositoryItems[Math.max(0, Math.min(selectedRepositoryIndex, repositoryItems.length - 1))] ?? null
-	const selectedRepositoryDetails = useRepositoryDetails(selectedRepositoryItem?.repository ?? null)
+	const selectedRepositoryItem = createMemo(() => repositoryItems()[Math.max(0, Math.min(selectedRepositoryIndex(), repositoryItems().length - 1))] ?? null)
+	const selectedRepositoryDetails = useRepositoryDetails(() => selectedRepositoryItem()?.repository ?? null)
 
-	useClampedIndex(repositoryItems.length, setSelectedRepositoryIndex)
+	useClampedIndex(() => repositoryItems().length, setSelectedRepositoryIndex)
 
 	const toggleFavoriteRepository = () => {
-		if (!selectedRepositoryItem) return
-		const repository = selectedRepositoryItem.repository
+		const item = selectedRepositoryItem()
+		if (!item) return
+		const repository = item.repository
 		setFavoriteRepositories((current) => {
 			if (current[repository]) {
 				const next = { ...current }
@@ -99,15 +93,16 @@ export const useRepoSurface = (input: UseRepoSurfaceInput): RepoSurfaceShell => 
 	}
 
 	const removeSelectedRepository = () => {
-		if (!selectedRepositoryItem) return
-		const repository = selectedRepositoryItem.repository
+		const item = selectedRepositoryItem()
+		if (!item) return
+		const repository = item.repository
 		setFavoriteRepositories((current) => {
 			if (!current[repository]) return current
 			const next = { ...current }
 			delete next[repository]
 			return next
 		})
-		setRecentRepositories((current) => current.filter((item) => item !== repository))
+		setRecentRepositories((current) => current.filter((entry) => entry !== repository))
 		flashNotice(repository === detectedRepository ? `Removed saved state for ${repository}; current repo stays pinned` : `Removed ${repository} from tracked repositories`)
 	}
 

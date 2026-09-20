@@ -1,6 +1,6 @@
-import type { MutableRefObject } from "../solid-hooks.js"
+import type { MutableRefObject } from "../solid-utils.js"
 import type * as Atom from "effect/unstable/reactivity/Atom"
-import { useAtomSet } from "../atom-solid.js"
+import { useAtomSet as useAtomSetSolid } from "@effect/atom-solid"
 import { devLog } from "../devLog.js"
 import type { PullRequestItem } from "../domain.js"
 import { type PullRequestView, nextView, viewCacheKey, viewEquals } from "../pullRequestViews.js"
@@ -89,8 +89,8 @@ export const useWorkspaceNavigation = (input: UseWorkspaceNavigationInput): Work
 		resetHydration,
 		resetLoadingMore,
 	} = input
-	const setRecentRepositories = useAtomSet(recentRepositoriesAtom)
-	const setWorkspaceScope = useAtomSet(workspaceScopeAtom)
+	const setRecentRepositories = useAtomSetSolid(() => recentRepositoriesAtom)
+	const setWorkspaceScope = useAtomSetSolid(() => workspaceScopeAtom)
 
 	const switchViewTo = (view: PullRequestView) => {
 		const currentView = registry.get(activeViewAtom)

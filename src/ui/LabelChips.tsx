@@ -1,4 +1,4 @@
-import { Fragment } from "../solid-hooks.js"
+import { Fragment } from "../solid-utils.js"
 import type { PullRequestLabel } from "../domain.js"
 import { colors } from "./colors.js"
 import { labelColor, labelTextColor } from "./pullRequests.js"

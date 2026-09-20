@@ -1,4 +1,4 @@
-import type { ComponentProps } from "../solid-hooks.js"
+import type { ComponentProps } from "../solid-utils.js"
 import type { IssueItem, LoadStatus, PullRequestComment, PullRequestItem } from "../domain.js"
 import { ACTIVE_FILTER_BAR_HEIGHT } from "../ui/ActiveFilterBar.js"
 import type { DetailCommentsStatus } from "../ui/DetailsPane.js"

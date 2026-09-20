@@ -1,17 +1,18 @@
-import { useEffect, type MutableRefObject } from "../solid-hooks.js"
+import { createEffect } from "solid-js"
+import { readMaybeAccessor, type MaybeAccessor, type MutableRefObject } from "../solid-utils.js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import type { DiffCommentSide } from "../domain.js"
 import type { DiffFilePatch, StackedDiffCommentAnchor } from "../ui/diff.js"
 import { safeDiffFileIndex } from "../ui/diff.js"
 
 export interface UseDiffSelectionSyncInput {
-	readonly selectedIndex: number
-	readonly selectedIssueIndex: number
-	readonly selectedRepositoryIndex: number
-	readonly readyDiffFiles: readonly DiffFilePatch[]
-	readonly diffCommentAnchors: readonly StackedDiffCommentAnchor[]
-	readonly diffFullView: boolean
-	readonly selectedDiffCommentAnchor: StackedDiffCommentAnchor | null
+	readonly selectedIndex: MaybeAccessor<number>
+	readonly selectedIssueIndex: MaybeAccessor<number>
+	readonly selectedRepositoryIndex: MaybeAccessor<number>
+	readonly readyDiffFiles: MaybeAccessor<readonly DiffFilePatch[]>
+	readonly diffCommentAnchors: MaybeAccessor<readonly StackedDiffCommentAnchor[]>
+	readonly diffFullView: MaybeAccessor<boolean>
+	readonly selectedDiffCommentAnchor: MaybeAccessor<StackedDiffCommentAnchor | null>
 	readonly detailPreviewScrollRef: MutableRefObject<ScrollBoxRenderable | null>
 	readonly setDiffFileIndex: (next: number | ((current: number) => number)) => void
 	readonly setDiffScrollTop: (next: number) => void
@@ -31,56 +32,44 @@ export interface UseDiffSelectionSyncInput {
  *
  * Lives in its own hook so App.tsx doesn't carry five disjoint useEffects.
  */
-export const useDiffSelectionSync = ({
-	selectedIndex,
-	selectedIssueIndex,
-	selectedRepositoryIndex,
-	readyDiffFiles,
-	diffCommentAnchors,
-	diffFullView,
-	selectedDiffCommentAnchor,
-	detailPreviewScrollRef,
-	setDiffFileIndex,
-	setDiffScrollTop,
-	setDiffCommentAnchorIndex,
-	setDiffPreferredSide,
-	setDiffCommentRangeStartIndex,
-}: UseDiffSelectionSyncInput): void => {
-	useEffect(() => {
-		setDiffFileIndex(0)
-		setDiffScrollTop(0)
-		setDiffCommentAnchorIndex(0)
-		setDiffPreferredSide(null)
-		setDiffCommentRangeStartIndex(null)
-		detailPreviewScrollRef.current?.scrollTo({ x: 0, y: 0 })
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selectedIndex])
+export const useDiffSelectionSync = (input: UseDiffSelectionSyncInput): void => {
+	createEffect(() => {
+		readMaybeAccessor(input.selectedIndex)
+		input.setDiffFileIndex(0)
+		input.setDiffScrollTop(0)
+		input.setDiffCommentAnchorIndex(0)
+		input.setDiffPreferredSide(null)
+		input.setDiffCommentRangeStartIndex(null)
+		input.detailPreviewScrollRef.current?.scrollTo({ x: 0, y: 0 })
+	})
 
-	useEffect(() => {
-		detailPreviewScrollRef.current?.scrollTo({ x: 0, y: 0 })
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selectedIssueIndex, selectedRepositoryIndex])
+	createEffect(() => {
+		readMaybeAccessor(input.selectedIssueIndex)
+		readMaybeAccessor(input.selectedRepositoryIndex)
+		input.detailPreviewScrollRef.current?.scrollTo({ x: 0, y: 0 })
+	})
 
-	useEffect(() => {
-		setDiffFileIndex((current) => safeDiffFileIndex(readyDiffFiles, current))
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [readyDiffFiles.length])
+	createEffect(() => {
+		const readyDiffFiles = readMaybeAccessor(input.readyDiffFiles)
+		input.setDiffFileIndex((current) => safeDiffFileIndex(readyDiffFiles, current))
+	})
 
-	useEffect(() => {
-		setDiffCommentAnchorIndex((current) => {
+	createEffect(() => {
+		const diffCommentAnchors = readMaybeAccessor(input.diffCommentAnchors)
+		input.setDiffCommentAnchorIndex((current) => {
 			if (diffCommentAnchors.length === 0) return 0
 			return Math.max(0, Math.min(current, diffCommentAnchors.length - 1))
 		})
-		setDiffCommentRangeStartIndex((current) => {
+		input.setDiffCommentRangeStartIndex((current) => {
 			if (current === null || diffCommentAnchors.length === 0) return null
 			return Math.max(0, Math.min(current, diffCommentAnchors.length - 1))
 		})
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [diffCommentAnchors.length])
+	})
 
-	useEffect(() => {
-		if (!diffFullView || !selectedDiffCommentAnchor) return
-		setDiffFileIndex((current) => (current === selectedDiffCommentAnchor.fileIndex ? current : selectedDiffCommentAnchor.fileIndex))
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [diffFullView, selectedDiffCommentAnchor?.fileIndex])
+	createEffect(() => {
+		if (!readMaybeAccessor(input.diffFullView)) return
+		const selectedDiffCommentAnchor = readMaybeAccessor(input.selectedDiffCommentAnchor)
+		if (!selectedDiffCommentAnchor) return
+		input.setDiffFileIndex((current) => (current === selectedDiffCommentAnchor.fileIndex ? current : selectedDiffCommentAnchor.fileIndex))
+	})
 }

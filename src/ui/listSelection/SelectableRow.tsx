@@ -1,4 +1,5 @@
-import { type ReactNode, useState } from "../../solid-hooks.js"
+import { createSignal } from "solid-js"
+import { type ReactNode } from "../../solid-utils.js"
 import { colors, rowHoverBackground } from "../colors.js"
 
 // Row background formula used by every selectable list — selection beats
@@ -43,8 +44,8 @@ export const SelectableRow = (props: SelectableRowProps) => (
  * lists previously inlined three times.
  */
 export const useHoverState = <K extends string | number>() => {
-	const [hovered, setHovered] = useState<K | null>(null)
-	const isHovered = (key: K) => hovered === key
+	const [hovered, setHovered] = createSignal<K | null>(null)
+	const isHovered = (key: K) => hovered() === key
 	const onHoverChange = (key: K) => (next: boolean) => setHovered((current) => (next ? (current === key ? current : key) : current === key ? null : current))
 	return { isHovered, onHoverChange }
 }

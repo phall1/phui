@@ -1,12 +1,13 @@
-import { useEffect } from "../solid-hooks.js"
+import { createEffect, onCleanup } from "solid-js"
+import { readMaybeAccessor, type MaybeAccessor } from "../solid-utils.js"
 import { registerHandoff } from "../commands/handoffs.js"
 import type { PullRequestItem } from "../domain.js"
 import type { PullRequestView } from "../pullRequestViews.js"
 
 export interface UseCommandHandoffsInput {
 	readonly renderer: { destroy: () => void }
-	readonly selectedPullRequest: PullRequestItem | null
-	readonly selectedRepository: string | null
+	readonly selectedPullRequest: MaybeAccessor<PullRequestItem | null>
+	readonly selectedRepository: MaybeAccessor<string | null>
 	readonly refreshPullRequests: (message?: string, options?: { readonly resetTransientState?: boolean }) => void
 	readonly refreshIssues: () => void
 	readonly loadMorePullRequests: () => boolean | Promise<void> | void
@@ -37,72 +38,106 @@ export interface UseCommandHandoffsInput {
  *
  * Centralizing this here keeps App.tsx free of ~25 useEffect lines and
  * makes the bridge between hooks and commands a single seam.
+ *
+ * Selection inputs accept a value or an accessor; pass accessors so a
+ * re-registration sees the live selection instead of the setup snapshot.
  */
-export const useCommandHandoffs = ({
-	renderer,
-	selectedPullRequest,
-	selectedRepository,
-	refreshPullRequests,
-	refreshIssues,
-	loadMorePullRequests,
-	loadPullRequestDiff,
-	flashNotice,
-	switchViewTo,
-	openThemeModal,
-	openMergeModal,
-	openCommentsView,
-	openDiffView,
-	openChangedFilesModal,
-	toggleDiffFilePanel,
-	jumpDiffFile,
-	moveDiffCommentThread,
-	openSelectedDiffComment,
-	toggleDiffCommentRange,
-	openDiffCommentModal,
-	openReplyToSelectedComment,
-	openEditSelectedComment,
-	openDeleteSelectedComment,
-	queueDiffComment,
-}: UseCommandHandoffsInput): void => {
-	useEffect(() => registerHandoff("quit", () => renderer.destroy()), [renderer])
-	useEffect(() => registerHandoff("refreshPullRequests", () => refreshPullRequests("Refreshed", { resetTransientState: true })), [refreshPullRequests])
-	useEffect(() => registerHandoff("refreshIssues", refreshIssues), [refreshIssues])
-	useEffect(() => registerHandoff("loadMorePullRequests", () => void loadMorePullRequests()), [loadMorePullRequests])
-	useEffect(() => registerHandoff("openThemeModal", openThemeModal), [openThemeModal])
-	useEffect(() => registerHandoff("openMergeModal", openMergeModal), [openMergeModal])
-	useEffect(() => registerHandoff("openCommentsView", openCommentsView), [openCommentsView])
-	useEffect(() => registerHandoff("openDiffView", openDiffView), [openDiffView])
-	useEffect(
-		() =>
+export const useCommandHandoffs = (input: UseCommandHandoffsInput): void => {
+	createEffect(() => {
+		onCleanup(registerHandoff("quit", () => input.renderer.destroy()))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("refreshPullRequests", () => input.refreshPullRequests("Refreshed", { resetTransientState: true })))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("refreshIssues", input.refreshIssues))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("loadMorePullRequests", () => void input.loadMorePullRequests()))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openThemeModal", input.openThemeModal))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openMergeModal", input.openMergeModal))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openCommentsView", input.openCommentsView))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openDiffView", input.openDiffView))
+	})
+	createEffect(() => {
+		const selectedPullRequest = readMaybeAccessor(input.selectedPullRequest)
+		onCleanup(
 			registerHandoff("reloadDiff", () => {
 				if (!selectedPullRequest) return
-				loadPullRequestDiff(selectedPullRequest, { force: true, includeComments: true })
-				flashNotice(`Refreshing diff for #${selectedPullRequest.number}`)
+				input.loadPullRequestDiff(selectedPullRequest, { force: true, includeComments: true })
+				input.flashNotice(`Refreshing diff for #${selectedPullRequest.number}`)
 			}),
-		[selectedPullRequest, loadPullRequestDiff, flashNotice],
-	)
-	useEffect(() => registerHandoff("openChangedFilesModal", openChangedFilesModal), [openChangedFilesModal])
-	useEffect(() => registerHandoff("toggleDiffFilePanel", toggleDiffFilePanel), [toggleDiffFilePanel])
-	useEffect(() => registerHandoff("jumpDiffFileNext", () => jumpDiffFile(1)), [jumpDiffFile])
-	useEffect(() => registerHandoff("jumpDiffFilePrevious", () => jumpDiffFile(-1)), [jumpDiffFile])
-	useEffect(() => registerHandoff("moveDiffCommentThreadNext", () => moveDiffCommentThread(1)), [moveDiffCommentThread])
-	useEffect(() => registerHandoff("moveDiffCommentThreadPrevious", () => moveDiffCommentThread(-1)), [moveDiffCommentThread])
-	useEffect(() => registerHandoff("openSelectedDiffComment", openSelectedDiffComment), [openSelectedDiffComment])
-	useEffect(() => registerHandoff("toggleDiffCommentRange", toggleDiffCommentRange), [toggleDiffCommentRange])
-	useEffect(() => registerHandoff("openDiffCommentModal", openDiffCommentModal), [openDiffCommentModal])
-	useEffect(() => registerHandoff("openReplyToSelectedComment", openReplyToSelectedComment), [openReplyToSelectedComment])
-	useEffect(() => registerHandoff("openEditSelectedComment", openEditSelectedComment), [openEditSelectedComment])
-	useEffect(() => registerHandoff("openDeleteSelectedComment", openDeleteSelectedComment), [openDeleteSelectedComment])
-	useEffect(() => registerHandoff("queueDiffComment", queueDiffComment), [queueDiffComment])
-	useEffect(
-		() =>
+		)
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openChangedFilesModal", input.openChangedFilesModal))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("toggleDiffFilePanel", input.toggleDiffFilePanel))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("jumpDiffFileNext", () => input.jumpDiffFile(1)))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("jumpDiffFilePrevious", () => input.jumpDiffFile(-1)))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("moveDiffCommentThreadNext", () => input.moveDiffCommentThread(1)))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("moveDiffCommentThreadPrevious", () => input.moveDiffCommentThread(-1)))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openSelectedDiffComment", input.openSelectedDiffComment))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("toggleDiffCommentRange", input.toggleDiffCommentRange))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openDiffCommentModal", input.openDiffCommentModal))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openReplyToSelectedComment", input.openReplyToSelectedComment))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openEditSelectedComment", input.openEditSelectedComment))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("openDeleteSelectedComment", input.openDeleteSelectedComment))
+	})
+	createEffect(() => {
+		onCleanup(registerHandoff("queueDiffComment", input.queueDiffComment))
+	})
+	createEffect(() => {
+		const selectedRepository = readMaybeAccessor(input.selectedRepository)
+		onCleanup(
 			registerHandoff("viewRepository", () => {
-				if (selectedRepository !== null) switchViewTo({ _tag: "Repository", repository: selectedRepository })
+				if (selectedRepository !== null) input.switchViewTo({ _tag: "Repository", repository: selectedRepository })
 			}),
-		[selectedRepository, switchViewTo],
-	)
-	useEffect(() => registerHandoff("viewAuthored", () => switchViewTo({ _tag: "Queue", mode: "authored", repository: selectedRepository })), [selectedRepository, switchViewTo])
-	useEffect(() => registerHandoff("viewReview", () => switchViewTo({ _tag: "Queue", mode: "review", repository: selectedRepository })), [selectedRepository, switchViewTo])
-	useEffect(() => registerHandoff("viewAssigned", () => switchViewTo({ _tag: "Queue", mode: "assigned", repository: selectedRepository })), [selectedRepository, switchViewTo])
-	useEffect(() => registerHandoff("viewMentioned", () => switchViewTo({ _tag: "Queue", mode: "mentioned", repository: selectedRepository })), [selectedRepository, switchViewTo])
+		)
+	})
+	createEffect(() => {
+		const selectedRepository = readMaybeAccessor(input.selectedRepository)
+		onCleanup(registerHandoff("viewAuthored", () => input.switchViewTo({ _tag: "Queue", mode: "authored", repository: selectedRepository })))
+	})
+	createEffect(() => {
+		const selectedRepository = readMaybeAccessor(input.selectedRepository)
+		onCleanup(registerHandoff("viewReview", () => input.switchViewTo({ _tag: "Queue", mode: "review", repository: selectedRepository })))
+	})
+	createEffect(() => {
+		const selectedRepository = readMaybeAccessor(input.selectedRepository)
+		onCleanup(registerHandoff("viewAssigned", () => input.switchViewTo({ _tag: "Queue", mode: "assigned", repository: selectedRepository })))
+	})
+	createEffect(() => {
+		const selectedRepository = readMaybeAccessor(input.selectedRepository)
+		onCleanup(registerHandoff("viewMentioned", () => input.switchViewTo({ _tag: "Queue", mode: "mentioned", repository: selectedRepository })))
+	})
 }

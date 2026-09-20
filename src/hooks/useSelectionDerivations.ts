@@ -1,5 +1,5 @@
-import { useAtomValue } from "../atom-solid.js"
-import { useMemo } from "../solid-hooks.js"
+import { createMemo, type Accessor } from "solid-js"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import type { IssueItem, PullRequestComment, PullRequestItem, PullRequestLabel } from "../domain.js"
 import type { DetailCommentsStatus } from "../ui/DetailsPane.js"
 import {
@@ -16,50 +16,40 @@ import { readyDiffFilesAtom } from "../ui/diff/atoms.js"
 import { filterChangedFiles } from "../ui/modals/shared.js"
 
 export interface UseSelectionDerivationsInput {
-	readonly diffRenderView: DiffView
-	readonly contentWidth: number
-	readonly changedFilesModalActive: boolean
-	readonly changedFilesQuery: string
+	readonly diffRenderView: Accessor<DiffView>
+	readonly contentWidth: Accessor<number>
+	readonly changedFilesModalActive: Accessor<boolean>
+	readonly changedFilesQuery: Accessor<string>
 }
 
 export interface SelectionDerivations {
-	readonly selectedCommentSubject: IssueItem | PullRequestItem | null
-	readonly selectedCommentKey: string | null
-	readonly selectedItemLabels: readonly PullRequestLabel[]
-	readonly selectedComments: readonly PullRequestComment[]
-	readonly selectedCommentsStatus: DetailCommentsStatus
-	readonly selectedCommentsLoadState: CommentLoadState
-	readonly effectiveDiffRenderView: DiffView
-	readonly readyDiffFiles: readonly DiffFilePatch[]
-	readonly changedFileResults: ReturnType<typeof filterChangedFiles>
+	readonly selectedCommentSubject: Accessor<IssueItem | PullRequestItem | null>
+	readonly selectedCommentKey: Accessor<string | null>
+	readonly selectedItemLabels: Accessor<readonly PullRequestLabel[]>
+	readonly selectedComments: Accessor<readonly PullRequestComment[]>
+	readonly selectedCommentsStatus: Accessor<DetailCommentsStatus>
+	readonly selectedCommentsLoadState: Accessor<CommentLoadState>
+	readonly effectiveDiffRenderView: Accessor<DiffView>
+	readonly readyDiffFiles: Accessor<readonly DiffFilePatch[]>
+	readonly changedFileResults: Accessor<ReturnType<typeof filterChangedFiles>>
 }
 
-// Thin React-side wrapper over the selection-derived atoms. Items that can
-// be computed entirely from atoms (selectedComments, readyDiffFiles, …) live
-// in their respective atom modules — see `ui/comments/atoms.ts` and
-// `ui/diff/atoms.ts`. The hook still owns the few derivations that depend on
-// React-only state (terminal width, modal flags, the row-index lookup).
+// Thin wrapper over the selection-derived atoms. Items that can be computed
+// entirely from atoms (selectedComments, readyDiffFiles, …) live in their
+// respective atom modules — see `ui/comments/atoms.ts` and `ui/diff/atoms.ts`.
+// The hook owns the few derivations that depend on app-shell state (terminal
+// width, modal flags). Everything is returned as an accessor.
 export const useSelectionDerivations = ({ diffRenderView, contentWidth, changedFilesModalActive, changedFilesQuery }: UseSelectionDerivationsInput): SelectionDerivations => {
-	const selectedCommentSubject = useAtomValue(selectedCommentSubjectAtom)
-	const selectedCommentKey = useAtomValue(selectedCommentKeyAtom)
-	const selectedItemLabels = useAtomValue(selectedItemLabelsAtom)
-	const selectedComments = useAtomValue(selectedCommentsAtom)
-	const selectedCommentsStatus = useAtomValue(selectedCommentsStatusAtom)
-	const selectedCommentsLoadState = useAtomValue(selectedCommentsLoadStateAtom)
-	const readyDiffFiles = useAtomValue(readyDiffFilesAtom)
-
-	const effectiveDiffRenderView: DiffView = contentWidth >= 100 ? diffRenderView : "unified"
-	const changedFileResults = useMemo(
-		() => (changedFilesModalActive ? filterChangedFiles(readyDiffFiles, changedFilesQuery) : []),
-		[changedFilesModalActive, readyDiffFiles, changedFilesQuery],
-	)
+	const readyDiffFiles = useAtomValueSolid(() => readyDiffFilesAtom)
+	const effectiveDiffRenderView = createMemo<DiffView>(() => (contentWidth() >= 100 ? diffRenderView() : "unified"))
+	const changedFileResults = createMemo(() => (changedFilesModalActive() ? filterChangedFiles(readyDiffFiles(), changedFilesQuery()) : []))
 	return {
-		selectedCommentSubject,
-		selectedCommentKey,
-		selectedItemLabels,
-		selectedComments,
-		selectedCommentsStatus,
-		selectedCommentsLoadState,
+		selectedCommentSubject: useAtomValueSolid(() => selectedCommentSubjectAtom),
+		selectedCommentKey: useAtomValueSolid(() => selectedCommentKeyAtom),
+		selectedItemLabels: useAtomValueSolid(() => selectedItemLabelsAtom),
+		selectedComments: useAtomValueSolid(() => selectedCommentsAtom),
+		selectedCommentsStatus: useAtomValueSolid(() => selectedCommentsStatusAtom),
+		selectedCommentsLoadState: useAtomValueSolid(() => selectedCommentsLoadStateAtom),
 		effectiveDiffRenderView,
 		readyDiffFiles,
 		changedFileResults,

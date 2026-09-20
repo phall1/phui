@@ -1,7 +1,8 @@
-import { useEffect, useEffectEvent, type MutableRefObject } from "../../solid-hooks.js"
+import { createEffect, onCleanup, type Accessor } from "solid-js"
+import { type MutableRefObject, useRef } from "../../solid-utils.js"
 
 export interface UseIdleRefreshInput {
-	readonly enabled: boolean
+	readonly enabled: Accessor<boolean>
 	readonly lastRefreshAtRef: MutableRefObject<number>
 	readonly idleAfterMs: number
 	readonly jitterMs: number
@@ -10,7 +11,7 @@ export interface UseIdleRefreshInput {
 	 * Bumped externally each time the underlying refresh completes so the
 	 * effect reschedules from the new "now" instead of the original mount.
 	 */
-	readonly refreshGeneration: number | undefined
+	readonly refreshGeneration: Accessor<number | undefined>
 }
 
 /**
@@ -19,16 +20,17 @@ export interface UseIdleRefreshInput {
  * the terminal regains focus.
  */
 export const useIdleRefresh = ({ enabled, lastRefreshAtRef, idleAfterMs, jitterMs, onRefresh, refreshGeneration }: UseIdleRefreshInput): void => {
-	const refresh = useEffectEvent(onRefresh)
-	useEffect(() => {
-		if (!enabled) return
+	const onRefreshRef = useRef(onRefresh)
+	onRefreshRef.current = onRefresh
+	createEffect(() => {
+		if (!enabled()) return
+		refreshGeneration()
 		const lastRefreshAt = lastRefreshAtRef.current || Date.now()
 		const ageMs = Date.now() - lastRefreshAt
 		const delayMs = Math.max(0, idleAfterMs - ageMs) + Math.floor(Math.random() * jitterMs)
 		const timeout = globalThis.setTimeout(() => {
-			refresh(idleAfterMs)
+			onRefreshRef.current(idleAfterMs)
 		}, delayMs)
-		return () => globalThis.clearTimeout(timeout)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [enabled, refreshGeneration])
+		onCleanup(() => globalThis.clearTimeout(timeout))
+	})
 }

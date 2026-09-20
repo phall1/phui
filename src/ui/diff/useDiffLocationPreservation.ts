@@ -1,5 +1,6 @@
 import type { ScrollBoxRenderable } from "@opentui/core"
-import { type MutableRefObject, useEffect, useRef } from "../../solid-hooks.js"
+import { createEffect, onCleanup } from "solid-js"
+import { readMaybeAccessor, type MaybeAccessor, type MutableRefObject, useRef } from "../../solid-utils.js"
 import { registerHandoff } from "../../commands/handoffs.js"
 import { nearestDiffAnchorForLocation, type StackedDiffCommentAnchor } from "../diff.js"
 
@@ -13,12 +14,12 @@ interface PendingDiffLocationRestore {
 }
 
 export interface UseDiffLocationPreservationInput {
-	readonly diffFullView: boolean
-	readonly selectedDiffCommentAnchor: StackedDiffCommentAnchor | null
-	readonly diffCommentAnchors: readonly StackedDiffCommentAnchor[]
-	readonly diffWhitespaceMode: string // dependency that triggers restore re-run
+	readonly diffFullView: MaybeAccessor<boolean>
+	readonly selectedDiffCommentAnchor: MaybeAccessor<StackedDiffCommentAnchor | null>
+	readonly diffCommentAnchors: MaybeAccessor<readonly StackedDiffCommentAnchor[]>
+	readonly diffWhitespaceMode: MaybeAccessor<string> // dependency that triggers restore re-run
 	readonly diffScrollRef: MutableRefObject<ScrollBoxRenderable | null>
-	readonly wideBodyHeight: number
+	readonly wideBodyHeight: MaybeAccessor<number>
 	readonly suppressNextDiffCommentScrollRef: MutableRefObject<boolean>
 	readonly setDiffCommentAnchorIndex: (next: number) => void
 	readonly setDiffFileIndex: (next: number) => void
@@ -42,55 +43,44 @@ export interface UseDiffLocationPreservationResult {
  * a layout-settle retry loop until the scrollbox can actually reach
  * the target position.
  */
-export const useDiffLocationPreservation = ({
-	diffFullView,
-	selectedDiffCommentAnchor,
-	diffCommentAnchors,
-	diffWhitespaceMode,
-	diffScrollRef,
-	wideBodyHeight,
-	suppressNextDiffCommentScrollRef,
-	setDiffCommentAnchorIndex,
-	setDiffFileIndex,
-	syncDiffScrollState,
-}: UseDiffLocationPreservationInput): UseDiffLocationPreservationResult => {
+export const useDiffLocationPreservation = (input: UseDiffLocationPreservationInput): UseDiffLocationPreservationResult => {
 	const pendingDiffLocationRestoreRef = useRef<PendingDiffLocationRestore | null>(null)
 	const diffLocationRestoreTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-	useEffect(
-		() => () => {
-			if (diffLocationRestoreTimeoutRef.current !== null) clearTimeout(diffLocationRestoreTimeoutRef.current)
-		},
-		[],
-	)
+	onCleanup(() => {
+		if (diffLocationRestoreTimeoutRef.current !== null) clearTimeout(diffLocationRestoreTimeoutRef.current)
+	})
 
-	useEffect(() => {
+	createEffect(() => {
+		const diffFullView = readMaybeAccessor(input.diffFullView)
+		readMaybeAccessor(input.diffWhitespaceMode)
+		const diffCommentAnchors = readMaybeAccessor(input.diffCommentAnchors)
 		const pending = pendingDiffLocationRestoreRef.current
 		if (!pending || !diffFullView || diffCommentAnchors.length === 0) return
 		pendingDiffLocationRestoreRef.current = null
 		const nextAnchor = nearestDiffAnchorForLocation(diffCommentAnchors, pending.anchor)
 		if (!nextAnchor) return
 		if (diffLocationRestoreTimeoutRef.current !== null) clearTimeout(diffLocationRestoreTimeoutRef.current)
-		suppressNextDiffCommentScrollRef.current = true
-		setDiffCommentAnchorIndex(diffCommentAnchors.indexOf(nextAnchor))
-		setDiffFileIndex(nextAnchor.fileIndex)
+		input.suppressNextDiffCommentScrollRef.current = true
+		input.setDiffCommentAnchorIndex(diffCommentAnchors.indexOf(nextAnchor))
+		input.setDiffFileIndex(nextAnchor.fileIndex)
 
 		let attempts = 0
 		const restoreScroll = () => {
 			attempts++
-			const scroll = diffScrollRef.current
+			const scroll = input.diffScrollRef.current
 			if (scroll) {
 				const viewportHeight = Math.max(1, scroll.viewport.height)
 				const maxScrollTop = Math.max(0, scroll.scrollHeight - viewportHeight)
 				const targetTop = Math.max(0, nextAnchor.renderLine - pending.screenOffset)
 				const nextTop = Math.min(maxScrollTop, targetTop)
-				suppressNextDiffCommentScrollRef.current = true
+				input.suppressNextDiffCommentScrollRef.current = true
 				if (Math.floor(scroll.scrollTop) !== nextTop) {
 					scroll.scrollTo({ x: 0, y: nextTop })
-					syncDiffScrollState()
+					input.syncDiffScrollState()
 				}
 				if (maxScrollTop >= targetTop && Math.floor(scroll.scrollTop) === targetTop) {
-					suppressNextDiffCommentScrollRef.current = false
+					input.suppressNextDiffCommentScrollRef.current = false
 					diffLocationRestoreTimeoutRef.current = null
 					return
 				}
@@ -98,17 +88,19 @@ export const useDiffLocationPreservation = ({
 			if (attempts < DIFF_SCROLL_RESTORE_ATTEMPTS) {
 				diffLocationRestoreTimeoutRef.current = globalThis.setTimeout(restoreScroll, DIFF_LAYOUT_RETRY_MS)
 			} else {
-				suppressNextDiffCommentScrollRef.current = false
+				input.suppressNextDiffCommentScrollRef.current = false
 				diffLocationRestoreTimeoutRef.current = null
 			}
 		}
 		diffLocationRestoreTimeoutRef.current = globalThis.setTimeout(restoreScroll, DIFF_LAYOUT_RETRY_MS)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [diffFullView, diffWhitespaceMode, diffCommentAnchors])
+	})
 
 	const preserveCurrentDiffLocation = () => {
+		const diffFullView = readMaybeAccessor(input.diffFullView)
+		const selectedDiffCommentAnchor = readMaybeAccessor(input.selectedDiffCommentAnchor)
 		if (diffFullView && selectedDiffCommentAnchor) {
-			const scroll = diffScrollRef.current
+			const scroll = input.diffScrollRef.current
+			const wideBodyHeight = readMaybeAccessor(input.wideBodyHeight)
 			const maxScreenOffset = Math.max(DIFF_STICKY_HEADER_LINES, (scroll?.viewport.height ?? wideBodyHeight) - 2)
 			const rawScreenOffset = scroll ? selectedDiffCommentAnchor.renderLine - Math.floor(scroll.scrollTop) : DIFF_STICKY_HEADER_LINES
 			pendingDiffLocationRestoreRef.current = {
@@ -123,7 +115,12 @@ export const useDiffLocationPreservation = ({
 	// triggers a re-render, so we capture the pre-mutation scrollTop and
 	// anchor.renderLine here. Re-register on dependency change so the
 	// closure reflects the live values.
-	useEffect(() => registerHandoff("preserveDiffLocation", preserveCurrentDiffLocation), [diffFullView, selectedDiffCommentAnchor, diffScrollRef, wideBodyHeight])
+	createEffect(() => {
+		readMaybeAccessor(input.diffFullView)
+		readMaybeAccessor(input.selectedDiffCommentAnchor)
+		readMaybeAccessor(input.wideBodyHeight)
+		onCleanup(registerHandoff("preserveDiffLocation", preserveCurrentDiffLocation))
+	})
 
 	return { preserveCurrentDiffLocation }
 }

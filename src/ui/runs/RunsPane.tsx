@@ -1,6 +1,6 @@
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
 import { createEffect, Match, Switch } from "solid-js"
-import { useRef, type ReactNode } from "../../solid-hooks.js"
+import { useRef, type ReactNode } from "../../solid-utils.js"
 import type { PullRequestItem, WorkflowRun, WorkflowRunDetails } from "../../domain.js"
 import { colors } from "../colors.js"
 import { centerCell, Divider, fitCell, Filler, PaddedRow, PlainLine, TextLine } from "../primitives.js"

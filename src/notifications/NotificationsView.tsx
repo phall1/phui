@@ -1,7 +1,8 @@
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
-import { useAtom, useAtomSet, useAtomValue } from "../atom-solid.js"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { createEffect, createMemo, onCleanup, onMount } from "solid-js"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
-import { useCallback, useEffect, useRef } from "../solid-hooks.js"
+import { useRef } from "../solid-utils.js"
 import { openUrlAtom } from "../services/systemAtoms.js"
 import { colors, mixHex } from "../ui/colors.js"
 import { centerCell, Divider, Filler, fitCell, PaddedRow, PlainLine, TextLine, trimCell } from "../ui/primitives.js"
@@ -189,53 +190,77 @@ const Rows = ({
  * to the keymap layer.
  */
 export const NotificationsView = ({ contentWidth, height, loadingIndicator, showScrollbar, onNotice }: NotificationsViewProps) => {
-	const result = useAtomValue(notificationsReportAtom)
-	const [selection, setSelection] = useAtom(notificationsSelectionAtom)
-	const [unreadOnly, setUnreadOnly] = useAtom(notificationsUnreadOnlyAtom)
-	const [participating, setParticipating] = useAtom(notificationsParticipatingAtom)
-	const [dismissed, setDismissed] = useAtom(notificationsDismissedAtom)
-	const [read, setRead] = useAtom(notificationsReadAtom)
-	const setRefreshes = useAtomSet(notificationsRefreshAtom)
-	const openUrl = useAtomSet(openUrlAtom, { mode: "promise" })
-	const markRead = useAtomSet(markNotificationReadAtom, { mode: "promise" })
-	const markDone = useAtomSet(markNotificationDoneAtom, { mode: "promise" })
-	const unsubscribe = useAtomSet(unsubscribeNotificationAtom, { mode: "promise" })
-	const markAll = useAtomSet(markAllNotificationsReadAtom, { mode: "promise" })
+	const result = useAtomValueSolid(() => notificationsReportAtom)
+	const selection = useAtomValueSolid(() => notificationsSelectionAtom)
+	const setSelection = useAtomSetSolid(() => notificationsSelectionAtom)
+	const unreadOnly = useAtomValueSolid(() => notificationsUnreadOnlyAtom)
+	const setUnreadOnly = useAtomSetSolid(() => notificationsUnreadOnlyAtom)
+	const participating = useAtomValueSolid(() => notificationsParticipatingAtom)
+	const setParticipating = useAtomSetSolid(() => notificationsParticipatingAtom)
+	const dismissed = useAtomValueSolid(() => notificationsDismissedAtom)
+	const setDismissed = useAtomSetSolid(() => notificationsDismissedAtom)
+	const read = useAtomValueSolid(() => notificationsReadAtom)
+	const setRead = useAtomSetSolid(() => notificationsReadAtom)
+	const setRefreshes = useAtomSetSolid(() => notificationsRefreshAtom)
+	const openUrl = useAtomSetSolid(() => openUrlAtom, { mode: "promise" })
+	const markRead = useAtomSetSolid(() => markNotificationReadAtom, { mode: "promise" })
+	const markDone = useAtomSetSolid(() => markNotificationDoneAtom, { mode: "promise" })
+	const unsubscribe = useAtomSetSolid(() => unsubscribeNotificationAtom, { mode: "promise" })
+	const markAll = useAtomSetSolid(() => markAllNotificationsReadAtom, { mode: "promise" })
 	const markAllReadArmedUntilRef = useRef(0)
 
 	// Chrome above the body: summary row + subline row + divider row = 3.
 	const bodyHeight = Math.max(1, height - 3)
 	const paneWidth = contentWidth + 2
 
-	const report = AsyncResult.isSuccess(result) ? result.value : null
-	const model = report ? notificationsRows(report, { unreadOnly, dismissed, read }) : { rows: [], selectable: [] }
-	const selectionIndex = clampSelection(selection, model.selectable.length)
-	const selectedRowIndex = model.selectable[selectionIndex] ?? -1
-	const selected = selectedNotification(model, selectionIndex)
+	const report = createMemo(() => {
+		const current = result()
+		return AsyncResult.isSuccess(current) ? current.value : null
+	})
+	const model = createMemo(() => {
+		const current = report()
+		return current ? notificationsRows(current, { unreadOnly: unreadOnly(), dismissed: dismissed(), read: read() }) : { rows: [], selectable: [] }
+	})
+	const selectionIndex = createMemo(() => clampSelection(selection(), model().selectable.length))
+	const selectedRowIndex = createMemo(() => model().selectable[selectionIndex()] ?? -1)
+	const selected = createMemo(() => selectedNotification(model(), selectionIndex()))
+	const visible = createMemo(() => {
+		const current = report()
+		return current ? visibleNotifications(current.items, { unreadOnly: false, dismissed: dismissed(), read: read() }) : []
+	})
+	const unread = createMemo(() => unreadCount(visible()))
 
 	// A fetch replaces the report wholesale, so the server has now agreed with
 	// whatever the overlays were asserting. Clearing them here (rather than at
 	// each mutation site) means a failed mutation's overlay also disappears on
 	// the next refresh instead of hiding a row forever.
-	const fetchedAtMs = report?.fetchedAt.getTime() ?? null
-	useEffect(() => {
-		if (fetchedAtMs === null) return
+	const fetchedAtMs = createMemo(() => report()?.fetchedAt.getTime() ?? null)
+	createEffect(() => {
+		if (fetchedAtMs() === null) return
 		setDismissed(new Set<string>())
 		setRead(new Set<string>())
-	}, [fetchedAtMs, setDismissed, setRead])
+	})
 
-	const refresh = useCallback(() => setRefreshes((current) => current + 1), [setRefreshes])
+	const refresh = () => setRefreshes((current) => current + 1)
 
-	useEffect(() => {
+	onMount(() => {
 		const timer = globalThis.setInterval(refresh, POLL_INTERVAL_MS)
-		return () => globalThis.clearInterval(timer)
-	}, [refresh])
+		onCleanup(() => globalThis.clearInterval(timer))
+	})
 
-	// Publish the imperative half of the surface to the keymap layer. Re-run on
-	// every render so the closures always see the current rows; cleared on
-	// unmount so the layer deactivates instead of acting on a stale view.
-	useEffect(() => {
-		const step = (delta: number) => setSelection((current) => clampSelection(clampSelection(current, model.selectable.length) + delta, model.selectable.length))
+	// Publish the imperative half of the surface to the keymap layer. Re-runs
+	// whenever the rows or filters change so the closures always see current
+	// state; cleared on unmount so the layer deactivates instead of acting on a
+	// stale view.
+	createEffect(() => {
+		const currentSelected = selected()
+		const currentModel = model()
+		const currentReport = report()
+		const currentUnread = unread()
+		const currentUnreadOnly = unreadOnly()
+		const currentParticipating = participating()
+
+		const step = (delta: number) => setSelection((current) => clampSelection(clampSelection(current, currentModel.selectable.length) + delta, currentModel.selectable.length))
 		const rememberRead = (id: string) => setRead((current) => new Set([...current, id]))
 
 		const openInBrowser = (item: NotificationItem) => {
@@ -249,44 +274,44 @@ export const NotificationsView = ({ contentWidth, height, loadingIndicator, show
 		}
 
 		const handle: InboxViewHandle = {
-			hasSelection: selected !== null,
-			canOpenInApp: selected !== null && isOpenableInApp(selected) && inboxNavigator() !== null,
-			unreadOnly,
-			participatingOnly: participating,
+			hasSelection: currentSelected !== null,
+			canOpenInApp: currentSelected !== null && isOpenableInApp(currentSelected) && inboxNavigator() !== null,
+			unreadOnly: currentUnreadOnly,
+			participatingOnly: currentParticipating,
 			moveSelection: step,
-			moveSelectionToBoundary: (boundary) => setSelection(boundary === "first" ? 0 : Math.max(0, model.selectable.length - 1)),
+			moveSelectionToBoundary: (boundary) => setSelection(boundary === "first" ? 0 : Math.max(0, currentModel.selectable.length - 1)),
 
 			// `enter` prefers phui and falls back to the browser, rather than
 			// refusing: a release or a discussion is still something you wanted to
 			// look at, and a dead key on those rows would teach you to stop pressing
 			// it on the rows where it does work.
 			openSelected: () => {
-				if (!selected) return
+				if (!currentSelected) return
 				const navigator = inboxNavigator()
-				if (navigator && isOpenableInApp(selected) && selected.number !== null) {
-					rememberRead(selected.id)
-					void markRead(selected.id).catch(() => undefined)
-					const target = { repository: selected.repository, number: selected.number }
-					if (selected.subjectType === "PullRequest") {
-						void navigator.openPullRequest(target).catch(() => onNotice(`Could not open ${selected.repository}#${selected.number}.`))
+				if (navigator && isOpenableInApp(currentSelected) && currentSelected.number !== null) {
+					rememberRead(currentSelected.id)
+					void markRead(currentSelected.id).catch(() => undefined)
+					const target = { repository: currentSelected.repository, number: currentSelected.number }
+					if (currentSelected.subjectType === "PullRequest") {
+						void navigator.openPullRequest(target).catch(() => onNotice(`Could not open ${currentSelected.repository}#${currentSelected.number}.`))
 					} else {
 						navigator.openIssue(target)
-						onNotice(`${selected.repository} issues — looking for #${selected.number}`)
+						onNotice(`${currentSelected.repository} issues — looking for #${currentSelected.number}`)
 					}
 					return
 				}
-				openInBrowser(selected)
+				openInBrowser(currentSelected)
 			},
 			openSelectedInBrowser: () => {
-				if (selected) openInBrowser(selected)
+				if (currentSelected) openInBrowser(currentSelected)
 			},
 
 			// Done is the action that actually empties a queue, so it is optimistic:
 			// the row leaves now and the request settles behind it. A failure puts
 			// it back rather than leaving a phantom gap.
 			markSelectedDone: () => {
-				if (!selected) return
-				const id = selected.id
+				if (!currentSelected) return
+				const id = currentSelected.id
 				setDismissed((current) => new Set([...current, id]))
 				void markDone(id).catch(() => {
 					setDismissed((current) => new Set([...current].filter((value) => value !== id)))
@@ -294,9 +319,9 @@ export const NotificationsView = ({ contentWidth, height, loadingIndicator, show
 				})
 			},
 			toggleSelectedRead: () => {
-				if (!selected) return
-				const id = selected.id
-				if (!selected.unread) {
+				if (!currentSelected) return
+				const id = currentSelected.id
+				if (!currentSelected.unread) {
 					onNotice("GitHub has no API for marking a single thread unread again.")
 					return
 				}
@@ -307,8 +332,8 @@ export const NotificationsView = ({ contentWidth, height, loadingIndicator, show
 				})
 			},
 			unsubscribeSelected: () => {
-				if (!selected) return
-				const id = selected.id
+				if (!currentSelected) return
+				const id = currentSelected.id
 				setDismissed((current) => new Set([...current, id]))
 				void unsubscribe(id).catch(() => {
 					setDismissed((current) => new Set([...current].filter((value) => value !== id)))
@@ -316,8 +341,8 @@ export const NotificationsView = ({ contentWidth, height, loadingIndicator, show
 				})
 			},
 			markAllRead: () => {
-				if (!report) return
-				const count = unreadCount(visibleNotifications(report.items, { unreadOnly: false, dismissed, read }))
+				if (!currentReport) return
+				const count = currentUnread
 				if (count === 0) {
 					markAllReadArmedUntilRef.current = 0
 					onNotice("Nothing unread.")
@@ -330,8 +355,8 @@ export const NotificationsView = ({ contentWidth, height, loadingIndicator, show
 					return
 				}
 				markAllReadArmedUntilRef.current = 0
-				setRead(new Set(report.items.map((item) => item.id)))
-				void markAll(report.fetchedAt)
+				setRead(new Set(currentReport.items.map((item) => item.id)))
+				void markAll(currentReport.fetchedAt)
 					.then(() => onNotice(`Marked ${count} ${count === 1 ? "notification" : "notifications"} read.`))
 					.catch(() => {
 						setRead(new Set<string>())
@@ -349,51 +374,59 @@ export const NotificationsView = ({ contentWidth, height, loadingIndicator, show
 			refresh,
 		}
 		setInboxViewHandle(handle)
-		return () => clearInboxViewHandle(handle)
+		onCleanup(() => clearInboxViewHandle(handle))
 	})
 
 	// Every row is height 1, so the row index is the scroll offset.
-	const needsScroll = model.rows.length > bodyHeight
+	const needsScroll = createMemo(() => model().rows.length > bodyHeight)
 	const scrollboxRef = useRef<ScrollBoxRenderable | null>(null)
-	useEffect(() => {
-		if (!needsScroll || selectedRowIndex < 0) return
+	createEffect(() => {
+		const currentNeedsScroll = needsScroll()
+		const currentSelectedRowIndex = selectedRowIndex()
+		if (!currentNeedsScroll || currentSelectedRowIndex < 0) return
 		const scrollbox = scrollboxRef.current
 		if (!scrollbox) return
 		const viewportTop = scrollbox.scrollTop
-		if (selectedRowIndex < viewportTop) scrollbox.scrollTo({ x: 0, y: selectedRowIndex })
-		else if (selectedRowIndex + 1 > viewportTop + bodyHeight) scrollbox.scrollTo({ x: 0, y: Math.max(0, selectedRowIndex + 1 - bodyHeight) })
-	}, [selectedRowIndex, needsScroll, bodyHeight, model.rows.length])
+		if (currentSelectedRowIndex < viewportTop) scrollbox.scrollTo({ x: 0, y: currentSelectedRowIndex })
+		else if (currentSelectedRowIndex + 1 > viewportTop + bodyHeight) scrollbox.scrollTo({ x: 0, y: Math.max(0, currentSelectedRowIndex + 1 - bodyHeight) })
+	})
 
 	const now = new Date()
-	const visible = report ? visibleNotifications(report.items, { unreadOnly: false, dismissed, read }) : []
-	const unread = unreadCount(visible)
 
-	const summaryLeft = (() => {
-		if (!report) return `${loadingIndicator} Loading inbox`
-		if (visible.length === 0) return "Inbox zero"
-		return unread === 0 ? `${visible.length} threads · all read` : `${unread} unread`
-	})()
+	const summaryLeft = createMemo(() => {
+		const currentReport = report()
+		const currentVisible = visible()
+		if (!currentReport) return `${loadingIndicator} Loading inbox`
+		if (currentVisible.length === 0) return "Inbox zero"
+		return unread() === 0 ? `${currentVisible.length} threads · all read` : `${unread()} unread`
+	})
 
-	const summaryRight = (() => {
-		if (!report) return ""
-		const filters = [unreadOnly ? "unread only" : "all threads", ...(participating ? ["participating"] : [])]
-		return `${filters.join(" · ")} · ${lastUpdatedText(report.fetchedAt, now)}`
-	})()
+	const summaryRight = createMemo(() => {
+		const currentReport = report()
+		if (!currentReport) return ""
+		const filters = [unreadOnly() ? "unread only" : "all threads", ...(participating() ? ["participating"] : [])]
+		return `${filters.join(" · ")} · ${lastUpdatedText(currentReport.fetchedAt, now)}`
+	})
 
-	const subline = (() => {
-		if (!report) return "Reading GitHub notifications through gh"
-		if (selected) return selected.url ?? `${selected.repository} · ${selected.subjectType}`
+	const subline = createMemo(() => {
+		const currentReport = report()
+		const currentSelected = selected()
+		if (!currentReport) return "Reading GitHub notifications through gh"
+		if (currentSelected) return currentSelected.url ?? `${currentSelected.repository} · ${currentSelected.subjectType}`
 		return "enter open · o browser · d done · m read · u unread-only · p participating · shift-a read all · r refresh"
-	})()
+	})
 
-	const body = (() => {
-		if (!report) return <SkeletonList contentWidth={paneWidth} rowCount={skeletonRowCountForHeight(bodyHeight, true)} compact />
-		if (model.rows.length === 0) {
+	const body = createMemo(() => {
+		const currentReport = report()
+		const currentModel = model()
+		const currentSelectedRowIndex = selectedRowIndex()
+		if (!currentReport) return <SkeletonList contentWidth={paneWidth} rowCount={skeletonRowCountForHeight(bodyHeight, true)} compact />
+		if (currentModel.rows.length === 0) {
 			return (
 				<Centered
 					lines={[
-						{ text: unreadOnly ? "Inbox zero — nothing unread." : "Inbox zero — nothing here at all.", fg: colors.text },
-						{ text: unreadOnly ? "press u to include threads you have already read · r to refresh" : "press r to refresh", fg: colors.muted },
+						{ text: unreadOnly() ? "Inbox zero — nothing unread." : "Inbox zero — nothing here at all.", fg: colors.text },
+						{ text: unreadOnly() ? "press u to include threads you have already read · r to refresh" : "press r to refresh", fg: colors.muted },
 					]}
 					width={contentWidth}
 					height={bodyHeight}
@@ -401,37 +434,45 @@ export const NotificationsView = ({ contentWidth, height, loadingIndicator, show
 				/>
 			)
 		}
-		return <Rows rows={model.rows} width={paneWidth} selectedRowIndex={selectedRowIndex} now={now} onSelect={(rowIndex) => setSelection(model.selectable.indexOf(rowIndex))} />
-	})()
+		return (
+			<Rows
+				rows={currentModel.rows}
+				width={paneWidth}
+				selectedRowIndex={currentSelectedRowIndex}
+				now={now}
+				onSelect={(rowIndex) => setSelection(currentModel.selectable.indexOf(rowIndex))}
+			/>
+		)
+	})
 
-	const summaryRightWidth = Math.min(summaryRight.length, Math.max(0, Math.floor(contentWidth * 0.5)))
-	const summaryLeftWidth = Math.max(1, contentWidth - summaryRightWidth - 1)
+	const summaryRightWidth = createMemo(() => Math.min(summaryRight().length, Math.max(0, Math.floor(contentWidth * 0.5))))
+	const summaryLeftWidth = createMemo(() => Math.max(1, contentWidth - summaryRightWidth() - 1))
 
 	return (
 		<box flexDirection="column" height={height} backgroundColor={colors.background}>
 			<PaddedRow>
 				<TextLine>
-					<span fg={unread > 0 ? colors.accent : colors.muted} attributes={TextAttributes.BOLD}>
-						{fitCell(summaryLeft, summaryLeftWidth)}
+					<span fg={unread() > 0 ? colors.accent : colors.muted} attributes={TextAttributes.BOLD}>
+						{fitCell(summaryLeft(), summaryLeftWidth())}
 					</span>
 					<span> </span>
-					<span fg={colors.muted}>{fitCell(summaryRight, summaryRightWidth)}</span>
+					<span fg={colors.muted}>{fitCell(summaryRight(), summaryRightWidth())}</span>
 				</TextLine>
 			</PaddedRow>
 			<PaddedRow>
 				<TextLine>
-					<span fg={colors.muted}>{fitCell(subline, contentWidth)}</span>
+					<span fg={colors.muted}>{fitCell(subline(), contentWidth)}</span>
 				</TextLine>
 			</PaddedRow>
 			<Divider width={paneWidth} />
 			<box height={bodyHeight} flexDirection="column">
-				{needsScroll ? (
+				{needsScroll() ? (
 					<scrollbox ref={scrollboxRef} focusable={false} flexGrow={1} verticalScrollbarOptions={{ visible: showScrollbar }}>
-						{body}
+						{body()}
 					</scrollbox>
 				) : (
 					<box flexGrow={1} flexDirection="column">
-						{body}
+						{body()}
 					</box>
 				)}
 			</box>

@@ -1,7 +1,8 @@
-import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "../atom-solid.js"
+import { RegistryContext, useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
-import { useCallback, useContext, useEffect, useRef, useState } from "../solid-hooks.js"
+import { createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { useContext, useRef } from "../solid-utils.js"
 import type { AppCommand } from "../commands.js"
 import type { PhuiLaunchIntent, PhuiLaunchView } from "../launchIntent.js"
 import { applyLaunchIntent, findLaunchPullRequestIndex, pullRequestLaunchViewState } from "../launchBootstrap.js"
@@ -82,53 +83,53 @@ export interface UseAppShellInput {
 export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShellInput) => {
 	const renderer = useRenderer()
 	const dimensions = useTerminalDimensions()
-	const { width, height } = dimensions()
 	const registry = useContext(RegistryContext)
 
-	const setQueueSelection = useAtomSet(queueSelectionAtom)
-	const setPendingIssueSelection = useAtomSet(pendingIssueSelectionAtom)
-	const [selectedIndex, setSelectedIndex] = useAtom(selectedIndexAtom)
-	const [notice, setNotice] = useAtom(noticeAtom)
-	const [filterQuery, setFilterQuery] = useAtom(filterQueryAtom)
-	const [filterDraft, setFilterDraft] = useAtom(filterDraftAtom)
-	const [filterMode, setFilterMode] = useAtom(filterModeAtom)
-	const {
-		detailFullView,
-		setDetailFullView,
-		setDetailScrollOffset,
-		diffFullView,
-		setDiffFullView,
-		runsFullView,
-		setRunsFullView,
-		commentsViewActive,
-		setCommentsViewActive,
-		commentsViewSelection,
-		setCommentsViewSelection,
-	} = useViewModeState()
-	const {
-		diffFileIndex,
-		setDiffFileIndex,
-		diffScrollTop,
-		setDiffScrollTop,
-		diffRenderView,
-		setDiffRenderView,
-		diffWrapMode,
-		diffWhitespaceMode,
-		diffCommentAnchorIndex,
-		setDiffCommentAnchorIndex,
-		diffPreferredSide,
-		setDiffPreferredSide,
-		diffCommentRangeStartIndex,
-		setDiffCommentRangeStartIndex,
-		diffCommentThreads,
-		setDiffCommentThreads,
-		setDiffCommentsLoaded,
-		setPullRequestDiffCache,
-	} = useDiffViewState()
-	const setPullRequestComments = useAtomSet(pullRequestCommentsAtom)
-	const setPullRequestCommentsLoaded = useAtomSet(pullRequestCommentsLoadedAtom)
-	const themeId = useAtomValue(themeIdAtom)
-	const showScrollbars = useAtomValue(showScrollbarsAtom)
+	const setQueueSelection = useAtomSetSolid(() => queueSelectionAtom)
+	const setPendingIssueSelection = useAtomSetSolid(() => pendingIssueSelectionAtom)
+	const selectedIndex = useAtomValueSolid(() => selectedIndexAtom)()
+	const setSelectedIndex = useAtomSetSolid(() => selectedIndexAtom)
+	const notice = useAtomValueSolid(() => noticeAtom)()
+	const setNotice = useAtomSetSolid(() => noticeAtom)
+	const filterQuery = useAtomValueSolid(() => filterQueryAtom)()
+	const setFilterQuery = useAtomSetSolid(() => filterQueryAtom)
+	const filterDraft = useAtomValueSolid(() => filterDraftAtom)()
+	const setFilterDraft = useAtomSetSolid(() => filterDraftAtom)
+	const filterMode = useAtomValueSolid(() => filterModeAtom)()
+	const setFilterMode = useAtomSetSolid(() => filterModeAtom)
+	const viewMode = useViewModeState()
+	const detailFullView = viewMode.detailFullView()
+	const setDetailFullView = viewMode.setDetailFullView
+	const setDetailScrollOffset = viewMode.setDetailScrollOffset
+	const diffFullView = viewMode.diffFullView()
+	const setDiffFullView = viewMode.setDiffFullView
+	const runsFullView = viewMode.runsFullView()
+	const setRunsFullView = viewMode.setRunsFullView
+	const commentsViewActive = viewMode.commentsViewActive()
+	const setCommentsViewActive = viewMode.setCommentsViewActive
+	const commentsViewSelection = viewMode.commentsViewSelection()
+	const setCommentsViewSelection = viewMode.setCommentsViewSelection
+	const diffView = useDiffViewState()
+	const diffFileIndex = diffView.diffFileIndex()
+	const setDiffFileIndex = diffView.setDiffFileIndex
+	const diffScrollTop = diffView.diffScrollTop()
+	const setDiffScrollTop = diffView.setDiffScrollTop
+	const setDiffRenderView = diffView.setDiffRenderView
+	const diffWrapMode = diffView.diffWrapMode()
+	const diffWhitespaceMode = diffView.diffWhitespaceMode()
+	const diffCommentAnchorIndex = diffView.diffCommentAnchorIndex()
+	const setDiffCommentAnchorIndex = diffView.setDiffCommentAnchorIndex
+	const diffPreferredSide = diffView.diffPreferredSide()
+	const setDiffPreferredSide = diffView.setDiffPreferredSide
+	const setDiffCommentRangeStartIndex = diffView.setDiffCommentRangeStartIndex
+	const diffCommentThreads = diffView.diffCommentThreads()
+	const setDiffCommentThreads = diffView.setDiffCommentThreads
+	const setDiffCommentsLoaded = diffView.setDiffCommentsLoaded
+	const setPullRequestDiffCache = diffView.setPullRequestDiffCache
+	const setPullRequestComments = useAtomSetSolid(() => pullRequestCommentsAtom)
+	const setPullRequestCommentsLoaded = useAtomSetSolid(() => pullRequestCommentsLoadedAtom)
+	const themeId = useAtomValueSolid(() => themeIdAtom)()
+	const showScrollbars = useAtomValueSolid(() => showScrollbarsAtom)()
 	const {
 		activeModal,
 		closeActiveModal,
@@ -172,15 +173,15 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		setOpenRepositoryModal,
 		setPromptModal,
 	} = useModalStack()
-	const [startupLoadComplete, setStartupLoadComplete] = useState(false)
-	const [homeCrumbHovered, setHomeCrumbHovered] = useState(false)
+	const [startupLoadComplete, setStartupLoadComplete] = createSignal(false)
+	const [homeCrumbHovered, setHomeCrumbHovered] = createSignal(false)
 	const launchIntentAppliedRef = useRef(false)
-	const [pendingLaunchPullRequest, setPendingLaunchPullRequest] = useState<{
+	const [pendingLaunchPullRequest, setPendingLaunchPullRequest] = createSignal<{
 		readonly repository: string
 		readonly number: number
 		readonly view: PhuiLaunchView
 	} | null>(null)
-	const usernameResult = useAtomValue(usernameAtom)
+	const usernameResult = useAtomValueSolid(() => usernameAtom)()
 	const {
 		addPullRequestLabel,
 		removePullRequestLabel,
@@ -201,37 +202,30 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		openUrl,
 		readRepoRollup,
 	} = useGitHubActions()
-	const terminalWidth = width ?? 100
-	const terminalHeight = height ?? 24
-	const terminalTooSmall = isTerminalTooSmall(terminalWidth, terminalHeight)
-	const showWorkspaceTabs = !detailFullView && !diffFullView && !runsFullView && !commentsViewActive
-	const diffFilePanelOverride = useAtomValue(diffFilePanelOverrideAtom)
-	const setDiffFilePanelOverride = useAtomSet(diffFilePanelOverrideAtom)
+	const diffFilePanelOverride = useAtomValueSolid(() => diffFilePanelOverrideAtom)
+	const setDiffFilePanelOverride = useAtomSetSolid(() => diffFilePanelOverrideAtom)
+	// Live terminal + layout. `dimensions()` is a Solid accessor, so the layout
+	// recomputes on resize instead of freezing at the size the shell first ran.
+	const terminalWidth = createMemo(() => dimensions().width ?? 100)
+	const terminalHeight = createMemo(() => dimensions().height ?? 24)
+	const terminalTooSmall = createMemo(() => isTerminalTooSmall(terminalWidth(), terminalHeight()))
+	const showWorkspaceTabs = createMemo(() => !viewMode.detailFullView() && !viewMode.diffFullView() && !viewMode.runsFullView() && !viewMode.commentsViewActive())
 	// Effective panel visibility: the override (true/false) wins if set, else
 	// auto-show whenever the terminal has room. Either way it only matters in
 	// diffFullView — the panel doesn't exist outside of the diff surface.
-	const diffFilePanelAutoVisible = terminalWidth >= DIFF_FILE_PANEL_AUTO_THRESHOLD
-	const diffFilePanelVisible = diffFullView && (diffFilePanelOverride ?? diffFilePanelAutoVisible)
-	const layout = computeLayout({
-		terminalWidth,
-		terminalHeight,
-		showWorkspaceTabs,
-		showDiffFilePanel: diffFilePanelVisible,
-		diffFilePanelWidth: diffFilePanelWidthFor(terminalWidth),
-	})
-	const {
-		contentWidth,
-		isWideLayout,
-		leftPaneWidth,
-		rightPaneWidth,
-		rightContentWidth,
-		dividerJunctionAt,
-		wideBodyHeight,
-		headerFooterWidth,
-		fullscreenContentWidth,
-		diffFilePanelEffectiveWidth,
-		diffPaneWidth,
-	} = layout
+	const diffFilePanelVisible = createMemo(() => viewMode.diffFullView() && (diffFilePanelOverride() ?? terminalWidth() >= DIFF_FILE_PANEL_AUTO_THRESHOLD))
+	const layout = createMemo(() =>
+		computeLayout({
+			terminalWidth: terminalWidth(),
+			terminalHeight: terminalHeight(),
+			showWorkspaceTabs: showWorkspaceTabs(),
+			showDiffFilePanel: diffFilePanelVisible(),
+			diffFilePanelWidth: diffFilePanelWidthFor(terminalWidth()),
+		}),
+	)
+	// Setup-time snapshot for the hooks below, which cannot take a reactive
+	// layout. The reactive `layout` above is what the returned shell reads.
+	const { contentWidth, isWideLayout, wideBodyHeight, diffPaneWidth } = layout()
 	const refreshGenerationRef = useRef(0)
 	const {
 		detailScrollRef,
@@ -246,20 +240,19 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 
 	const flashNotice = useFlashNotice()
 
-	useEffect(() => {
+	onMount(() => {
 		renderer.setBackgroundColor(colors.background)
-	}, [renderer, themeId, systemThemeGeneration])
+	})
 
 	const themeModalActions = useThemeModal({ themeModal, setThemeModal, closeActiveModal, flashNotice })
 
-	useEffect(
-		() => () => {
-			refreshGenerationRef.current += 1
-		},
-		[],
-	)
+	onCleanup(() => {
+		refreshGenerationRef.current += 1
+	})
 
-	const [activeWorkspaceSurface, setActiveWorkspaceSurface] = useAtom(workspaceSurfaceAtom)
+	const activeWorkspaceSurface = useAtomValueSolid(() => workspaceSurfaceAtom)()
+	const setActiveWorkspaceSurface = useAtomSetSolid(() => workspaceSurfaceAtom)
+	const activeWorkspaceSurfaceLive = useAtomValueSolid(() => workspaceSurfaceAtom)
 	const visibleFilterText = filterMode ? filterDraft : filterQuery
 	const username = AsyncResult.isSuccess(usernameResult) ? usernameResult.value : null
 
@@ -271,47 +264,45 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		setSelectedIndex,
 		setQueueSelection,
 		visibleFilterText,
-		activeWorkspaceSurface,
-		detailFullView,
-		diffFullView,
-		commentsViewActive,
+		activeWorkspaceSurface: activeWorkspaceSurfaceLive,
+		detailFullView: viewMode.detailFullView,
+		diffFullView: viewMode.diffFullView,
+		commentsViewActive: viewMode.commentsViewActive,
 		flashNotice,
 		prListScrollRef,
 		prListScrollPersistedRef,
 	})
-	const {
-		pullRequestResult,
-		pullRequestStatus,
-		pullRequestError,
-		activeView,
-		setActiveView,
-		activeViews,
-		currentQueueCacheKey,
-		pullRequestLoad,
-		hasMorePullRequests,
-		loadedPullRequestCount,
-		loadMoreRowSelected,
-		loadMoreSlotAvailable,
-		pullRequests,
-		visiblePullRequests,
-		visibleGroups,
-		selectedPullRequest,
-		selectedRepository,
-		pullRequestActiveFilterLabel,
-		compactPullRequestRows,
-		pullRequestListRows,
-		setPullRequestOverrides,
-		setRecentlyCompletedPullRequests,
-		retryProgress: pullRequestRetryProgress,
-		loadMorePullRequests,
-		isLoadingMorePullRequests,
-		resetLoadingMore,
-		cancelRefreshToast,
-		refreshPullRequests,
-		detailHydrationState,
-		resetHydration,
-		selectPullRequestByUrl,
-	} = prSurface
+	// Setup-time snapshots for the hooks below (which cannot take accessors);
+	// the shell memo reads the live accessors directly.
+	const pullRequestStatus = prSurface.pullRequestStatus()
+	const pullRequestError = prSurface.pullRequestError()
+	const activeView = prSurface.activeView()
+	const setActiveView = prSurface.setActiveView
+	const activeViews = prSurface.activeViews()
+	const currentQueueCacheKey = prSurface.currentQueueCacheKey()
+	const pullRequestLoad = prSurface.pullRequestLoad()
+	const hasMorePullRequests = prSurface.hasMorePullRequests()
+	const loadedPullRequestCount = prSurface.loadedPullRequestCount()
+	const loadMoreRowSelected = prSurface.loadMoreRowSelected()
+	const loadMoreSlotAvailable = prSurface.loadMoreSlotAvailable()
+	const pullRequests = prSurface.pullRequests()
+	const visiblePullRequests = prSurface.visiblePullRequests()
+	const visibleGroups = prSurface.visibleGroups()
+	const selectedPullRequest = prSurface.selectedPullRequest()
+	const selectedRepository = prSurface.selectedRepository()
+	const pullRequestActiveFilterLabel = prSurface.pullRequestActiveFilterLabel()
+	const compactPullRequestRows = prSurface.compactPullRequestRows()
+	const pullRequestListRows = prSurface.pullRequestListRows()
+	const setPullRequestOverrides = prSurface.setPullRequestOverrides
+	const setRecentlyCompletedPullRequests = prSurface.setRecentlyCompletedPullRequests
+	const pullRequestRetryProgress = prSurface.retryProgress()
+	const loadMorePullRequests = prSurface.loadMorePullRequests
+	const isLoadingMorePullRequests = prSurface.isLoadingMorePullRequests()
+	const resetLoadingMore = prSurface.resetLoadingMore
+	const cancelRefreshToast = prSurface.cancelRefreshToast
+	const refreshPullRequests = prSurface.refreshPullRequests
+	const resetHydration = prSurface.resetHydration
+	const selectPullRequestByUrl = prSurface.selectPullRequestByUrl
 	useTerminalTitle({
 		activeWorkspaceSurface,
 		selectedRepository,
@@ -321,52 +312,50 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		commentsViewActive,
 		runsFullView,
 	})
-	const isInitialLoading = !startupLoadComplete && pullRequestStatus === "loading" && pullRequests.length === 0
+	const isInitialLoading = !startupLoadComplete() && pullRequestStatus === "loading" && pullRequests.length === 0
 	const visibleNotice = visibleNoticeAfterInitialLoading(notice, isInitialLoading)
 	// Atom-side notices do not pass through `useFlashNotice`'s timer. Start their
 	// fallback timeout only once the normal notice surface is visible, so an
 	// early launch failure gets the full 2.5s interval without becoming sticky.
-	useEffect(() => {
+	createEffect(() => {
 		if (visibleNotice === null) return
 		const handle = globalThis.setTimeout(() => setNotice((current) => expireNotice(current, visibleNotice)), NOTICE_TIMEOUT_MS)
-		return () => globalThis.clearTimeout(handle)
-	}, [setNotice, visibleNotice])
+		onCleanup(() => globalThis.clearTimeout(handle))
+	})
 
 	const issueSurface = useIssueSurface({
 		username,
-		activeWorkspaceSurface,
-		detailFullView,
-		diffFullView,
-		commentsViewActive,
+		activeWorkspaceSurface: activeWorkspaceSurfaceLive,
+		detailFullView: viewMode.detailFullView,
+		diffFullView: viewMode.diffFullView,
+		commentsViewActive: viewMode.commentsViewActive,
 		refreshGenerationRef,
 		flashNotice,
 		issueListScrollRef,
 		issueListScrollPersistedRef,
 	})
-	const {
-		issues,
-		allIssues,
-		issueLoad,
-		issuesStatus,
-		issuesError,
-		selectedIssue,
-		selectedIssueIndex,
-		setSelectedIssueIndex,
-		activeIssueView,
-		setActiveIssueView,
-		hasMoreIssues,
-		loadedIssueCount,
-		loadMoreIssueRowSelected,
-		issueLoadMoreSlotAvailable,
-		issueFetchInFlight,
-		retryProgress: issueRetryProgress,
-		issueActiveFilterLabel,
-		setIssueOverrides,
-		showIssueRepositoryGroups,
-		loadMoreIssues,
-		isLoadingMoreIssues,
-		resetLoadingMoreIssues,
-	} = issueSurface
+	const issues = issueSurface.issues()
+	const allIssues = issueSurface.allIssues()
+	const issueLoad = issueSurface.issueLoad()
+	const issuesStatus = issueSurface.issuesStatus()
+	const issuesError = issueSurface.issuesError()
+	const selectedIssue = issueSurface.selectedIssue()
+	const selectedIssueIndex = issueSurface.selectedIssueIndex()
+	const setSelectedIssueIndex = issueSurface.setSelectedIssueIndex
+	const activeIssueView = issueSurface.activeIssueView()
+	const setActiveIssueView = issueSurface.setActiveIssueView
+	const hasMoreIssues = issueSurface.hasMoreIssues()
+	const loadedIssueCount = issueSurface.loadedIssueCount()
+	const loadMoreIssueRowSelected = issueSurface.loadMoreIssueRowSelected()
+	const issueLoadMoreSlotAvailable = issueSurface.issueLoadMoreSlotAvailable()
+	const issueFetchInFlight = issueSurface.issueFetchInFlight()
+	const issueRetryProgress = issueSurface.retryProgress()
+	const issueActiveFilterLabel = issueSurface.issueActiveFilterLabel()
+	const setIssueOverrides = issueSurface.setIssueOverrides
+	const showIssueRepositoryGroups = issueSurface.showIssueRepositoryGroups()
+	const loadMoreIssues = issueSurface.loadMoreIssues
+	const isLoadingMoreIssues = issueSurface.isLoadingMoreIssues()
+	const resetLoadingMoreIssues = issueSurface.resetLoadingMoreIssues
 	const retryProgress = activeWorkspaceSurface === "issues" ? issueRetryProgress : pullRequestRetryProgress
 	const refreshIssuesIfIdle = () => {
 		if (!issueFetchInFlight && !isLoadingMoreIssues) refreshIssues()
@@ -376,7 +365,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// Subscribed here rather than inside the Inbox so the tab badge is live
 	// before you ever open the surface — the whole point being that phui, not
 	// github.com, is where you notice you have been asked for a review.
-	const notificationsResult = useAtomValue(notificationsReportAtom)
+	const notificationsResult = useAtomValueSolid(() => notificationsReportAtom)()
 	const notificationsUnreadCount = AsyncResult.isSuccess(notificationsResult) ? unreadCount(notificationsResult.value.items) : null
 	const repo = useRepoSurface({
 		pullRequests,
@@ -387,74 +376,64 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		mockRepositoryCatalog,
 		flashNotice,
 	})
-	const {
-		repositoryItems,
-		selectedRepositoryItem,
-		selectedRepositoryDetails,
-		selectedRepositoryIndex,
-		setSelectedRepositoryIndex,
-		favoriteRepositories,
-		setFavoriteRepositories,
-		recentRepositories,
-		setRecentRepositories,
-		setRepoRollup,
-	} = repo
+	const repositoryItems = repo.repositoryItems()
+	const selectedRepositoryItem = repo.selectedRepositoryItem()
+	const selectedRepositoryDetails = repo.selectedRepositoryDetails()
+	const selectedRepositoryIndex = repo.selectedRepositoryIndex()
+	const setSelectedRepositoryIndex = repo.setSelectedRepositoryIndex
+	const favoriteRepositories = repo.favoriteRepositories()
+	const setFavoriteRepositories = repo.setFavoriteRepositories
+	const recentRepositories = repo.recentRepositories()
+	const setRecentRepositories = repo.setRecentRepositories
+	const setRepoRollup = repo.setRepoRollup
 	const { toggleFavoriteRepository, removeSelectedRepository } = repo.actions
-	const pullRequestComments = useAtomValue(pullRequestCommentsAtom)
-	const selectedDiffKey = useAtomValue(selectedDiffKeyAtom)
-	const selectedDiffState = useAtomValue(selectedDiffStateAtom)
-	const {
-		selectedCommentSubject,
-		selectedCommentKey,
-		selectedItemLabels,
-		selectedComments,
-		selectedCommentsStatus,
-		selectedCommentsLoadState,
-		effectiveDiffRenderView,
-		readyDiffFiles,
-		changedFileResults,
-	} = useSelectionDerivations({
-		diffRenderView,
-		contentWidth,
-		changedFilesModalActive,
-		changedFilesQuery: changedFilesModal.query,
+	const pullRequestComments = useAtomValueSolid(() => pullRequestCommentsAtom)()
+	const selectedDiffKey = useAtomValueSolid(() => selectedDiffKeyAtom)()
+	const selectedDiffState = useAtomValueSolid(() => selectedDiffStateAtom)()
+	const selection = useSelectionDerivations({
+		diffRenderView: diffView.diffRenderView,
+		contentWidth: () => contentWidth,
+		changedFilesModalActive: () => changedFilesModalActive,
+		changedFilesQuery: () => changedFilesModal.query,
 	})
-	const {
-		displayedDiffState,
-		stackedDiffFiles,
-		diffCommentAnchors,
-		selectedDiffCommentAnchorIndex,
-		selectedDiffCommentAnchor,
-		diffCommentRangeStartAnchor,
-		selectedDiffCommentRangeAnchors,
-		diffCommentRangeActive,
-		selectedDiffCommentLabel,
-		selectedDiffCommentThread,
-		diffLineColorContextKey,
-		diffCommentThreadAnchors,
-	} = useDiffCommentDerivations({
-		selectedDiffState,
-		readyDiffFiles,
-		effectiveDiffRenderView,
-		diffWrapMode,
-		diffWhitespaceMode,
+	const selectedCommentSubject = selection.selectedCommentSubject()
+	const selectedCommentKey = selection.selectedCommentKey()
+	const selectedItemLabels = selection.selectedItemLabels()
+	const selectedComments = selection.selectedComments()
+	const selectedCommentsStatus = selection.selectedCommentsStatus()
+	const selectedCommentsLoadState = selection.selectedCommentsLoadState()
+	const effectiveDiffRenderView = selection.effectiveDiffRenderView()
+	const readyDiffFiles = selection.readyDiffFiles()
+	const changedFileResults = selection.changedFileResults()
+	const diffDerivations = useDiffCommentDerivations({
+		selectedDiffState: () => selectedDiffState,
+		readyDiffFiles: selection.readyDiffFiles,
+		effectiveDiffRenderView: selection.effectiveDiffRenderView,
+		diffWrapMode: diffView.diffWrapMode,
+		diffWhitespaceMode: diffView.diffWhitespaceMode,
 		// When the docked file panel takes a slice, the diff renders at
 		// `diffPaneWidth` — pass that so the split-view's OLD/NEW columns are
 		// halved on the actual diff width, not the full terminal width.
-		diffPaneWidth: diffFilePanelVisible ? diffPaneWidth : contentWidth,
-		diffFullView,
-		diffCommentAnchorIndex,
-		diffCommentRangeStartIndex,
-		selectedDiffKey,
-		diffCommentThreads,
+		diffPaneWidth: () => (diffFilePanelVisible() ? diffPaneWidth : contentWidth),
+		diffFullView: viewMode.diffFullView,
+		diffCommentAnchorIndex: diffView.diffCommentAnchorIndex,
+		diffCommentRangeStartIndex: diffView.diffCommentRangeStartIndex,
+		selectedDiffKey: () => selectedDiffKey,
+		diffCommentThreads: diffView.diffCommentThreads,
 	})
+	const displayedDiffState = diffDerivations.displayedDiffState()
+	const stackedDiffFiles = diffDerivations.stackedDiffFiles()
+	const diffCommentAnchors = diffDerivations.diffCommentAnchors()
+	const selectedDiffCommentAnchorIndex = diffDerivations.selectedDiffCommentAnchorIndex()
+	const selectedDiffCommentAnchor = diffDerivations.selectedDiffCommentAnchor()
+	const diffCommentRangeStartAnchor = diffDerivations.diffCommentRangeStartAnchor()
+	const selectedDiffCommentRangeAnchors = diffDerivations.selectedDiffCommentRangeAnchors()
+	const diffCommentRangeActive = diffDerivations.diffCommentRangeActive()
+	const selectedDiffCommentLabel = diffDerivations.selectedDiffCommentLabel()
+	const selectedDiffCommentThread = diffDerivations.selectedDiffCommentThread()
+	const diffLineColorContextKey = diffDerivations.diffLineColorContextKey()
+	const diffCommentThreadAnchors = diffDerivations.diffCommentThreadAnchors()
 	const getCurrentGroupIndex = (current: number) => groupIndexAt(registry.get(groupStartsAtom), current)
-	const { headerRight, headerLeftWidth, footerNotice, homeCrumb, breadcrumbSeparatorText, headerRepoWidth } = computeHeaderDerivations({
-		username,
-		notice,
-		headerFooterWidth,
-		selectedRepository,
-	})
 	const { updatePullRequest, updateIssue, markPullRequestCompleted, restoreOptimisticPullRequest } = useItemMutations({
 		pullRequests,
 		issues,
@@ -563,41 +542,38 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// The `phui owner/repo#123` startup path and the Inbox's `enter` want exactly
 	// the same thing — scope to the repository, hydrate the PR, select it, open a
 	// view — so the actions are named once and both callers drive them.
-	const openLaunchTarget = useCallback(
-		(intent: PhuiLaunchIntent) =>
-			applyLaunchIntent(intent, {
-				openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
-				hydratePullRequest: hydrateTargetedPullRequest,
-				selectPullRequest: (pullRequest) => {
-					const repositoryView = { _tag: "Repository", repository: pullRequest.repository } as const
-					const index = findLaunchPullRequestIndex(registry.get(visiblePullRequestsAtom), pullRequest)
-					if (index < 0) return false
-					setSelectedIndex(index)
-					setQueueSelection((current) => ({ ...current, [viewCacheKey(repositoryView)]: index }))
-					return true
-				},
-				showNotice: setNotice,
-			}).then((result) => {
-				if (result._tag !== "PullRequestReady") return result
-				setPendingLaunchPullRequest({
-					repository: result.pullRequest.repository,
-					number: result.pullRequest.number,
-					view: result.view,
-				})
-				return result
-			}),
-		[hydrateTargetedPullRequest, registry, setNotice, setQueueSelection, setSelectedIndex, switchViewTo],
-	)
+	const openLaunchTarget = (intent: PhuiLaunchIntent) =>
+		applyLaunchIntent(intent, {
+			openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
+			hydratePullRequest: hydrateTargetedPullRequest,
+			selectPullRequest: (pullRequest) => {
+				const repositoryView = { _tag: "Repository", repository: pullRequest.repository } as const
+				const index = findLaunchPullRequestIndex(registry.get(visiblePullRequestsAtom), pullRequest)
+				if (index < 0) return false
+				setSelectedIndex(index)
+				setQueueSelection((current) => ({ ...current, [viewCacheKey(repositoryView)]: index }))
+				return true
+			},
+			showNotice: setNotice,
+		}).then((result) => {
+			if (result._tag !== "PullRequestReady") return result
+			setPendingLaunchPullRequest({
+				repository: result.pullRequest.repository,
+				number: result.pullRequest.number,
+				view: result.view,
+			})
+			return result
+		})
 
-	useEffect(() => {
+	onMount(() => {
 		if (launchIntentAppliedRef.current) return
 		launchIntentAppliedRef.current = true
 		void openLaunchTarget(launchIntent)
-	}, [launchIntent, openLaunchTarget])
+	})
 
 	// Publish the navigation bridge the Inbox surface calls into. See
 	// src/notifications/navigation.ts for why the dependency points this way.
-	useEffect(() => {
+	onMount(() => {
 		const navigator: InboxNavigator = {
 			openPullRequest: async (target) => {
 				const result = await openLaunchTarget({ _tag: "PullRequest", repository: target.repository, number: target.number, view: "details" })
@@ -611,8 +587,8 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 			openRepository: (repository) => switchViewTo({ _tag: "Repository", repository }),
 		}
 		setInboxNavigator(navigator)
-		return () => clearInboxNavigator(navigator)
-	}, [openLaunchTarget, setActiveWorkspaceSurface, setPendingIssueSelection, switchViewTo])
+		onCleanup(() => clearInboxNavigator(navigator))
+	})
 
 	// Keep list scroll position when toggling between surfaces. Each list's
 	// scrollbox remounts on surface switch; without persistence it starts at
@@ -661,50 +637,41 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// Scroll the selected line into view when the diff view is opened. Previously
 	// opentui's `focused` scrollbox did this auto-scroll on mount; with the keymap
 	// migration the scrollbox is `focusable={false}` so we have to scroll explicitly.
-	useEffect(() => {
+	createEffect(() => {
 		if (!diffFullView) return
 		if (!selectedDiffCommentAnchor) return
 		ensureDiffLineVisible(selectedDiffCommentAnchor.renderLine)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [diffFullView])
-	const selectedPullRequestDetailKey = selectedPullRequest ? pullRequestDetailKey(selectedPullRequest) : null
-	const { selectedPullRequestDetailError, isActiveSurfaceLoading, loadingFrame, loadingIndicator } = useLoadingStatus({
-		selectedPullRequestDetailKey,
-		detailHydrationState,
-		pullRequestResult,
-		pullRequestLoad,
-		pullRequestStatus,
-		issuesStatus,
-		isLoadingMorePullRequests,
-		issueFetchInFlight,
-		isLoadingMoreIssues,
-		activeWorkspaceSurface,
-		selectedCommentsStatus,
-		selectedDiffState,
-		labelModal,
-		closeModal,
-		pullRequestStateModal,
-		mergeModal,
-		submitReviewModal,
-		isInitialLoading,
+	})
+	const loadingStatus = useLoadingStatus({
+		selectedPullRequestDetailKey: () => {
+			const pullRequest = prSurface.selectedPullRequest()
+			return pullRequest ? pullRequestDetailKey(pullRequest) : null
+		},
+		detailHydrationState: prSurface.detailHydrationState,
+		pullRequestResult: prSurface.pullRequestResult,
+		pullRequestLoad: prSurface.pullRequestLoad,
+		pullRequestStatus: prSurface.pullRequestStatus,
+		issuesStatus: () => issuesStatus,
+		isLoadingMorePullRequests: prSurface.isLoadingMorePullRequests,
+		issueFetchInFlight: () => issueFetchInFlight,
+		isLoadingMoreIssues: () => isLoadingMoreIssues,
+		activeWorkspaceSurface: activeWorkspaceSurfaceLive,
+		selectedCommentsStatus: selection.selectedCommentsStatus,
+		selectedDiffState: () => selectedDiffState,
+		labelModal: () => labelModal,
+		closeModal: () => closeModal,
+		pullRequestStateModal: () => pullRequestStateModal,
+		mergeModal: () => mergeModal,
+		submitReviewModal: () => submitReviewModal,
+		isInitialLoading: () => !startupLoadComplete() && prSurface.pullRequestStatus() === "loading" && prSurface.pullRequests().length === 0,
 		startupLoadComplete,
 		setStartupLoadComplete,
-		selectedPullRequest,
+		selectedPullRequest: prSurface.selectedPullRequest,
 		loadPullRequestComments,
-		commentsViewActive,
-		detailFullView,
-		isWideLayout,
+		commentsViewActive: viewMode.commentsViewActive,
+		detailFullView: viewMode.detailFullView,
+		isWideLayout: () => layout().isWideLayout,
 	})
-
-	const detailPlaceholderContent = getDetailPlaceholderContent({
-		status: pullRequestStatus,
-		retryProgress: pullRequestRetryProgress,
-		loadingIndicator,
-		visibleCount: visiblePullRequests.length,
-		filterText: visibleFilterText,
-	})
-	const isSelectedPullRequestDetailLoading = selectedPullRequest !== null && !selectedPullRequest.detailLoaded && selectedPullRequestDetailError === null
-	const isSelectedPullRequestDetailError = selectedPullRequest !== null && !selectedPullRequest.detailLoaded && selectedPullRequestDetailError !== null
 	const halfPage = Math.max(1, Math.floor(wideBodyHeight / 2))
 
 	const runsView = useRunsView(selectedPullRequest, halfPage, flashNotice)
@@ -759,9 +726,9 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	// the comment under the cursor is the one immediately below the previously
 	// highlighted row, regardless of where it lives in the flat array. Derived
 	// in `ui/comments/atoms.ts` and read here as plain atom values.
-	const orderedComments = useAtomValue(orderedCommentsAtom)
-	const selectedOrderedComment = useAtomValue(selectedOrderedCommentAtom)
-	const commentsRowCount = useAtomValue(commentsRowCountAtom)
+	const orderedComments = useAtomValueSolid(() => orderedCommentsAtom)()
+	const selectedOrderedComment = useAtomValueSolid(() => selectedOrderedCommentAtom)()
+	const commentsRowCount = useAtomValueSolid(() => commentsRowCountAtom)()
 	const { scrollDetailPreviewBy, scrollDetailPreviewTo, scrollDetailFullViewBy, scrollDetailFullViewTo, setCommentEditorValue, editSubmitReview, openDiffView } =
 		useImperativeActions({
 			contentWidth,
@@ -804,7 +771,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		stackedDiffFiles,
 		readyDiffFiles,
 		wideBodyHeight,
-		diffPaneWidth: diffFilePanelVisible ? diffPaneWidth : contentWidth,
+		diffPaneWidth: diffFilePanelVisible() ? diffPaneWidth : contentWidth,
 		diffScrollRef,
 		suppressNextDiffCommentScrollRef,
 		selectedPullRequest,
@@ -881,40 +848,25 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 			flashNotice,
 		})
 
-	useEffect(() => {
-		if (
-			pendingLaunchPullRequest === null ||
-			selectedPullRequest === null ||
-			selectedPullRequest.repository !== pendingLaunchPullRequest.repository ||
-			selectedPullRequest.number !== pendingLaunchPullRequest.number
-		) {
+	createEffect(() => {
+		const pending = pendingLaunchPullRequest()
+		if (pending === null || selectedPullRequest === null || selectedPullRequest.repository !== pending.repository || selectedPullRequest.number !== pending.number) {
 			return
 		}
 
 		switchWorkspaceSurface("pullRequests")
-		const viewState = pullRequestLaunchViewState(pendingLaunchPullRequest.view)
+		const viewState = pullRequestLaunchViewState(pending.view)
 		setDetailFullView(viewState.detailFullView)
 		setDiffFullView(viewState.diffFullView)
 		setCommentsViewActive(viewState.commentsViewActive)
 		setRunsFullView(viewState.runsFullView)
-		if (pendingLaunchPullRequest.view === "diff") openDiffView()
-		if (pendingLaunchPullRequest.view === "comments") {
+		if (pending.view === "diff") openDiffView()
+		if (pending.view === "comments") {
 			setCommentsViewSelection(0)
 			loadPullRequestComments(selectedPullRequest)
 		}
 		setPendingLaunchPullRequest(null)
-	}, [
-		loadPullRequestComments,
-		openDiffView,
-		pendingLaunchPullRequest,
-		selectedPullRequest,
-		setCommentsViewActive,
-		setCommentsViewSelection,
-		setDetailFullView,
-		setDiffFullView,
-		setRunsFullView,
-		switchWorkspaceSurface,
-	])
+	})
 
 	const { movePullRequestStateSelection, confirmPullRequestStateChange, confirmCloseModal, toggleLabelAtIndex, confirmSubmitReview } = useItemModalActions({
 		pullRequestStateModal,
@@ -1053,7 +1005,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		toggleDiffFilePanel: () => {
 			// Flip whatever the user currently sees: if it's auto-on, set
 			// explicit-off (and vice versa). Sticky from there.
-			const currentlyVisible = diffFilePanelOverride ?? diffFilePanelAutoVisible
+			const currentlyVisible = diffFilePanelOverride() ?? terminalWidth() >= DIFF_FILE_PANEL_AUTO_THRESHOLD
 			setDiffFilePanelOverride(!currentlyVisible)
 		},
 		jumpDiffFile,
@@ -1112,7 +1064,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	}
 
 	useAppKeymap({
-		disabled: terminalTooSmall,
+		disabled: terminalTooSmall(),
 		registry,
 		closeModalActive,
 		pullRequestStateModalActive,
@@ -1237,217 +1189,265 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		editThemeQuery,
 	})
 
-	const derivations = computeWorkspaceDerivations({
-		contentWidth,
-		isWideLayout,
-		leftPaneWidth,
-		rightPaneWidth,
-		rightContentWidth,
-		fullscreenContentWidth,
-		wideBodyHeight,
-		dividerJunctionAt,
-		showWorkspaceTabs,
-		detailFullView,
-		diffFullView,
-		runsFullView,
-		commentsViewActive,
-		activeWorkspaceSurface,
-		workspaceTabSurfaces,
-		selectedPullRequest,
-		selectedIssue,
-		selectedRepository,
-		selectedComments,
-		selectedCommentsStatus,
-		isSelectedPullRequestDetailLoading,
-		pullRequestStatus,
-		pullRequestError,
-		pullRequestActiveFilterLabel,
-		compactPullRequestRows,
-		issueActiveFilterLabel,
-		pullRequestListRows,
-		visibleGroups,
-		visiblePullRequests,
-		issues,
-		showIssueRepositoryGroups,
-		issuesStatus,
-		issuesError,
-		repositoryItems,
-		actionsRunCount: actionsRunsView.runsState.status === "ready" ? actionsRunsView.runsState.value.length : "…",
-		notificationsUnreadCount,
-		selectedIssueIndex,
-		selectedRepositoryIndex,
-		hasMorePullRequests,
-		pullRequestLoadMoreSlotAvailable: loadMoreSlotAvailable,
-		isLoadingMorePullRequests,
-		loadedPullRequestCount,
-		loadingIndicator,
-		filterMode,
-		visibleFilterText,
-		selectPullRequestByUrl,
-		setSelectedIssueIndex,
-		setSelectedRepositoryIndex,
-		loadMoreSelected: loadMoreRowSelected,
-		onSelectLoadMore: () => {
-			if (loadMorePullRequests()) setSelectedIndex(visiblePullRequests.length)
-		},
-		hasMoreIssues,
-		issueLoadMoreSlotAvailable,
-		isLoadingMoreIssues,
-		loadedIssueCount,
-		loadMoreIssueRowSelected,
-		onSelectLoadMoreIssues: () => {
-			if (loadMoreIssues()) setSelectedIssueIndex(issues.length)
-		},
-		diffFilePanelDividerColumn: diffFilePanelVisible ? diffFilePanelEffectiveWidth : null,
-	})
-	const { showPaneSplit, workspaceTabCounts, filterPlaceholder, workspaceTopDividerJunctions, workspaceBottomDividerJunctions, preFooterDividerJunctions } = derivations
+	// The whole shell shape is one memo so its values re-read the live
+	// dimensions, view-mode, layout, and loading accessors instead of freezing
+	// at the size/state the shell first ran.
+	const shell = createMemo(() => {
+		const layoutNow = layout()
+		const {
+			contentWidth,
+			isWideLayout,
+			leftPaneWidth,
+			rightPaneWidth,
+			rightContentWidth,
+			fullscreenContentWidth,
+			wideBodyHeight,
+			dividerJunctionAt,
+			headerFooterWidth,
+			diffFilePanelEffectiveWidth,
+			diffPaneWidth,
+		} = layoutNow
 
-	const modalLayouts = computeModalLayouts({
-		contentWidth,
-		terminalHeight,
-		longestLabelName: labelModal.availableLabels.reduce((max, label) => Math.max(max, label.name.length), 0),
-		longestDiffFileName: changedFilesModalActive ? readyDiffFiles.reduce((max, file) => Math.max(max, file.name.length), 0) : 0,
-		changedFilesModalActive,
-	})
-	const commentAnchorLabel = ((): string => {
-		if (commentModalActive) {
-			if (commentModal.target.kind === "issue") return selectedCommentSubject ? `New comment on #${selectedCommentSubject.number}` : "New comment"
-			if (commentModal.target.kind === "reply") return `Reply on ${commentModal.target.anchorLabel}`
-			if (commentModal.target.kind === "edit") return commentModal.target.anchorLabel
-		}
-		return selectedDiffCommentAnchor && selectedDiffCommentLabel ? `${selectedDiffCommentAnchor.path} ${selectedDiffCommentLabel}` : "No diff line selected"
-	})()
-	const footerProps = computeFooterProps({
-		footerNotice,
-		filterMode,
-		visibleFilterText,
-		filterPlaceholder,
-		filterQuery,
-		detailFullView,
-		diffFullView,
-		diffCommentRangeActive,
-		runsFullView: workflowRunsActive,
-		runsInDetail: activeRunsView.inDetail,
-		commentsViewActive,
-		selectedCommentsStatus,
-		selectedOrderedComment,
-		username,
-		selectedCommentsLength: selectedComments.length,
-		selectedCommentSubject,
-		activeWorkspaceSurface,
-		selectedRepositoryItem,
-		selectedRepository,
-		selectedPullRequest,
-		pullRequestStatus,
-		issuesStatus,
-		actionsStatus: actionsRunsView.runsState.status,
-		isActiveSurfaceLoading,
-		closeModal,
-		pullRequestStateModal,
-		mergeModal,
-		submitReviewModal,
-		loadingIndicator,
-		retryProgress,
-	})
-	return {
-		isInitialLoading: false as const,
-		detailPlaceholderContent,
-		loadingFrame,
-		terminalTooSmall,
-		terminalWidth,
-		terminalHeight,
-		contentWidth,
-		headerFooterWidth,
-		headerRight,
-		showWorkspaceTabs,
-		workspaceTabSurfaces,
-		workspaceTabCounts,
-		activeWorkspaceSurface,
-		switchWorkspaceSurface,
-		workspaceTopDividerJunctions,
-		workspaceBottomDividerJunctions,
-		preFooterDividerJunctions,
-		showPaneSplit,
-		dividerJunctionAt,
-		layout,
-		derivations,
-		headerProps: { selectedRepository, homeCrumb, breadcrumbSeparatorText, headerLeftWidth, headerRepoWidth, homeCrumbHovered, setHomeCrumbHovered, goUpWorkspaceScope },
-		contentProps: {
-			showScrollbars,
-			activeWorkspaceSurface,
-			commentsViewActive,
-			diffFullView,
-			runsView,
-			actionsRunsView,
+		const header = computeHeaderDerivations({
+			username,
+			notice,
+			headerFooterWidth,
 			selectedRepository,
+		})
+		const detailPlaceholderContent = getDetailPlaceholderContent({
+			status: pullRequestStatus,
+			retryProgress: pullRequestRetryProgress,
+			loadingIndicator: loadingStatus.loadingIndicator(),
+			visibleCount: visiblePullRequests.length,
+			filterText: visibleFilterText,
+		})
+		const isSelectedPullRequestDetailLoading = selectedPullRequest !== null && !selectedPullRequest.detailLoaded && loadingStatus.selectedPullRequestDetailError() === null
+		const isSelectedPullRequestDetailError = selectedPullRequest !== null && !selectedPullRequest.detailLoaded && loadingStatus.selectedPullRequestDetailError() !== null
+
+		const derivations = computeWorkspaceDerivations({
+			contentWidth,
+			isWideLayout,
+			leftPaneWidth,
+			rightPaneWidth,
+			rightContentWidth,
+			fullscreenContentWidth,
+			wideBodyHeight,
+			dividerJunctionAt,
+			showWorkspaceTabs: showWorkspaceTabs(),
+			diffFullView,
 			detailFullView,
-			layout,
-			derivations,
-			issueActiveFilterLabel,
-			pullRequestActiveFilterLabel,
-			selectedRepositoryItem,
-			selectedRepositoryDetails,
-			selectedIssue,
+			runsFullView,
+			commentsViewActive,
+			activeWorkspaceSurface,
+			workspaceTabSurfaces,
 			selectedPullRequest,
+			selectedIssue,
+			selectedRepository,
 			selectedComments,
 			selectedCommentsStatus,
-			selectedCommentsLoadState,
-			detailPlaceholderContent,
 			isSelectedPullRequestDetailLoading,
-			isSelectedPullRequestDetailError,
-			selectedPullRequestDetailError,
-			commentsViewSelection,
-			orderedComments,
-			selectedCommentSubject,
-			displayedDiffState,
-			stackedDiffFiles,
-			diffScrollTop,
-			effectiveDiffRenderView,
-			diffWhitespaceMode,
-			diffWrapMode,
-			selectedDiffCommentAnchor,
-			selectedDiffCommentLabel,
-			selectedDiffCommentThread,
-			selectDiffCommentLine,
-			setDiffRenderableRef,
-			loadingIndicator,
-			themeId,
-			systemThemeGeneration,
-			scrollRefs: { prListScrollRef, detailScrollRef, detailPreviewScrollRef, diffScrollRef, issueListScrollRef },
-			openInlineLink,
-			showNotice: flashNotice,
-			diffFilePanel: {
-				visible: diffFilePanelVisible,
-				width: diffFilePanelEffectiveWidth,
-				diffPaneWidth,
-				files: readyDiffFiles,
-				currentFileIndex: diffFileIndex,
-				pickerActive: changedFilesModalActive,
-				pickerQuery: changedFilesModal.query,
-				pickerSelectedIndex: changedFilesModal.selectedIndex,
-				pickerResults: changedFileResults,
-				onSelectFile: selectDiffFile,
+			pullRequestStatus,
+			pullRequestError,
+			pullRequestActiveFilterLabel,
+			compactPullRequestRows,
+			issueActiveFilterLabel,
+			pullRequestListRows,
+			visibleGroups,
+			visiblePullRequests,
+			issues,
+			showIssueRepositoryGroups,
+			issuesStatus,
+			issuesError,
+			repositoryItems,
+			actionsRunCount: actionsRunsView.runsState.status === "ready" ? actionsRunsView.runsState.value.length : "…",
+			notificationsUnreadCount,
+			selectedIssueIndex,
+			selectedRepositoryIndex,
+			hasMorePullRequests,
+			pullRequestLoadMoreSlotAvailable: loadMoreSlotAvailable,
+			isLoadingMorePullRequests,
+			loadedPullRequestCount,
+			loadingIndicator: loadingStatus.loadingIndicator(),
+			filterMode,
+			visibleFilterText,
+			selectPullRequestByUrl,
+			setSelectedIssueIndex,
+			setSelectedRepositoryIndex,
+			loadMoreSelected: loadMoreRowSelected,
+			onSelectLoadMore: () => {
+				if (loadMorePullRequests()) setSelectedIndex(visiblePullRequests.length)
 			},
-		},
-		footerProps,
-		modalsProps: {
-			activeModal,
-			loadingIndicator,
-			selectedItemLabels,
-			commentAnchorLabel,
-			selectedDiffCommentThread,
-			changedFileResults,
-			readyDiffFileCount: readyDiffFiles.length,
-			commandPaletteCommands,
-			selectedCommandIndex,
-			onSelectCommandIndex: selectCommandPaletteIndex,
-			onRunCommand: runCommandPaletteCommand,
-			onCommentChange: setCommentEditorValue,
-			onCommentSubmit: submitCommentModal,
-			layouts: modalLayouts,
-			// Picker takes over the docked panel when visible; suppressing the
-			// modal here keeps both presentations from rendering at once.
-			suppressChangedFilesModal: diffFilePanelVisible,
-		},
-	}
+			hasMoreIssues,
+			issueLoadMoreSlotAvailable,
+			isLoadingMoreIssues,
+			loadedIssueCount,
+			loadMoreIssueRowSelected,
+			onSelectLoadMoreIssues: () => {
+				if (loadMoreIssues()) setSelectedIssueIndex(issues.length)
+			},
+			diffFilePanelDividerColumn: diffFilePanelVisible() ? diffFilePanelEffectiveWidth : null,
+		})
+		const { showPaneSplit, workspaceTabCounts, filterPlaceholder, workspaceTopDividerJunctions, workspaceBottomDividerJunctions, preFooterDividerJunctions } = derivations
+
+		const modalLayouts = computeModalLayouts({
+			contentWidth,
+			terminalHeight: terminalHeight(),
+			longestLabelName: labelModal.availableLabels.reduce((max, label) => Math.max(max, label.name.length), 0),
+			longestDiffFileName: changedFilesModalActive ? readyDiffFiles.reduce((max, file) => Math.max(max, file.name.length), 0) : 0,
+			changedFilesModalActive,
+		})
+		const commentAnchorLabel = ((): string => {
+			if (commentModalActive) {
+				if (commentModal.target.kind === "issue") return selectedCommentSubject ? `New comment on #${selectedCommentSubject.number}` : "New comment"
+				if (commentModal.target.kind === "reply") return `Reply on ${commentModal.target.anchorLabel}`
+				if (commentModal.target.kind === "edit") return commentModal.target.anchorLabel
+			}
+			return selectedDiffCommentAnchor && selectedDiffCommentLabel ? `${selectedDiffCommentAnchor.path} ${selectedDiffCommentLabel}` : "No diff line selected"
+		})()
+		const footerProps = computeFooterProps({
+			footerNotice: header.footerNotice,
+			filterMode,
+			visibleFilterText,
+			filterPlaceholder,
+			filterQuery,
+			detailFullView,
+			diffFullView,
+			diffCommentRangeActive,
+			runsFullView: workflowRunsActive,
+			runsInDetail: activeRunsView.inDetail,
+			commentsViewActive,
+			selectedCommentsStatus,
+			selectedOrderedComment,
+			username,
+			selectedCommentsLength: selectedComments.length,
+			selectedCommentSubject,
+			activeWorkspaceSurface,
+			selectedRepositoryItem,
+			selectedRepository,
+			selectedPullRequest,
+			pullRequestStatus,
+			issuesStatus,
+			actionsStatus: activeRunsView.runsState.status,
+			isActiveSurfaceLoading: loadingStatus.isActiveSurfaceLoading(),
+			closeModal,
+			pullRequestStateModal,
+			mergeModal,
+			submitReviewModal,
+			loadingIndicator: loadingStatus.loadingIndicator(),
+			retryProgress,
+		})
+
+		return {
+			isInitialLoading: false as const,
+			detailPlaceholderContent,
+			loadingFrame: loadingStatus.loadingFrame(),
+			terminalTooSmall: terminalTooSmall(),
+			terminalWidth: terminalWidth(),
+			terminalHeight: terminalHeight(),
+			contentWidth,
+			headerFooterWidth,
+			headerRight: header.headerRight,
+			showWorkspaceTabs: showWorkspaceTabs(),
+			workspaceTabSurfaces,
+			workspaceTabCounts,
+			activeWorkspaceSurface,
+			switchWorkspaceSurface,
+			workspaceTopDividerJunctions,
+			workspaceBottomDividerJunctions,
+			preFooterDividerJunctions,
+			showPaneSplit,
+			dividerJunctionAt,
+			layout: layoutNow,
+			derivations,
+			headerProps: {
+				selectedRepository,
+				homeCrumb: header.homeCrumb,
+				breadcrumbSeparatorText: header.breadcrumbSeparatorText,
+				headerLeftWidth: header.headerLeftWidth,
+				headerRepoWidth: header.headerRepoWidth,
+				homeCrumbHovered: homeCrumbHovered(),
+				setHomeCrumbHovered,
+				goUpWorkspaceScope,
+			},
+			contentProps: {
+				showScrollbars,
+				activeWorkspaceSurface,
+				commentsViewActive,
+				diffFullView,
+				runsView,
+				actionsRunsView,
+				selectedRepository,
+				detailFullView,
+				layout: layoutNow,
+				derivations,
+				issueActiveFilterLabel,
+				pullRequestActiveFilterLabel,
+				selectedRepositoryItem,
+				selectedRepositoryDetails,
+				selectedIssue,
+				selectedPullRequest,
+				selectedComments,
+				selectedCommentsStatus,
+				selectedCommentsLoadState,
+				detailPlaceholderContent,
+				isSelectedPullRequestDetailLoading,
+				isSelectedPullRequestDetailError,
+				selectedPullRequestDetailError: loadingStatus.selectedPullRequestDetailError(),
+				commentsViewSelection,
+				orderedComments,
+				selectedCommentSubject,
+				displayedDiffState,
+				stackedDiffFiles,
+				diffScrollTop,
+				effectiveDiffRenderView,
+				diffWhitespaceMode,
+				diffWrapMode,
+				selectedDiffCommentAnchor,
+				selectedDiffCommentLabel,
+				selectedDiffCommentThread,
+				selectDiffCommentLine,
+				setDiffRenderableRef,
+				loadingIndicator: loadingStatus.loadingIndicator(),
+				themeId,
+				systemThemeGeneration,
+				scrollRefs: { prListScrollRef, detailScrollRef, detailPreviewScrollRef, diffScrollRef, issueListScrollRef },
+				openInlineLink,
+				showNotice: flashNotice,
+				diffFilePanel: {
+					visible: diffFilePanelVisible(),
+					width: diffFilePanelEffectiveWidth,
+					diffPaneWidth,
+					files: readyDiffFiles,
+					currentFileIndex: diffFileIndex,
+					pickerActive: changedFilesModalActive,
+					pickerQuery: changedFilesModal.query,
+					pickerSelectedIndex: changedFilesModal.selectedIndex,
+					pickerResults: changedFileResults,
+					onSelectFile: selectDiffFile,
+				},
+			},
+			footerProps,
+			modalsProps: {
+				activeModal,
+				loadingIndicator: loadingStatus.loadingIndicator(),
+				selectedItemLabels,
+				commentAnchorLabel,
+				selectedDiffCommentThread,
+				changedFileResults,
+				readyDiffFileCount: readyDiffFiles.length,
+				commandPaletteCommands,
+				selectedCommandIndex,
+				onSelectCommandIndex: selectCommandPaletteIndex,
+				onRunCommand: runCommandPaletteCommand,
+				onCommentChange: setCommentEditorValue,
+				onCommentSubmit: submitCommentModal,
+				layouts: modalLayouts,
+				// Picker takes over the docked panel when visible; suppressing the
+				// modal here keeps both presentations from rendering at once.
+				suppressChangedFilesModal: diffFilePanelVisible(),
+			},
+		}
+	})
+
+	return shell
 }

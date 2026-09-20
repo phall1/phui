@@ -131,17 +131,40 @@ swapping the shim for raw registry reads.
 
 ## Status
 
-In progress. Step 1 shipped 2026-09-20. Steps 2–7 not started on this branch.
+**Shipped 2026-09-20.** `src/solid-hooks.ts` and `src/atom-solid.ts` are
+**deleted**. Every call site uses Solid primitives (`createSignal`,
+`createEffect`, `createMemo`, `onMount`, `onCleanup`) and the official
+`@effect/atom-solid` hooks directly. The only survivors are genuinely
+non-reactive helpers in `src/solid-utils.ts` (`useRef` mutable box,
+`readMaybeAccessor`, ref types, `Fragment`) — no `useState`/`useEffect`/`useMemo`
+emulation remains.
 
-A partial attempt at steps 2–4 lives on branch `wip/solid-migration` (commit
-"wip: accessor conversion for view/diff/loading/derivation hooks"). It converts
-`useViewModeState`, `useDiffViewState`, `useSelectionDerivations`,
-`useDiffCommentDerivations`, `useLoadingStatus`, and `useSpinnerFrame` to return
-Solid accessors. It does **not** typecheck yet (110 errors): `useAppShell` and
-`App.tsx` still consume those hooks as values. The next edit is to make
-`useAppShell` return a memo of accessors and update `App.tsx`, then continue with
-the surface hooks and the leaf `useEffect`s. Use it as a starting point, not as a
-mergeable state.
+What that fixed along the way:
 
-The shim is still load-bearing and still non-reactive; the app's live updates
-continue to come from the hand-maintained `App.tsx` overrides.
+- **Terminal resize now relayouts** — `useAppShell` returns a `createMemo`; layout,
+  terminal size, view-mode, and loading are live.
+- **The busy spinner actually advances** — `useSpinnerFrame`/`useLoadingStatus`
+  return accessors fed live inputs.
+- **Selected-PR detail hydration and neighbour prefetch now run** — they sat
+  behind shim `useEffect`s that ran once and never re-fired.
+- **List scroll position is restored** — `useScrollPersistence` is reactive.
+- **Diff viewport windowing + diff scroll ownership** (see
+  `diff-rendering-performance.md`).
+
+Known follow-up: the shell memo still does not read the PR/Issue surface
+accessors, because tracking selection re-rendered the whole content tree per
+keypress and tripped a native `TextBuffer` allocation storm under rapid key
+bursts. `App.tsx`'s overrides keep the list/detail live. Removing that split
+(per-prop accessors, or dissolving the shell into per-Surface shells) is the
+remaining work; see `app-shell-deepening.md`.
+
+## Open questions
+
+- Should `useAppShell` return a function-of-accessors, or an object of
+  accessors? A function keeps the current shape and one spread site; an object
+  of accessors is more idiomatic Solid but touches every field read in `App.tsx`.
+- Per-prop accessors vs. one memo: the memo must not track selection without
+  also making the tab/row renderables reuse-safe (`WorkspaceTabs` now uses
+  `<Index>`; other lists may need the same).
+- How much of `useAppShell` should dissolve into per-Surface shells at the same
+  time (`app-shell-deepening.md` steps 4c/5)?
