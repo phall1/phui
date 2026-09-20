@@ -31,10 +31,9 @@
 - After merging a release PR, verify the `Release Please` run passes — it
   includes the called publish jobs and a `verify-published` matrix that installs
   the published package from the registry on every platform and runs it.
-- The upstream npm workflow (`.github/workflows/publish.yml`) is
-  repository-gated to `kitlangton/ghui` and skips on the fork. Do not un-gate
-  it; fork publishing lives in `fork-publish.yml`, which is fork-owned and does
-  not conflict on merge.
+- Fork publishing lives in `fork-publish.yml` (called from `release-please.yml`).
+  Do not copy upstream's `publish.yml` back in; it is gated to `kitlangton/ghui`
+  and would fight this fork's trusted-publisher setup.
 
 ### npm
 

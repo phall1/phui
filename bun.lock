@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "ghui",
+      "name": "@phall/phui",
       "dependencies": {
         "@effect/atom-solid": "4.0.0-rc.115",
         "@effect/sql-sqlite-bun": "4.0.0-rc.115",

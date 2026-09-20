@@ -71,7 +71,7 @@ Nice-to-have, not the bar:
 2. **Item load leftover** — [`item-load-deepening.md`](./item-load-deepening.md): one cache module, still-separate per-kind atom families.
 3. **GitHubService carve** — ~40 methods in one `Effect.gen`. Split along Item / Review / Merge / Runs when Track A adds pending reviews, resolve, reviewers, update-branch. Do not split first for sport.
 4. **Hook tests** — zero isolated Surface tests. `@testing-library/react` + atom `initialValues` + fixtures lifted from `MockGitHubService`. Pin the first eight invariants from the deepening brief.
-5. **Dead weight** — `listAllPullRequests` / `listAllIssues` unused in app code; `bun.lock` workspace name still `ghui`; keymap `COMPARISON.md` / `MIGRATION.md` stale.
+5. **Dead weight** — ~~`listAllPullRequests` / `listAllIssues`; `bun.lock` workspace name `ghui`; keymap `COMPARISON.md` / `MIGRATION.md`~~ removed.
 
 ### Track D — libraries and toolchain
 
