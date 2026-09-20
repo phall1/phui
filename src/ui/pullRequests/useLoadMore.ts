@@ -1,4 +1,6 @@
-import { useAtom, useAtomSet } from "../../atom-solid.js"
+import { useAtomSet } from "../../atom-solid.js"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { type Accessor } from "solid-js"
 import type { MutableRefObject } from "../../solid-hooks.js"
 import { config } from "../../config.js"
 import { useItemLoadMore } from "../../hooks/useItemLoadMore.js"
@@ -26,7 +28,7 @@ export interface UseLoadMoreResult {
 	 * (already loading, no more pages, no cursor, or limit reached). */
 	readonly loadMorePullRequests: () => boolean
 	/** Whether a load-more for the active queue cache key is in flight. */
-	readonly isLoadingMorePullRequests: boolean
+	readonly isLoadingMorePullRequests: Accessor<boolean>
 	/** Reset on view switch / hard refresh so a stale "loading more" never
 	 * sticks on a queue the user has navigated away from. */
 	readonly resetLoadingMore: () => void
@@ -50,7 +52,8 @@ export const useLoadMore = ({
 }: UseLoadMoreInput): UseLoadMoreResult => {
 	const loadPullRequestPage = useAtomSet(listOpenPullRequestPageAtom, { mode: "promise" })
 	const writeQueueCache = useAtomSet(writeQueueCacheAtom, { mode: "promise" })
-	const [loadingMoreKey, setLoadingMoreKey] = useAtom(loadingMoreKeyAtom)
+	const loadingMoreKey = useAtomValueSolid(() => loadingMoreKeyAtom)
+	const setLoadingMoreKey = useAtomSet(loadingMoreKeyAtom)
 	const targetedPullRequestCount = pullRequestLoad ? pullRequestLoad.data.length - pullRequestQueueItemCount(pullRequestLoad) : 0
 	const { loadMore, isLoadingMore, resetLoadingMore } = useItemLoadMore({
 		cacheKey: currentQueueCacheKey,

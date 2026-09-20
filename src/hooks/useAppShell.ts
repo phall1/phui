@@ -269,39 +269,39 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		prListScrollRef,
 		prListScrollPersistedRef,
 	})
-	const {
-		pullRequestResult,
-		pullRequestStatus,
-		pullRequestError,
-		activeView,
-		setActiveView,
-		activeViews,
-		currentQueueCacheKey,
-		pullRequestLoad,
-		hasMorePullRequests,
-		loadedPullRequestCount,
-		loadMoreRowSelected,
-		loadMoreSlotAvailable,
-		pullRequests,
-		visiblePullRequests,
-		visibleGroups,
-		selectedPullRequest,
-		selectedRepository,
-		pullRequestActiveFilterLabel,
-		compactPullRequestRows,
-		pullRequestListRows,
-		setPullRequestOverrides,
-		setRecentlyCompletedPullRequests,
-		retryProgress: pullRequestRetryProgress,
-		loadMorePullRequests,
-		isLoadingMorePullRequests,
-		resetLoadingMore,
-		cancelRefreshToast,
-		refreshPullRequests,
-		detailHydrationState,
-		resetHydration,
-		selectPullRequestByUrl,
-	} = prSurface
+	// Setup-time snapshots for the hooks below (which cannot take accessors);
+	// the shell memo reads the live accessors directly.
+	const pullRequestResult = prSurface.pullRequestResult()
+	const pullRequestStatus = prSurface.pullRequestStatus()
+	const pullRequestError = prSurface.pullRequestError()
+	const activeView = prSurface.activeView()
+	const setActiveView = prSurface.setActiveView
+	const activeViews = prSurface.activeViews()
+	const currentQueueCacheKey = prSurface.currentQueueCacheKey()
+	const pullRequestLoad = prSurface.pullRequestLoad()
+	const hasMorePullRequests = prSurface.hasMorePullRequests()
+	const loadedPullRequestCount = prSurface.loadedPullRequestCount()
+	const loadMoreRowSelected = prSurface.loadMoreRowSelected()
+	const loadMoreSlotAvailable = prSurface.loadMoreSlotAvailable()
+	const pullRequests = prSurface.pullRequests()
+	const visiblePullRequests = prSurface.visiblePullRequests()
+	const visibleGroups = prSurface.visibleGroups()
+	const selectedPullRequest = prSurface.selectedPullRequest()
+	const selectedRepository = prSurface.selectedRepository()
+	const pullRequestActiveFilterLabel = prSurface.pullRequestActiveFilterLabel()
+	const compactPullRequestRows = prSurface.compactPullRequestRows()
+	const pullRequestListRows = prSurface.pullRequestListRows()
+	const setPullRequestOverrides = prSurface.setPullRequestOverrides
+	const setRecentlyCompletedPullRequests = prSurface.setRecentlyCompletedPullRequests
+	const pullRequestRetryProgress = prSurface.retryProgress()
+	const loadMorePullRequests = prSurface.loadMorePullRequests
+	const isLoadingMorePullRequests = prSurface.isLoadingMorePullRequests()
+	const resetLoadingMore = prSurface.resetLoadingMore
+	const cancelRefreshToast = prSurface.cancelRefreshToast
+	const refreshPullRequests = prSurface.refreshPullRequests
+	const detailHydrationState = prSurface.detailHydrationState()
+	const resetHydration = prSurface.resetHydration
+	const selectPullRequestByUrl = prSurface.selectPullRequestByUrl
 	useTerminalTitle({
 		activeWorkspaceSurface,
 		selectedRepository,

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { testRender } from "@opentui/solid"
-import { act, useState } from "../src/solid-hooks.js"
+import { createSignal } from "solid-js"
+import { act } from "../src/solid-hooks.js"
 import { useItemLoadMore, type UseItemLoadMoreResult } from "../src/hooks/useItemLoadMore.ts"
 
 interface TestLoad {
@@ -27,7 +28,7 @@ describe("useItemLoadMore", () => {
 		let result!: UseItemLoadMoreResult
 
 		const Harness = () => {
-			const [loadingMoreKey, setLoadingMoreKey] = useState<string | null>(null)
+			const [loadingMoreKey, setLoadingMoreKey] = createSignal<string | null>(null)
 			result = useItemLoadMore({
 				cacheKey: "A",
 				load: cache.A ?? null,
@@ -73,7 +74,7 @@ describe("useItemLoadMore", () => {
 		let result!: UseItemLoadMoreResult
 
 		const Harness = () => {
-			const [loadingMoreKey, setLoadingMoreKey] = useState<string | null>(null)
+			const [loadingMoreKey, setLoadingMoreKey] = createSignal<string | null>(null)
 			result = useItemLoadMore({
 				cacheKey: "A",
 				load: cache.A ?? null,

@@ -1,10 +1,10 @@
-import { RegistryContext, useAtom, useAtomRefresh, useAtomSet, useAtomValue } from "../../atom-solid.js"
+import { RegistryContext, useAtomSet, useAtomRefresh } from "../../atom-solid.js"
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
-import { createEffect } from "solid-js"
+import { createEffect, createMemo, type Accessor } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
 import { Cause } from "effect"
-import { type MutableRefObject, useCallback, useContext, useMemo, useRef } from "../../solid-hooks.js"
+import { type MutableRefObject, useContext, useRef } from "../../solid-hooks.js"
 import type { LoadStatus, PullRequestItem } from "../../domain.js"
 import { errorMessage } from "../../errors.js"
 import { type PullRequestView, viewCacheKey } from "../../pullRequestViews.js"
@@ -75,47 +75,46 @@ export interface UsePullRequestSurfaceInput {
 export interface PullRequestSurfaceShell {
 	readonly isFullscreen: boolean
 	// Async result + derived status
-	readonly pullRequestResult: AsyncResult.AsyncResult<unknown, unknown>
-	readonly pullRequestStatus: LoadStatus
-	readonly pullRequestError: string | null
-	readonly pullRequestFetchInFlight: boolean
+	readonly pullRequestResult: Accessor<AsyncResult.AsyncResult<unknown, unknown>>
+	readonly pullRequestStatus: Accessor<LoadStatus>
+	readonly pullRequestError: Accessor<string | null>
+	readonly pullRequestFetchInFlight: Accessor<boolean>
 	readonly isInitialLoading: (startupLoadComplete: boolean) => boolean
 	// View + pagination state
-	readonly activeView: PullRequestView
+	readonly activeView: Accessor<PullRequestView>
 	readonly setActiveView: (next: PullRequestView) => void
-	readonly activeViews: readonly PullRequestView[]
-	readonly currentQueueCacheKey: string
-	readonly pullRequestLoad: PullRequestLoad | null
+	readonly activeViews: Accessor<readonly PullRequestView[]>
+	readonly currentQueueCacheKey: Accessor<string>
+	readonly pullRequestLoad: Accessor<PullRequestLoad | null>
 	readonly setQueueLoadCache: SetState<Partial<Record<string, PullRequestLoad>>>
-	readonly hasMorePullRequests: boolean
-	readonly loadedPullRequestCount: number
-	readonly loadMoreRowSelected: boolean
-	readonly loadMoreSlotAvailable: boolean
+	readonly hasMorePullRequests: Accessor<boolean>
+	readonly loadedPullRequestCount: Accessor<number>
+	readonly loadMoreRowSelected: Accessor<boolean>
+	readonly loadMoreSlotAvailable: Accessor<boolean>
 	// PR list + selection
-	readonly pullRequests: readonly PullRequestItem[]
-	readonly visiblePullRequests: readonly PullRequestItem[]
-	readonly visibleGroups: PullRequestGroups
-	readonly groupStarts: readonly number[]
-	readonly selectedPullRequest: PullRequestItem | null
-	readonly selectedRepository: string | null
-	readonly pullRequestActiveFilterLabel: string | null
-	readonly compactPullRequestRows: boolean
-	readonly pullRequestListRows: readonly PullRequestListRow[]
-	readonly selectedPullRequestRowIndex: number | null
+	readonly pullRequests: Accessor<readonly PullRequestItem[]>
+	readonly visiblePullRequests: Accessor<readonly PullRequestItem[]>
+	readonly visibleGroups: Accessor<PullRequestGroups>
+	readonly groupStarts: Accessor<readonly number[]>
+	readonly selectedPullRequest: Accessor<PullRequestItem | null>
+	readonly selectedRepository: Accessor<string | null>
+	readonly pullRequestActiveFilterLabel: Accessor<string | null>
+	readonly compactPullRequestRows: Accessor<boolean>
+	readonly pullRequestListRows: Accessor<readonly PullRequestListRow[]>
+	readonly selectedPullRequestRowIndex: Accessor<number | null>
 	// Atom setters re-exposed for App-shell-level consumers (modals, mutations,
-	// workspace navigation). Will dissolve once those consumers read atoms
-	// directly via the command registry (step 5).
+	// workspace navigation).
 	readonly setPullRequestOverrides: SetState<Readonly<Record<string, PullRequestItem>>>
 	readonly setRecentlyCompletedPullRequests: SetState<Readonly<Record<string, PullRequestItem>>>
-	readonly retryProgress: RetryProgress
+	readonly retryProgress: Accessor<RetryProgress>
 	// Load-more + refresh subsystems
 	readonly loadMorePullRequests: () => boolean
-	readonly isLoadingMorePullRequests: boolean
+	readonly isLoadingMorePullRequests: Accessor<boolean>
 	readonly resetLoadingMore: () => void
 	readonly armRefreshToast: (message: string) => void
 	readonly cancelRefreshToast: () => void
 	readonly refreshPullRequests: (message?: string, options?: { readonly resetTransientState?: boolean }) => void
-	readonly detailHydrationState: Record<string, DetailHydrationState>
+	readonly detailHydrationState: Accessor<Record<string, DetailHydrationState>>
 	readonly resetHydration: () => void
 	// Selection helper used by link navigation + comment view jump
 	readonly selectPullRequestByUrl: (url: string) => void
@@ -129,21 +128,13 @@ export interface PullRequestSurfaceShell {
 //   • PR list-row build, the row-index lookup that drives the scroll-follow
 //     effect, and the scroll persistence wiring for the PR list.
 //
-// Refs that gate the refresh state machine
-// (`lastPullRequestRefreshAtRef`, `pullRequestStatusRef`,
-// `refreshPullRequestsRef`, `maybeRefreshPullRequestsRef`) live here because
-// they're only read/written by the four refresh hooks above.
-//
-// The shell exposes its setters (overrides, recently-completed) so App-shell
-// can wire them into `useItemMutations` and `useWorkspaceNavigation` during
-// the transition. Once commands read atoms directly (step 5) the setters
-// stop crossing the boundary.
+// Everything reactive is returned as a Solid accessor so the app shell can
+// compose it into its own memo.
 export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRequestSurfaceShell => {
 	const {
 		renderer,
 		refreshGenerationRef,
 		username,
-		selectedIndex,
 		setSelectedIndex,
 		setQueueSelection,
 		visibleFilterText,
@@ -166,58 +157,69 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 	// PR atom reads.
 	// The queue atom tracks `activeViewAtom`; view changes interrupt the old
 	// request and start the new query while keyed queue data remains cached.
-	const [activeView, setActiveView] = useAtom(activeViewAtom)
-	const pullRequestResult = useAtomValue(pullRequestsAtom)
+	const activeView = useAtomValueSolid(() => activeViewAtom)
+	const setActiveView = useAtomSet(activeViewAtom)
+	const pullRequestResult = useAtomValueSolid(() => pullRequestsAtom)
 	const refreshCurrentPullRequestsAtom = useAtomRefresh(pullRequestsAtom)
-	const refreshPullRequestsAtom = useCallback(() => {
+	const refreshPullRequestsAtom = () => {
 		if (registry.get(pullRequestsAtom).waiting) return
 		refreshCurrentPullRequestsAtom()
-	}, [registry, refreshCurrentPullRequestsAtom])
-	const queueLoadCache = useAtomValue(queueLoadCacheAtom)
+	}
+	const queueLoadCache = useAtomValueSolid(() => queueLoadCacheAtom)
 	const setQueueLoadCache = useAtomSet(queueLoadCacheAtom)
 	const setPullRequestOverrides = useAtomSet(pullRequestOverridesAtom)
 	const setRecentlyCompletedPullRequests = useAtomSet(recentlyCompletedPullRequestsAtom)
 	const setPullRequestComments = useAtomSet(pullRequestCommentsAtom)
 	const setPullRequestCommentsLoaded = useAtomSet(pullRequestCommentsLoadedAtom)
 	const setNotice = useAtomSet(noticeAtom)
-	const retryProgress = useAtomValue(retryProgressAtom)
+	const retryProgress = useAtomValueSolid(() => retryProgressAtom)
 
-	const pullRequestLoad = useMemo(() => resolveLoad(activeView, queueLoadCache, pullRequestResult), [activeView, queueLoadCache, pullRequestResult])
-	const pullRequests = useAtomValue(displayedPullRequestsAtom)
-	const pullRequestStatus: LoadStatus =
-		pullRequestResult.waiting && pullRequestLoad === null ? "loading" : AsyncResult.isFailure(pullRequestResult) && pullRequestLoad === null ? "error" : "ready"
-	const pullRequestFetchInFlight = pullRequestResult.waiting
-	const selectedRepository = useAtomValue(selectedRepositoryAtom)
-	const pullRequestAuthorFilterActive = selectedRepository !== null && activeView._tag === "Queue" && activeView.mode === "authored"
-	const pullRequestActiveFilterLabel = pullRequestAuthorFilterActive ? "author:@me" : null
-	const compactPullRequestRows = activeView._tag === "Queue" && activeView.mode === "authored"
-	const pullRequestError = AsyncResult.isFailure(pullRequestResult) ? errorMessage(Cause.squash(pullRequestResult.cause)) : null
+	const pullRequestLoad = createMemo(() => resolveLoad(activeView(), queueLoadCache(), pullRequestResult()))
+	const pullRequests = useAtomValueSolid(() => displayedPullRequestsAtom)
+	const pullRequestStatus = createMemo<LoadStatus>(() => {
+		const result = pullRequestResult()
+		return result.waiting && pullRequestLoad() === null ? "loading" : AsyncResult.isFailure(result) && pullRequestLoad() === null ? "error" : "ready"
+	})
+	const pullRequestFetchInFlight = createMemo(() => pullRequestResult().waiting)
+	const selectedRepository = useAtomValueSolid(() => selectedRepositoryAtom)
+	const pullRequestAuthorFilterActive = createMemo(() => {
+		const view = activeView()
+		return selectedRepository() !== null && view._tag === "Queue" && view.mode === "authored"
+	})
+	const pullRequestActiveFilterLabel = createMemo(() => (pullRequestAuthorFilterActive() ? "author:@me" : null))
+	const compactPullRequestRows = createMemo(() => {
+		const view = activeView()
+		return view._tag === "Queue" && view.mode === "authored"
+	})
+	const pullRequestError = createMemo(() => {
+		const result = pullRequestResult()
+		return AsyncResult.isFailure(result) ? errorMessage(Cause.squash(result.cause)) : null
+	})
 
-	const visibleGroups = useAtomValue(visibleGroupsAtom)
-	const visiblePullRequests = useAtomValue(visiblePullRequestsAtom)
-	const selectedPullRequest = useAtomValue(selectedPullRequestAtom)
-	const filterActive = useAtomValue(effectiveFilterQueryAtom).length > 0
-	const activeViews = useAtomValue(activeViewsAtom)
-	const currentQueueCacheKey = viewCacheKey(activeView)
-	const loadedPullRequestCount = useAtomValue(loadedPullRequestCountAtom)
-	const hasMorePullRequests = useAtomValue(hasMorePullRequestsAtom)
-	const loadMoreRowSelected = useAtomValue(loadMoreRowSelectedAtom)
-	const loadMoreSlotAvailable = useAtomValue(pullRequestLoadMoreSlotAvailableAtom)
-	const groupStarts = useAtomValue(groupStartsAtom)
-	const previousSelectionStateRef = useRef({ cacheKey: currentQueueCacheKey, visiblePullRequests, filterActive })
-	const filterQueryLive = useAtomValueSolid(() => effectiveFilterQueryAtom)
-	const visiblePullRequestsLive = useAtomValueSolid(() => visiblePullRequestsAtom)
+	const visibleGroups = useAtomValueSolid(() => visibleGroupsAtom)
+	const visiblePullRequests = useAtomValueSolid(() => visiblePullRequestsAtom)
+	const selectedPullRequest = useAtomValueSolid(() => selectedPullRequestAtom)
+	const effectiveFilterQuery = useAtomValueSolid(() => effectiveFilterQueryAtom)
+	const filterActive = createMemo(() => effectiveFilterQuery().length > 0)
+	const activeViews = useAtomValueSolid(() => activeViewsAtom)
+	const currentQueueCacheKey = createMemo(() => viewCacheKey(activeView()))
+	const loadedPullRequestCount = useAtomValueSolid(() => loadedPullRequestCountAtom)
+	const hasMorePullRequests = useAtomValueSolid(() => hasMorePullRequestsAtom)
+	const loadMoreRowSelected = useAtomValueSolid(() => loadMoreRowSelectedAtom)
+	const loadMoreSlotAvailable = useAtomValueSolid(() => pullRequestLoadMoreSlotAvailableAtom)
+	const groupStarts = useAtomValueSolid(() => groupStartsAtom)
+	const previousSelectionStateRef = useRef({ cacheKey: currentQueueCacheKey(), visiblePullRequests: visiblePullRequests(), filterActive: filterActive() })
 	const selectedIndexLive = useAtomValueSolid(() => selectedIndexAtom)
 	const rememberedIndexRef = useRef(0)
 
 	createEffect(() => {
-		const filterActiveNow = filterQueryLive().length > 0
+		const filterActiveNow = filterActive()
 		const selectedIndexNow = selectedIndexLive()
 		const previous = previousSelectionStateRef.current
 		const filterEnded = previous.filterActive && !filterActiveNow
 		if (filterEnded) {
 			const remembered = rememberedIndexRef.current
-			const visibleNow = visiblePullRequestsLive()
+			const visibleNow = visiblePullRequests()
 			const next = Math.max(0, Math.min(remembered, Math.max(0, visibleNow.length - 1)))
 			if (next !== selectedIndexNow) setSelectedIndex(next)
 			previousSelectionStateRef.current = { ...previous, filterActive: false }
@@ -227,51 +229,49 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 		previousSelectionStateRef.current = { ...previous, filterActive: filterActiveNow }
 	})
 
-	pullRequestStatusRef.current = pullRequestStatus
+	pullRequestStatusRef.current = pullRequestStatus()
 
 	const { loadMorePullRequests, isLoadingMorePullRequests, resetLoadingMore } = useLoadMore({
-		activeView,
-		currentQueueCacheKey,
-		pullRequestLoad,
-		hasMorePullRequests,
-		pullRequestFetchInFlight,
+		activeView: activeView(),
+		currentQueueCacheKey: currentQueueCacheKey(),
+		pullRequestLoad: pullRequestLoad(),
+		hasMorePullRequests: hasMorePullRequests(),
+		pullRequestFetchInFlight: pullRequestFetchInFlight(),
 		username,
 		refreshGenerationRef,
 		flashNotice,
 		setQueueLoadCache,
 	})
 
-	const pullRequestListRows = useMemo(
-		() =>
-			buildPullRequestListRows({
-				groups: visibleGroups,
-				status: pullRequestStatus,
-				error: pullRequestError,
-				filterText: visibleFilterText,
-				loadedCount: loadedPullRequestCount,
-				hasMore: loadMoreSlotAvailable,
-				isLoadingMore: isLoadingMorePullRequests,
-				compact: compactPullRequestRows,
-			}),
-		[visibleGroups, pullRequestStatus, pullRequestError, visibleFilterText, loadedPullRequestCount, loadMoreSlotAvailable, isLoadingMorePullRequests, compactPullRequestRows],
+	const pullRequestListRows = createMemo(() =>
+		buildPullRequestListRows({
+			groups: visibleGroups(),
+			status: pullRequestStatus(),
+			error: pullRequestError(),
+			filterText: visibleFilterText,
+			loadedCount: loadedPullRequestCount(),
+			hasMore: loadMoreSlotAvailable(),
+			isLoadingMore: isLoadingMorePullRequests(),
+			compact: compactPullRequestRows(),
+		}),
 	)
-	const selectedPullRequestRowIndex = pullRequestListRowIndex(pullRequestListRows, selectedPullRequest?.url ?? null, loadMoreRowSelected)
+	const selectedPullRequestRowIndex = createMemo(() => pullRequestListRowIndex(pullRequestListRows(), selectedPullRequest()?.url ?? null, loadMoreRowSelected()))
 
 	const { detailHydrationState, resetHydration } = useDetailHydration({
 		selectedPullRequest,
 		pullRequestStatus,
 		visiblePullRequests,
-		selectedIndex,
+		selectedIndex: selectedIndexLive,
 		currentQueueCacheKey,
 		refreshGenerationRef,
-		queueFetchedAtMs: pullRequestLoad?.fetchedAt?.getTime() ?? null,
+		queueFetchedAtMs: createMemo(() => pullRequestLoad()?.fetchedAt?.getTime() ?? null),
 		flashNotice,
 	})
 
 	const { terminalFocusedRef } = useFocusReturnRefresh({
 		renderer,
 		lastRefreshAtRef: lastPullRequestRefreshAtRef,
-		refreshGeneration: pullRequestLoad?.fetchedAt?.getTime(),
+		refreshGeneration: pullRequestLoad()?.fetchedAt?.getTime(),
 		focusReturnMinMs: FOCUS_RETURN_REFRESH_MIN_MS,
 		idleAfterMs: FOCUSED_IDLE_REFRESH_MS,
 		jitterMs: AUTO_REFRESH_JITTER_MS,
@@ -280,25 +280,25 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 		// merge (the cache write order isn't deterministic), reverting a
 		// freshly-loaded next page.
 		onRefresh: (ms) => {
-			if (isLoadingMorePullRequests) return
+			if (isLoadingMorePullRequests()) return
 			maybeRefreshPullRequestsRef.current(ms)
 		},
 	})
 
 	const { armRefreshToast, cancelRefreshToast } = useRefreshCompletionToast({
-		pullRequestStatus,
-		pullRequestError,
-		fetchedAt: pullRequestLoad?.fetchedAt?.getTime(),
-		pullRequestLoad,
-		selectedPullRequest,
+		pullRequestStatus: pullRequestStatus(),
+		pullRequestError: pullRequestError(),
+		fetchedAt: pullRequestLoad()?.fetchedAt?.getTime(),
+		pullRequestLoad: pullRequestLoad(),
+		selectedPullRequest: selectedPullRequest(),
 		lastPullRequestRefreshAtRef,
 		flashNotice,
 	})
 
 	const { refreshPullRequests } = usePullRequestRefresh({
-		pullRequestLoad,
-		pullRequestFetchInFlight,
-		isLoadingMorePullRequests,
+		pullRequestLoad: pullRequestLoad(),
+		pullRequestFetchInFlight: pullRequestFetchInFlight(),
+		isLoadingMorePullRequests: isLoadingMorePullRequests(),
 		refreshGenerationRef,
 		lastPullRequestRefreshAtRef,
 		pullRequestStatusRef,
@@ -316,40 +316,35 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 		refreshPullRequestsAtom,
 	})
 
-	const selectedPullRequestLive = useAtomValueSolid(() => selectedPullRequestAtom)
-	const loadMoreRowSelectedLive = useAtomValueSolid(() => loadMoreRowSelectedAtom)
-	const visibleGroupsLive = useAtomValueSolid(() => visibleGroupsAtom)
 	useScrollFollowSelected(prListScrollRef, () =>
 		pullRequestListRowIndex(
 			buildPullRequestListRows({
-				groups: visibleGroupsLive(),
-				status: pullRequestStatus,
-				error: pullRequestError,
-				filterText: filterQueryLive(),
-				loadedCount: loadedPullRequestCount,
-				hasMore: loadMoreSlotAvailable,
-				isLoadingMore: isLoadingMorePullRequests,
-				compact: compactPullRequestRows,
+				groups: visibleGroups(),
+				status: pullRequestStatus(),
+				error: pullRequestError(),
+				filterText: effectiveFilterQuery(),
+				loadedCount: loadedPullRequestCount(),
+				hasMore: loadMoreSlotAvailable(),
+				isLoadingMore: isLoadingMorePullRequests(),
+				compact: compactPullRequestRows(),
 			}),
-			selectedPullRequestLive()?.url ?? null,
-			loadMoreRowSelectedLive(),
+			selectedPullRequest()?.url ?? null,
+			loadMoreRowSelected(),
 		),
 	)
 	useScrollPersistence(prListScrollRef, prListScrollPersistedRef, activeWorkspaceSurface === "pullRequests" && !detailFullView && !diffFullView && !commentsViewActive)
 
 	const selectPullRequestByUrl = (url: string) => {
-		const index = visiblePullRequests.findIndex((pullRequest) => pullRequest.url === url)
+		const index = visiblePullRequests().findIndex((pullRequest) => pullRequest.url === url)
 		if (index >= 0) {
 			setSelectedIndex(index)
-			setQueueSelection((current) => ({ ...current, [currentQueueCacheKey]: index }))
+			setQueueSelection((current) => ({ ...current, [currentQueueCacheKey()]: index }))
 		}
 	}
 
 	// `isFullscreen` is provisionally `false` for the PR Surface here — the
 	// detail/diff/comments full-view booleans still live in App-shell during
-	// the transition. After step 4c (diff system collapse) and step 5
-	// (atom-driven commands), this should derive from PR-Surface-owned
-	// view-mode atoms.
+	// the transition.
 	const isFullscreen = false
 
 	return {
@@ -358,7 +353,7 @@ export const usePullRequestSurface = (input: UsePullRequestSurfaceInput): PullRe
 		pullRequestStatus,
 		pullRequestError,
 		pullRequestFetchInFlight,
-		isInitialLoading: (startupLoadComplete: boolean) => !startupLoadComplete && pullRequestStatus === "loading" && pullRequests.length === 0,
+		isInitialLoading: (startupLoadComplete: boolean) => !startupLoadComplete && pullRequestStatus() === "loading" && pullRequests().length === 0,
 		activeView,
 		setActiveView,
 		activeViews,

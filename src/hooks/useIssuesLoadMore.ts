@@ -1,4 +1,6 @@
-import { useAtom, useAtomSet } from "../atom-solid.js"
+import { useAtomSet } from "../atom-solid.js"
+import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { type Accessor } from "solid-js"
 import type { MutableRefObject } from "../solid-hooks.js"
 import { config } from "../config.js"
 import { useItemLoadMore } from "./useItemLoadMore.js"
@@ -23,7 +25,7 @@ export interface UseIssuesLoadMoreInput {
 
 export interface UseIssuesLoadMoreResult {
 	readonly loadMoreIssues: () => boolean
-	readonly isLoadingMoreIssues: boolean
+	readonly isLoadingMoreIssues: Accessor<boolean>
 	readonly resetLoadingMoreIssues: () => void
 }
 
@@ -41,7 +43,7 @@ export const useIssuesLoadMore = ({
 }: UseIssuesLoadMoreInput): UseIssuesLoadMoreResult => {
 	const loadIssuePage = useAtomSet(listIssuePageAtom, { mode: "promise" })
 	const writeIssueQueue = useAtomSet(writeIssueQueueAtom, { mode: "promise" })
-	const [loadingMoreKey, setLoadingMoreKey] = useAtom(loadingMoreIssueKeyAtom)
+	const [loadingMoreKey, setLoadingMoreKey] = [useAtomValueSolid(() => loadingMoreIssueKeyAtom), useAtomSet(loadingMoreIssueKeyAtom)] as const
 	const { loadMore, isLoadingMore, resetLoadingMore } = useItemLoadMore({
 		cacheKey: currentIssueCacheKey,
 		load: issueLoad,

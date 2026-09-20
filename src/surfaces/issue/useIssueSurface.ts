@@ -188,7 +188,7 @@ export const useIssueSurface = (input: UseIssueSurfaceInput): IssueSurfaceShell 
 		selectedIssueRepository,
 		showIssueRepositoryGroups,
 		loadMoreIssues,
-		isLoadingMoreIssues,
+		isLoadingMoreIssues: isLoadingMoreIssues(),
 		resetLoadingMoreIssues,
 	}
 }
