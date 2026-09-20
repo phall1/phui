@@ -1,5 +1,12 @@
 # phui
 
+## [0.18.0](https://github.com/phall1/phui/compare/v0.17.4...v0.18.0) (2026-09-20)
+
+
+### Features
+
+* compact short terminals, honest loading, and safer inbox ([#23](https://github.com/phall1/phui/issues/23)) ([488d7d9](https://github.com/phall1/phui/commit/488d7d9e3a80573c82fa1a8d24ab6faa6860af2a))
+
 ## [0.17.4](https://github.com/phall1/phui/compare/v0.17.3...v0.17.4) (2026-09-20)
 
 
