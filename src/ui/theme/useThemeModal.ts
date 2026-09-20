@@ -41,7 +41,8 @@ export interface UseThemeModalResult {
  * is a single seam.
  */
 export const useThemeModal = ({ themeModal, setThemeModal, closeActiveModal, flashNotice }: UseThemeModalInput): UseThemeModalResult => {
-	const themeConfig = useAtomValueSolid(() => themeConfigAtom)()
+	const themeConfigLive = useAtomValueSolid(() => themeConfigAtom)
+	const themeConfig = themeConfigLive()
 	const setThemeConfig = useAtomSetSolid(() => themeConfigAtom)
 	const systemAppearance = useAtomValueSolid(() => systemAppearanceAtom)()
 	const setSystemAppearance = useAtomSetSolid(() => systemAppearanceAtom)
@@ -71,9 +72,8 @@ export const useThemeModal = ({ themeModal, setThemeModal, closeActiveModal, fla
 
 	// System-appearance polling: while themeConfig.mode === "system", re-check
 	// the OS appearance and re-resolve the theme id when it flips.
-	const enabled = themeConfig.mode === "system"
 	createEffect(() => {
-		if (!enabled) return
+		if (themeConfigLive().mode !== "system") return
 		let cancelled = false
 		const refresh = () => {
 			void detectSystemAppearance().then((appearance) => {
