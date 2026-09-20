@@ -1,3 +1,4 @@
+import { type Accessor } from "solid-js"
 import { colors, mixHex } from "./colors.js"
 import { TextLine } from "./primitives.js"
 import { shimmerIntensity } from "./shimmer.js"
@@ -40,17 +41,17 @@ export const skeletonRowCountForHeight = (height: number, compact: boolean) => M
  * than as content; the travelling highlight lifts them toward `muted`, the
  * dimmest colour real rows ever use.
  */
-const Bar = ({ width, offset, frame, span, weight = 1 }: { width: number; offset: number; frame: number; span: number; weight?: number }) => (
+const Bar = ({ width, offset, frame, span, weight = 1 }: { width: number; offset: number; frame: Accessor<number>; span: number; weight?: number }) => (
 	<>
 		{Array.from({ length: Math.max(0, width) }, (_, index) => (
-			<span key={index} fg={mixHex(mixHex(colors.background, colors.separator, 0.55 * weight), colors.muted, shimmerIntensity(offset + index, frame, span))}>
+			<span key={index} fg={mixHex(mixHex(colors.background, colors.separator, 0.55 * weight), colors.muted, shimmerIntensity(offset + index, frame(), span))}>
 				{BAR}
 			</span>
 		))}
 	</>
 )
 
-const SkeletonGroupRow = ({ contentWidth, frame }: { contentWidth: number; frame: number }) => (
+const SkeletonGroupRow = ({ contentWidth, frame }: { contentWidth: number; frame: Accessor<number> }) => (
 	<TextLine width={contentWidth}>
 		<span fg={mixHex(colors.background, colors.separator, 0.7)}>{"◆ "}</span>
 		<Bar width={Math.max(8, Math.round(contentWidth * 0.22))} offset={2} frame={frame} span={contentWidth} weight={1.25} />
@@ -58,7 +59,7 @@ const SkeletonGroupRow = ({ contentWidth, frame }: { contentWidth: number; frame
 )
 
 /** Mirrors `PullRequestRow`'s geometry: review glyph, number, title, trailing age. */
-const SkeletonItemRow = ({ contentWidth, index, frame, compact }: { contentWidth: number; index: number; frame: number; compact: boolean }) => {
+const SkeletonItemRow = ({ contentWidth, index, frame, compact }: { contentWidth: number; index: number; frame: Accessor<number>; compact: boolean }) => {
 	const available = Math.max(10, contentWidth - 14)
 	const title = titleWidth(index, available)
 	const trailingGap = Math.max(1, contentWidth - 8 - title - 4)
@@ -88,7 +89,7 @@ const SkeletonItemRow = ({ contentWidth, index, frame, compact }: { contentWidth
 }
 
 export const SkeletonList = ({ contentWidth, rowCount, compact }: { contentWidth: number; rowCount: number; compact: boolean }) => {
-	const frame = useSpinnerFrame({ active: true, reset: false })
+	const frame = useSpinnerFrame({ active: () => true, reset: () => false })
 	return (
 		<box width={contentWidth} flexDirection="column">
 			<SkeletonGroupRow contentWidth={contentWidth} frame={frame} />
