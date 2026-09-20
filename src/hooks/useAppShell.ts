@@ -2,7 +2,7 @@ import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "../atom-soli
 import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
-import { createMemo } from "solid-js"
+import { createMemo, createSignal } from "solid-js"
 import { useCallback, useContext, useEffect, useRef, useState } from "../solid-hooks.js"
 import type { AppCommand } from "../commands.js"
 import type { PhuiLaunchIntent, PhuiLaunchView } from "../launchIntent.js"
@@ -169,8 +169,8 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		setOpenRepositoryModal,
 		setPromptModal,
 	} = useModalStack()
-	const [startupLoadComplete, setStartupLoadComplete] = useState(false)
-	const [homeCrumbHovered, setHomeCrumbHovered] = useState(false)
+	const [startupLoadComplete, setStartupLoadComplete] = createSignal(false)
+	const [homeCrumbHovered, setHomeCrumbHovered] = createSignal(false)
 	const launchIntentAppliedRef = useRef(false)
 	const [pendingLaunchPullRequest, setPendingLaunchPullRequest] = useState<{
 		readonly repository: string
@@ -272,7 +272,6 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	})
 	// Setup-time snapshots for the hooks below (which cannot take accessors);
 	// the shell memo reads the live accessors directly.
-	const pullRequestResult = prSurface.pullRequestResult()
 	const pullRequestStatus = prSurface.pullRequestStatus()
 	const pullRequestError = prSurface.pullRequestError()
 	const activeView = prSurface.activeView()
@@ -300,7 +299,6 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	const resetLoadingMore = prSurface.resetLoadingMore
 	const cancelRefreshToast = prSurface.cancelRefreshToast
 	const refreshPullRequests = prSurface.refreshPullRequests
-	const detailHydrationState = prSurface.detailHydrationState()
 	const resetHydration = prSurface.resetHydration
 	const selectPullRequestByUrl = prSurface.selectPullRequestByUrl
 	useTerminalTitle({
@@ -312,7 +310,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		commentsViewActive,
 		runsFullView,
 	})
-	const isInitialLoading = !startupLoadComplete && pullRequestStatus === "loading" && pullRequests.length === 0
+	const isInitialLoading = !startupLoadComplete() && pullRequestStatus === "loading" && pullRequests.length === 0
 	const visibleNotice = visibleNoticeAfterInitialLoading(notice, isInitialLoading)
 	// Atom-side notices do not pass through `useFlashNotice`'s timer. Start their
 	// fallback timeout only once the normal notice surface is visible, so an
@@ -650,33 +648,35 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		ensureDiffLineVisible(selectedDiffCommentAnchor.renderLine)
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [diffFullView])
-	const selectedPullRequestDetailKey = selectedPullRequest ? pullRequestDetailKey(selectedPullRequest) : null
 	const loadingStatus = useLoadingStatus({
-		selectedPullRequestDetailKey: () => selectedPullRequestDetailKey,
-		detailHydrationState: () => detailHydrationState,
-		pullRequestResult: () => pullRequestResult,
-		pullRequestLoad: () => pullRequestLoad,
-		pullRequestStatus: () => pullRequestStatus,
+		selectedPullRequestDetailKey: () => {
+			const pullRequest = prSurface.selectedPullRequest()
+			return pullRequest ? pullRequestDetailKey(pullRequest) : null
+		},
+		detailHydrationState: prSurface.detailHydrationState,
+		pullRequestResult: prSurface.pullRequestResult,
+		pullRequestLoad: prSurface.pullRequestLoad,
+		pullRequestStatus: prSurface.pullRequestStatus,
 		issuesStatus: () => issuesStatus,
-		isLoadingMorePullRequests: () => isLoadingMorePullRequests,
+		isLoadingMorePullRequests: prSurface.isLoadingMorePullRequests,
 		issueFetchInFlight: () => issueFetchInFlight,
 		isLoadingMoreIssues: () => isLoadingMoreIssues,
-		activeWorkspaceSurface: () => activeWorkspaceSurface,
-		selectedCommentsStatus: () => selectedCommentsStatus,
+		activeWorkspaceSurface: activeWorkspaceSurfaceLive,
+		selectedCommentsStatus: selection.selectedCommentsStatus,
 		selectedDiffState: () => selectedDiffState,
 		labelModal: () => labelModal,
 		closeModal: () => closeModal,
 		pullRequestStateModal: () => pullRequestStateModal,
 		mergeModal: () => mergeModal,
 		submitReviewModal: () => submitReviewModal,
-		isInitialLoading: () => isInitialLoading,
-		startupLoadComplete: () => startupLoadComplete,
+		isInitialLoading: () => !startupLoadComplete() && prSurface.pullRequestStatus() === "loading" && prSurface.pullRequests().length === 0,
+		startupLoadComplete,
 		setStartupLoadComplete,
-		selectedPullRequest: () => selectedPullRequest,
+		selectedPullRequest: prSurface.selectedPullRequest,
 		loadPullRequestComments,
 		commentsViewActive: viewMode.commentsViewActive,
 		detailFullView: viewMode.detailFullView,
-		isWideLayout: () => isWideLayout,
+		isWideLayout: () => layout().isWideLayout,
 	})
 	const halfPage = Math.max(1, Math.floor(wideBodyHeight / 2))
 
@@ -1386,7 +1386,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 				breadcrumbSeparatorText: header.breadcrumbSeparatorText,
 				headerLeftWidth: header.headerLeftWidth,
 				headerRepoWidth: header.headerRepoWidth,
-				homeCrumbHovered,
+				homeCrumbHovered: homeCrumbHovered(),
 				setHomeCrumbHovered,
 				goUpWorkspaceScope,
 			},
