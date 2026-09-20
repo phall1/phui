@@ -1,5 +1,19 @@
 # phui
 
+## [0.18.3](https://github.com/phall1/phui/compare/v0.18.2...v0.18.3) (2026-09-20)
+
+
+### Bug Fixes
+
+* make scroll persistence reactive and stop dropping it at mount ([0b4b869](https://github.com/phall1/phui/commit/0b4b8691e0adfac34678253e5d469caca181410d))
+* make the theme modal's system-appearance poll react to mode changes ([5190ff2](https://github.com/phall1/phui/commit/5190ff2f7850f4bbf27a6d365905d0a68b49fb04))
+
+
+### Performance Improvements
+
+* render workspace tabs with &lt;Index&gt; so counts updates reuse renderables ([99bd4f1](https://github.com/phall1/phui/commit/99bd4f187dcc6ea4b58ffe63d87770b336301dbd))
+* window diff file sections to the viewport ([1024396](https://github.com/phall1/phui/commit/1024396a9674c44e5db458293ab026ae45d2f4dd))
+
 ## [0.18.2](https://github.com/phall1/phui/compare/v0.18.1...v0.18.2) (2026-09-20)
 
 
