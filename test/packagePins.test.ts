@@ -16,6 +16,11 @@ describe("daily-driver package pins", () => {
 		expect(dependencies).not.toHaveProperty("scheduler")
 	})
 
+	test("linux binary packages do not set libc, so npm cannot skip them when Node omits glibcVersionRuntime", async () => {
+		const text = await Bun.file("dev/build-npm-packages.ts").text()
+		expect(text).not.toMatch(/libc:\s*\[/)
+	})
+
 	test("GitHub Actions install the Bun version in .bun-version", async () => {
 		const bunVersion = (await Bun.file(".bun-version").text()).trim()
 		expect(bunVersion).toBe("1.3.14")

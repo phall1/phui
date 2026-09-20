@@ -41,7 +41,11 @@ const packageMetadata = (target: ReleaseTarget) => ({
 	homepage: rootPackage.homepage,
 	os: [target.os],
 	cpu: [target.cpu],
-	...(target.os === "linux" ? { libc: ["glibc"] } : {}),
+	// Do not set `libc`. npm skips optionalDependencies whose libc does not
+	// match process.report's glibcVersionRuntime, and some Node builds
+	// (GitHub-hosted ubuntu-24.04 x64) omit that field — so linux-x64 was
+	// silently not installed even when os/cpu matched. Musl is rejected in
+	// bin/phui.js after the binary is present.
 	files: ["bin", "LICENSE"],
 	publishConfig: {
 		access: "public",
