@@ -1,4 +1,4 @@
-import { useAtom, useAtomSet, useAtomValue } from "../atom-solid.js"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import {
 	diffCommentAnchorIndexAtom,
 	diffCommentRangeStartIndexAtom,
@@ -15,39 +15,30 @@ import {
 
 /**
  * Diff-view atom subscriptions bundled into one hook. The bulk of the
- * diff state lives in `ui/diff/atoms.ts`; this hook gives App.tsx a
+ * diff state lives in `ui/diff/atoms.ts`; this hook gives the app shell a
  * single named seam to read and write them through.
+ *
+ * Values are returned as Solid accessors so consumers stay reactive.
  */
 export const useDiffViewState = () => {
-	const [diffFileIndex, setDiffFileIndex] = useAtom(diffFileIndexAtom)
-	const [diffScrollTop, setDiffScrollTop] = useAtom(diffScrollTopAtom)
-	const [diffRenderView, setDiffRenderView] = useAtom(diffRenderViewAtom)
-	const diffWrapMode = useAtomValue(diffWrapModeAtom)
-	const diffWhitespaceMode = useAtomValue(diffWhitespaceModeAtom)
-	const [diffCommentAnchorIndex, setDiffCommentAnchorIndex] = useAtom(diffCommentAnchorIndexAtom)
-	const [diffPreferredSide, setDiffPreferredSide] = useAtom(diffPreferredSideAtom)
-	const [diffCommentRangeStartIndex, setDiffCommentRangeStartIndex] = useAtom(diffCommentRangeStartIndexAtom)
-	const [diffCommentThreads, setDiffCommentThreads] = useAtom(diffCommentThreadsAtom)
-	const setDiffCommentsLoaded = useAtomSet(diffCommentsLoadedAtom)
-	const setPullRequestDiffCache = useAtomSet(pullRequestDiffCacheAtom)
 	return {
-		diffFileIndex,
-		setDiffFileIndex,
-		diffScrollTop,
-		setDiffScrollTop,
-		diffRenderView,
-		setDiffRenderView,
-		diffWrapMode,
-		diffWhitespaceMode,
-		diffCommentAnchorIndex,
-		setDiffCommentAnchorIndex,
-		diffPreferredSide,
-		setDiffPreferredSide,
-		diffCommentRangeStartIndex,
-		setDiffCommentRangeStartIndex,
-		diffCommentThreads,
-		setDiffCommentThreads,
-		setDiffCommentsLoaded,
-		setPullRequestDiffCache,
+		diffFileIndex: useAtomValueSolid(() => diffFileIndexAtom),
+		setDiffFileIndex: useAtomSetSolid(() => diffFileIndexAtom),
+		diffScrollTop: useAtomValueSolid(() => diffScrollTopAtom),
+		setDiffScrollTop: useAtomSetSolid(() => diffScrollTopAtom),
+		diffRenderView: useAtomValueSolid(() => diffRenderViewAtom),
+		setDiffRenderView: useAtomSetSolid(() => diffRenderViewAtom),
+		diffWrapMode: useAtomValueSolid(() => diffWrapModeAtom),
+		diffWhitespaceMode: useAtomValueSolid(() => diffWhitespaceModeAtom),
+		diffCommentAnchorIndex: useAtomValueSolid(() => diffCommentAnchorIndexAtom),
+		setDiffCommentAnchorIndex: useAtomSetSolid(() => diffCommentAnchorIndexAtom),
+		diffPreferredSide: useAtomValueSolid(() => diffPreferredSideAtom),
+		setDiffPreferredSide: useAtomSetSolid(() => diffPreferredSideAtom),
+		diffCommentRangeStartIndex: useAtomValueSolid(() => diffCommentRangeStartIndexAtom),
+		setDiffCommentRangeStartIndex: useAtomSetSolid(() => diffCommentRangeStartIndexAtom),
+		diffCommentThreads: useAtomValueSolid(() => diffCommentThreadsAtom),
+		setDiffCommentThreads: useAtomSetSolid(() => diffCommentThreadsAtom),
+		setDiffCommentsLoaded: useAtomSetSolid(() => diffCommentsLoadedAtom),
+		setPullRequestDiffCache: useAtomSetSolid(() => pullRequestDiffCacheAtom),
 	}
 }

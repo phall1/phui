@@ -1,4 +1,4 @@
-import { useMemo } from "../solid-hooks.js"
+import { createMemo, type Accessor } from "solid-js"
 import type { PullRequestReviewComment } from "../domain.js"
 import {
 	buildStackedDiffFiles,
@@ -17,100 +17,90 @@ import {
 import { diffCommentRangeContains, diffCommentRangeLabel, diffCommentRangeSelection, diffCommentThreadMapKey } from "../ui/diff/comments.js"
 
 export interface UseDiffCommentDerivationsInput {
-	readonly selectedDiffState: PullRequestDiffStateType | undefined
-	readonly readyDiffFiles: readonly DiffFilePatch[]
-	readonly effectiveDiffRenderView: DiffView
-	readonly diffWrapMode: DiffWrapMode
-	readonly diffWhitespaceMode: DiffWhitespaceMode
+	readonly selectedDiffState: Accessor<PullRequestDiffStateType | undefined>
+	readonly readyDiffFiles: Accessor<readonly DiffFilePatch[]>
+	readonly effectiveDiffRenderView: Accessor<DiffView>
+	readonly diffWrapMode: Accessor<DiffWrapMode>
+	readonly diffWhitespaceMode: Accessor<DiffWhitespaceMode>
 	// The outer width the diff pane actually renders at. When the docked file
 	// panel is hidden this matches contentWidth, but with the panel docked the
 	// diff lives in a narrower slice. buildStackedDiffFiles splits this in
 	// half for the split view, so passing the full contentWidth here causes
 	// the OLD/NEW columns to be unequal.
-	readonly diffPaneWidth: number
-	readonly diffFullView: boolean
-	readonly diffCommentAnchorIndex: number
-	readonly diffCommentRangeStartIndex: number | null
-	readonly selectedDiffKey: string | null
-	readonly diffCommentThreads: Record<string, readonly PullRequestReviewComment[]>
+	readonly diffPaneWidth: Accessor<number>
+	readonly diffFullView: Accessor<boolean>
+	readonly diffCommentAnchorIndex: Accessor<number>
+	readonly diffCommentRangeStartIndex: Accessor<number | null>
+	readonly selectedDiffKey: Accessor<string | null>
+	readonly diffCommentThreads: Accessor<Record<string, readonly PullRequestReviewComment[]>>
 }
 
 export interface DiffCommentDerivations {
-	readonly displayedDiffState: PullRequestDiffStateType | undefined
-	readonly stackedDiffFiles: readonly StackedDiffFilePatch[]
-	readonly diffCommentAnchors: readonly StackedDiffCommentAnchor[]
-	readonly selectedDiffCommentAnchorIndex: number
-	readonly selectedDiffCommentAnchor: StackedDiffCommentAnchor | null
-	readonly diffCommentRangeStartAnchor: StackedDiffCommentAnchor | null
-	readonly selectedDiffCommentRange: ReturnType<typeof diffCommentRangeSelection>
-	readonly selectedDiffCommentRangeAnchors: readonly StackedDiffCommentAnchor[]
-	readonly diffCommentRangeActive: boolean
-	readonly selectedDiffCommentLabel: string | null
-	readonly selectedDiffCommentThread: readonly PullRequestReviewComment[]
-	readonly diffLineColorContextKey: string | null
-	readonly diffCommentThreadAnchors: readonly StackedDiffCommentAnchor[]
+	readonly displayedDiffState: Accessor<PullRequestDiffStateType | undefined>
+	readonly stackedDiffFiles: Accessor<readonly StackedDiffFilePatch[]>
+	readonly diffCommentAnchors: Accessor<readonly StackedDiffCommentAnchor[]>
+	readonly selectedDiffCommentAnchorIndex: Accessor<number>
+	readonly selectedDiffCommentAnchor: Accessor<StackedDiffCommentAnchor | null>
+	readonly diffCommentRangeStartAnchor: Accessor<StackedDiffCommentAnchor | null>
+	readonly selectedDiffCommentRange: Accessor<ReturnType<typeof diffCommentRangeSelection>>
+	readonly selectedDiffCommentRangeAnchors: Accessor<readonly StackedDiffCommentAnchor[]>
+	readonly diffCommentRangeActive: Accessor<boolean>
+	readonly selectedDiffCommentLabel: Accessor<string | null>
+	readonly selectedDiffCommentThread: Accessor<readonly PullRequestReviewComment[]>
+	readonly diffLineColorContextKey: Accessor<string | null>
+	readonly diffCommentThreadAnchors: Accessor<readonly StackedDiffCommentAnchor[]>
 }
 
 export const useDiffCommentDerivations = (input: UseDiffCommentDerivationsInput): DiffCommentDerivations => {
-	const {
-		selectedDiffState,
-		readyDiffFiles,
-		effectiveDiffRenderView,
-		diffWrapMode,
-		diffWhitespaceMode,
-		diffPaneWidth,
-		diffFullView,
-		diffCommentAnchorIndex,
-		diffCommentRangeStartIndex,
-		selectedDiffKey,
-		diffCommentThreads,
-	} = input
-
-	const displayedDiffState = useMemo(
-		() =>
-			selectedDiffState?._tag === "Ready" ? PullRequestDiffState.Ready({ patch: readyDiffFiles.map((file) => file.patch).join("\n"), files: readyDiffFiles }) : selectedDiffState,
-		[selectedDiffState, readyDiffFiles],
+	const displayedDiffState = createMemo<PullRequestDiffStateType | undefined>(() => {
+		const state = input.selectedDiffState()
+		const files = input.readyDiffFiles()
+		return state?._tag === "Ready" ? PullRequestDiffState.Ready({ patch: files.map((file) => file.patch).join("\n"), files }) : state
+	})
+	const stackedDiffFiles = createMemo(() => buildStackedDiffFiles(input.readyDiffFiles(), input.effectiveDiffRenderView(), input.diffWrapMode(), input.diffPaneWidth()))
+	const diffCommentAnchors = createMemo(() =>
+		input.diffFullView() ? getStackedDiffCommentAnchors(stackedDiffFiles(), input.effectiveDiffRenderView(), input.diffWrapMode(), input.diffPaneWidth()) : [],
 	)
-	const stackedDiffFiles = useMemo(
-		() => buildStackedDiffFiles(readyDiffFiles, effectiveDiffRenderView, diffWrapMode, diffPaneWidth),
-		[readyDiffFiles, effectiveDiffRenderView, diffWrapMode, diffPaneWidth],
+	const selectedDiffCommentAnchorIndex = createMemo(() => Math.max(0, Math.min(input.diffCommentAnchorIndex(), diffCommentAnchors().length - 1)))
+	const selectedDiffCommentAnchor = createMemo(() => diffCommentAnchors()[selectedDiffCommentAnchorIndex()] ?? null)
+	const diffCommentRangeStartAnchor = createMemo(() => {
+		const startIndex = input.diffCommentRangeStartIndex()
+		return startIndex === null ? null : (diffCommentAnchors()[Math.max(0, Math.min(startIndex, diffCommentAnchors().length - 1))] ?? null)
+	})
+	const selectedDiffCommentRange = createMemo(() => diffCommentRangeSelection(diffCommentRangeStartAnchor(), selectedDiffCommentAnchor()))
+	const selectedDiffCommentRangeAnchors = createMemo(() =>
+		selectedDiffCommentRange() ? diffCommentAnchors().filter((anchor) => diffCommentRangeContains(selectedDiffCommentRange()!, anchor)) : [],
 	)
-	const diffCommentAnchors = useMemo(
-		() => (diffFullView ? getStackedDiffCommentAnchors(stackedDiffFiles, effectiveDiffRenderView, diffWrapMode, diffPaneWidth) : []),
-		[diffFullView, stackedDiffFiles, effectiveDiffRenderView, diffWrapMode, diffPaneWidth],
-	)
-	const selectedDiffCommentAnchorIndex = Math.max(0, Math.min(diffCommentAnchorIndex, diffCommentAnchors.length - 1))
-	const selectedDiffCommentAnchor = diffCommentAnchors[selectedDiffCommentAnchorIndex] ?? null
-	const diffCommentRangeStartAnchor =
-		diffCommentRangeStartIndex === null ? null : (diffCommentAnchors[Math.max(0, Math.min(diffCommentRangeStartIndex, diffCommentAnchors.length - 1))] ?? null)
-	const selectedDiffCommentRange = useMemo(
-		() => diffCommentRangeSelection(diffCommentRangeStartAnchor, selectedDiffCommentAnchor),
-		[diffCommentRangeStartAnchor, selectedDiffCommentAnchor],
-	)
-	const selectedDiffCommentRangeAnchors = useMemo(
-		() => (selectedDiffCommentRange ? diffCommentAnchors.filter((anchor) => diffCommentRangeContains(selectedDiffCommentRange, anchor)) : []),
-		[diffCommentAnchors, selectedDiffCommentRange],
-	)
-	const diffCommentRangeActive = selectedDiffCommentRange !== null
-	const selectedDiffCommentLabel = selectedDiffCommentRange
-		? diffCommentRangeLabel(selectedDiffCommentRange)
-		: selectedDiffCommentAnchor
-			? diffCommentAnchorLabel(selectedDiffCommentAnchor)
-			: null
-	const selectedDiffCommentThreadKey = selectedDiffKey && selectedDiffCommentAnchor ? diffCommentThreadMapKey(selectedDiffKey, selectedDiffCommentAnchor) : null
-	const selectedDiffCommentThread = selectedDiffCommentThreadKey ? (diffCommentThreads[selectedDiffCommentThreadKey] ?? []) : []
-	const diffLineColorContextKey = selectedDiffKey ? `${selectedDiffKey}:${effectiveDiffRenderView}:${diffWrapMode}:${diffWhitespaceMode}` : null
-	const diffCommentThreadAnchors = useMemo(() => {
-		if (!selectedDiffKey) return [] as readonly StackedDiffCommentAnchor[]
+	const diffCommentRangeActive = createMemo(() => selectedDiffCommentRange() !== null)
+	const selectedDiffCommentLabel = createMemo(() => {
+		const range = selectedDiffCommentRange()
+		if (range) return diffCommentRangeLabel(range)
+		const anchor = selectedDiffCommentAnchor()
+		return anchor ? diffCommentAnchorLabel(anchor) : null
+	})
+	const selectedDiffCommentThread = createMemo(() => {
+		const key = input.selectedDiffKey()
+		const anchor = selectedDiffCommentAnchor()
+		const threadKey = key && anchor ? diffCommentThreadMapKey(key, anchor) : null
+		return threadKey ? (input.diffCommentThreads()[threadKey] ?? []) : []
+	})
+	const diffLineColorContextKey = createMemo(() => {
+		const key = input.selectedDiffKey()
+		return key ? `${key}:${input.effectiveDiffRenderView()}:${input.diffWrapMode()}:${input.diffWhitespaceMode()}` : null
+	})
+	const diffCommentThreadAnchors = createMemo(() => {
+		const key = input.selectedDiffKey()
+		if (!key) return [] as readonly StackedDiffCommentAnchor[]
+		const threads = input.diffCommentThreads()
 		const seen = new Set<string>()
-		return diffCommentAnchors.filter((anchor) => {
-			const key = diffCommentLocationKey(anchor)
-			if (seen.has(key)) return false
-			if ((diffCommentThreads[diffCommentThreadMapKey(selectedDiffKey, anchor)]?.length ?? 0) === 0) return false
-			seen.add(key)
+		return diffCommentAnchors().filter((anchor) => {
+			const location = diffCommentLocationKey(anchor)
+			if (seen.has(location)) return false
+			if ((threads[diffCommentThreadMapKey(key, anchor)]?.length ?? 0) === 0) return false
+			seen.add(location)
 			return true
 		})
-	}, [diffCommentAnchors, diffCommentThreads, selectedDiffKey])
+	})
 
 	return {
 		displayedDiffState,

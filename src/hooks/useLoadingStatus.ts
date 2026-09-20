@@ -1,7 +1,4 @@
-import { createEffect } from "solid-js"
-import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
-import { useEffect } from "../solid-hooks.js"
-import { selectedPullRequestAtom } from "../ui/pullRequests/atoms.js"
+import { createEffect, createMemo, type Accessor } from "solid-js"
 import type { PullRequestItem } from "../domain.js"
 import type { WorkspaceSurface } from "../workspaceSurfaces.js"
 import type { CloseModalState, LabelModalState, MergeModalState, PullRequestStateModalState, SubmitReviewModalState } from "../ui/modals/types.js"
@@ -19,113 +16,94 @@ interface PullRequestResult {
 }
 
 export interface UseLoadingStatusInput {
-	readonly selectedPullRequestDetailKey: string | null
-	readonly detailHydrationState: Readonly<Record<string, DetailHydrationState>>
-	readonly pullRequestResult: PullRequestResult
-	readonly pullRequestLoad: PullRequestLoadShape | null
-	readonly pullRequestStatus: "loading" | "ready" | "error"
-	readonly issuesStatus: "loading" | "ready" | "error"
-	readonly isLoadingMorePullRequests: boolean
-	readonly issueFetchInFlight: boolean
-	readonly isLoadingMoreIssues: boolean
-	readonly activeWorkspaceSurface: WorkspaceSurface
-	readonly selectedCommentsStatus: "idle" | "loading" | "ready" | "error"
-	readonly selectedDiffState: PullRequestDiffState | undefined
-	readonly labelModal: LabelModalState
-	readonly closeModal: CloseModalState
-	readonly pullRequestStateModal: PullRequestStateModalState
-	readonly mergeModal: MergeModalState
-	readonly submitReviewModal: SubmitReviewModalState
-	readonly isInitialLoading: boolean
-	readonly startupLoadComplete: boolean
+	readonly selectedPullRequestDetailKey: Accessor<string | null>
+	readonly detailHydrationState: Accessor<Readonly<Record<string, DetailHydrationState>>>
+	readonly pullRequestResult: Accessor<PullRequestResult>
+	readonly pullRequestLoad: Accessor<PullRequestLoadShape | null>
+	readonly pullRequestStatus: Accessor<"loading" | "ready" | "error">
+	readonly issuesStatus: Accessor<"loading" | "ready" | "error">
+	readonly isLoadingMorePullRequests: Accessor<boolean>
+	readonly issueFetchInFlight: Accessor<boolean>
+	readonly isLoadingMoreIssues: Accessor<boolean>
+	readonly activeWorkspaceSurface: Accessor<WorkspaceSurface>
+	readonly selectedCommentsStatus: Accessor<"idle" | "loading" | "ready" | "error">
+	readonly selectedDiffState: Accessor<PullRequestDiffState | undefined>
+	readonly labelModal: Accessor<LabelModalState>
+	readonly closeModal: Accessor<CloseModalState>
+	readonly pullRequestStateModal: Accessor<PullRequestStateModalState>
+	readonly mergeModal: Accessor<MergeModalState>
+	readonly submitReviewModal: Accessor<SubmitReviewModalState>
+	readonly isInitialLoading: Accessor<boolean>
+	readonly startupLoadComplete: Accessor<boolean>
 	readonly setStartupLoadComplete: (next: boolean) => void
-	readonly selectedPullRequest: PullRequestItem | null
+	readonly selectedPullRequest: Accessor<PullRequestItem | null>
 	readonly loadPullRequestComments: (pr: PullRequestItem) => void
-	readonly commentsViewActive: boolean
-	readonly detailFullView: boolean
-	readonly isWideLayout: boolean
+	readonly commentsViewActive: Accessor<boolean>
+	readonly detailFullView: Accessor<boolean>
+	readonly isWideLayout: Accessor<boolean>
 }
 
 export interface LoadingStatus {
-	readonly selectedPullRequestDetailError: string | null
-	readonly isHydratingPullRequestDetails: boolean
-	readonly isRefreshingPullRequests: boolean
-	readonly isActiveSurfaceLoading: boolean
-	readonly hasActiveLoadingIndicator: boolean
-	readonly loadingFrame: number
-	readonly loadingIndicator: string
+	readonly selectedPullRequestDetailError: Accessor<string | null>
+	readonly isHydratingPullRequestDetails: Accessor<boolean>
+	readonly isRefreshingPullRequests: Accessor<boolean>
+	readonly isActiveSurfaceLoading: Accessor<boolean>
+	readonly hasActiveLoadingIndicator: Accessor<boolean>
+	readonly loadingFrame: Accessor<number>
+	readonly loadingIndicator: Accessor<string>
 }
 
 /**
- * Derives the four cross-cutting "is something loading?" booleans plus
- * the spinner frame the footer and headers consult. Also pumps the
- * one-shot startup completion flag and the per-PR comments load. The
- * inputs are wide because loading state is collated from a dozen
- * independent sources; the seam is worth it because callers read a
- * tight bundle instead of recomputing the union inline.
+ * Derives the cross-cutting "is something loading?" booleans plus the spinner
+ * frame the footer and headers consult. Returns accessors so the spinner and
+ * the loading chrome are live.
  */
-export const useLoadingStatus = ({
-	selectedPullRequestDetailKey,
-	detailHydrationState,
-	pullRequestResult,
-	pullRequestLoad,
-	pullRequestStatus,
-	issuesStatus,
-	isLoadingMorePullRequests,
-	issueFetchInFlight,
-	isLoadingMoreIssues,
-	activeWorkspaceSurface,
-	selectedCommentsStatus,
-	selectedDiffState,
-	labelModal,
-	closeModal,
-	pullRequestStateModal,
-	mergeModal,
-	submitReviewModal,
-	isInitialLoading,
-	startupLoadComplete,
-	setStartupLoadComplete,
-	selectedPullRequest: _selectedPullRequest,
-	loadPullRequestComments,
-	commentsViewActive,
-	detailFullView,
-	isWideLayout,
-}: UseLoadingStatusInput): LoadingStatus => {
-	const selectedPullRequestDetailHydrationState = selectedPullRequestDetailKey ? (detailHydrationState[selectedPullRequestDetailKey] ?? null) : null
-	const selectedPullRequestDetailError = selectedPullRequestDetailHydrationState?._tag === "Error" ? (selectedPullRequestDetailHydrationState.message ?? null) : null
-	const isHydratingPullRequestDetails = selectedPullRequestDetailHydrationState?._tag === "Loading"
-	const isRefreshingPullRequests = pullRequestResult.waiting && pullRequestLoad !== null
-	// Background refresh of an already-painted list must not steal the footer.
-	const isActiveSurfaceLoading =
-		(activeWorkspaceSurface === "pullRequests" && (pullRequestStatus === "loading" || isHydratingPullRequestDetails || isLoadingMorePullRequests)) ||
-		(activeWorkspaceSurface === "issues" && (issuesStatus === "loading" || isLoadingMoreIssues))
-	const hasActiveLoadingIndicator =
-		pullRequestResult.waiting ||
-		isHydratingPullRequestDetails ||
-		isLoadingMorePullRequests ||
-		(activeWorkspaceSurface === "issues" && (issueFetchInFlight || isLoadingMoreIssues)) ||
-		selectedCommentsStatus === "loading" ||
-		labelModal.loading ||
-		closeModal.running ||
-		pullRequestStateModal.running ||
-		mergeModal.loading ||
-		mergeModal.running ||
-		submitReviewModal.running ||
-		selectedDiffState?._tag === "Loading"
-	const loadingFrame = useSpinnerFrame({ active: hasActiveLoadingIndicator, reset: isInitialLoading })
-	const loadingIndicator = SPINNER_FRAMES[loadingFrame % SPINNER_FRAMES.length]!
+export const useLoadingStatus = (input: UseLoadingStatusInput): LoadingStatus => {
+	const selectedPullRequestDetailHydrationState = createMemo(() => {
+		const key = input.selectedPullRequestDetailKey()
+		return key ? (input.detailHydrationState()[key] ?? null) : null
+	})
+	const selectedPullRequestDetailError = createMemo(() => {
+		const state = selectedPullRequestDetailHydrationState()
+		return state?._tag === "Error" ? (state.message ?? null) : null
+	})
+	const isHydratingPullRequestDetails = createMemo(() => selectedPullRequestDetailHydrationState()?._tag === "Loading")
+	const isRefreshingPullRequests = createMemo(() => input.pullRequestResult().waiting && input.pullRequestLoad() !== null)
+	const isActiveSurfaceLoading = createMemo(() => {
+		const surface = input.activeWorkspaceSurface()
+		return (
+			(surface === "pullRequests" && (input.pullRequestStatus() === "loading" || isHydratingPullRequestDetails() || input.isLoadingMorePullRequests())) ||
+			(surface === "issues" && (input.issuesStatus() === "loading" || input.isLoadingMoreIssues()))
+		)
+	})
+	const hasActiveLoadingIndicator = createMemo(
+		() =>
+			input.pullRequestResult().waiting ||
+			isHydratingPullRequestDetails() ||
+			input.isLoadingMorePullRequests() ||
+			(input.activeWorkspaceSurface() === "issues" && (input.issueFetchInFlight() || input.isLoadingMoreIssues())) ||
+			input.selectedCommentsStatus() === "loading" ||
+			input.labelModal().loading ||
+			input.closeModal().running ||
+			input.pullRequestStateModal().running ||
+			input.mergeModal().loading ||
+			input.mergeModal().running ||
+			input.submitReviewModal().running ||
+			input.selectedDiffState()?._tag === "Loading",
+	)
+	const loadingFrame = useSpinnerFrame({ active: hasActiveLoadingIndicator, reset: input.isInitialLoading })
+	const loadingIndicator = createMemo(() => SPINNER_FRAMES[loadingFrame() % SPINNER_FRAMES.length]!)
 
-	useEffect(() => {
-		if (startupLoadComplete || pullRequestStatus === "loading") return
-		setStartupLoadComplete(true)
-	}, [startupLoadComplete, pullRequestStatus, setStartupLoadComplete])
-
-	const selectedPullRequestLive = useAtomValueSolid(() => selectedPullRequestAtom)
 	createEffect(() => {
-		const current = selectedPullRequestLive()
-		if (pullRequestStatus !== "ready" || !current) return
-		if (!commentsViewActive && !detailFullView && !isWideLayout) return
-		loadPullRequestComments(current)
+		if (input.startupLoadComplete() || input.pullRequestStatus() === "loading") return
+		input.setStartupLoadComplete(true)
+	})
+
+	createEffect(() => {
+		const current = input.selectedPullRequest()
+		if (input.pullRequestStatus() !== "ready" || !current) return
+		if (!input.commentsViewActive() && !input.detailFullView() && !input.isWideLayout()) return
+		input.loadPullRequestComments(current)
 	})
 
 	return {

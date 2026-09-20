@@ -1,25 +1,29 @@
-import { useEffect, useState } from "../solid-hooks.js"
+import { createEffect, createSignal, onCleanup, type Accessor } from "solid-js"
 import { SPINNER_INTERVAL_MS } from "./spinner.js"
 
 export interface UseSpinnerFrameInput {
-	readonly active: boolean
-	readonly reset: boolean
+	readonly active: Accessor<boolean>
+	readonly reset: Accessor<boolean>
 }
 
-export const useSpinnerFrame = ({ active, reset }: UseSpinnerFrameInput): number => {
-	const [frame, setFrame] = useState(0)
+/**
+ * Advances the shared busy-spinner frame while `active` is true. Returns a
+ * Solid accessor so the indicator is live rather than a one-shot snapshot.
+ */
+export const useSpinnerFrame = ({ active, reset }: UseSpinnerFrameInput): Accessor<number> => {
+	const [frame, setFrame] = createSignal(0)
 
-	useEffect(() => {
-		if (!active) return
+	createEffect(() => {
+		if (!active()) return
 		const interval = globalThis.setInterval(() => {
 			setFrame((current) => current + 1)
 		}, SPINNER_INTERVAL_MS)
-		return () => globalThis.clearInterval(interval)
-	}, [active])
+		onCleanup(() => globalThis.clearInterval(interval))
+	})
 
-	useEffect(() => {
-		if (reset) setFrame(0)
-	}, [reset])
+	createEffect(() => {
+		if (reset()) setFrame(0)
+	})
 
 	return frame
 }
