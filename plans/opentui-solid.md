@@ -15,4 +15,4 @@ phui's renderables go through OpenTUI's Zig core either way. Solid skips React's
 
 ## Status
 
-Runtime pins are OpenTUI Solid 0.5.11 + Effect `4.0.0-rc.115` + official `@effect/atom-solid`. The port itself is **not finished**: `src/solid-hooks.ts` emulates React hook semantics on Solid and is non-reactive (shim `useState` never updates JSX; shim `useEffect` never re-runs). `useAppShell` returns a one-shot snapshot and `App.tsx` hand-patches ~18 atoms to compensate. See [`solid-reactivity-migration.md`](./solid-reactivity-migration.md) for the proven findings, the structural blocker, and the ordered plan. Resize relayout and the loading spinner are casualties of this.
+Shipped. Runtime pins are OpenTUI Solid 0.5.11 + Effect `4.0.0-rc.115` + official `@effect/atom-solid`. The React-semantics shim (`src/solid-hooks.ts`, `src/atom-solid.ts`) has been deleted; call sites use Solid primitives and official atom hooks directly, with only non-reactive helpers left in `src/solid-utils.ts`. See [`solid-reactivity-migration.md`](./solid-reactivity-migration.md).

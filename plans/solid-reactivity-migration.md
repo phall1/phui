@@ -131,38 +131,32 @@ swapping the shim for raw registry reads.
 
 ## Status
 
-In progress. Landed on `perf/solid-reactivity` 2026-09-20:
+**Shipped 2026-09-20.** `src/solid-hooks.ts` and `src/atom-solid.ts` are
+**deleted**. Every call site uses Solid primitives (`createSignal`,
+`createEffect`, `createMemo`, `onMount`, `onCleanup`) and the official
+`@effect/atom-solid` hooks directly. The only survivors are genuinely
+non-reactive helpers in `src/solid-utils.ts` (`useRef` mutable box,
+`readMaybeAccessor`, ref types, `Fragment`) — no `useState`/`useEffect`/`useMemo`
+emulation remains.
 
-- **Step 1** — diff viewport windowing + diff scroll ownership (see
+What that fixed along the way:
+
+- **Terminal resize now relayouts** — `useAppShell` returns a `createMemo`; layout,
+  terminal size, view-mode, and loading are live.
+- **The busy spinner actually advances** — `useSpinnerFrame`/`useLoadingStatus`
+  return accessors fed live inputs.
+- **Selected-PR detail hydration and neighbour prefetch now run** — they sat
+  behind shim `useEffect`s that ran once and never re-fired.
+- **List scroll position is restored** — `useScrollPersistence` is reactive.
+- **Diff viewport windowing + diff scroll ownership** (see
   `diff-rendering-performance.md`).
-- **Step 2** — `useAppShell` returns a `createMemo` accessor; layout, terminal
-  size, view-mode, and loading are live. **Terminal resize now relayouts.**
-- **Step 3** — `useSpinnerFrame` / `useLoadingStatus` return accessors and the
-  spinner is fed live inputs, so it actually advances.
-- **Step 4 (partial)** — `useViewModeState`, `useDiffViewState`,
-  `useSelectionDerivations`, `useDiffCommentDerivations` return accessors.
-- **Step 5 (partial)** — `usePullRequestSurface` returns accessors;
-  `useDetailHydration` takes accessors and uses real `createEffect`s, so
-  **selected-PR detail hydration and neighbour prefetch now actually run**
-  (under the shim they ran once and never re-fired).
-- **Step 6 (partial)** — all shim `useState` sites are gone (0 remaining);
-  `useTerminalFocus`, `useIdleRefresh`, `usePullRequestRefresh`,
-  `useScrollPersistence`, `useCommandPalette` scroll, `useRunsView` pending, and
-  the shell's startup state are Solid primitives. `useScrollPersistence` is
-  reactive, so list scroll position is restored again.
 
-Deliberately NOT done: the shell memo does **not** read the PR/Issue surface
-accessors. Doing so re-rendered the whole content tree per keypress and tripped
-a native `TextBuffer` allocation storm under rapid key bursts. `App.tsx`'s
-overrides still keep the list/detail live. The follow-up that removes that split
-is per-prop accessors on the shell return (or dissolving the shell into
-per-Surface shells).
-
-Remaining (mechanical): 70 shim `useEffect` sites (the non-empty-dep ones are
-the broken ones), 12 `useMemo`, 33 `useAtomValue`, 26 `useAtom`; then delete
-`src/solid-hooks.ts` and `src/atom-solid.ts`. `useIssueSurface` /
-`useRepoSurface` still return values; `useScrollPersistence` is wired for them
-via accessor inputs.
+Known follow-up: the shell memo still does not read the PR/Issue surface
+accessors, because tracking selection re-rendered the whole content tree per
+keypress and tripped a native `TextBuffer` allocation storm under rapid key
+bursts. `App.tsx`'s overrides keep the list/detail live. Removing that split
+(per-prop accessors, or dissolving the shell into per-Surface shells) is the
+remaining work; see `app-shell-deepening.md`.
 
 ## Open questions
 
