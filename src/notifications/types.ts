@@ -48,6 +48,10 @@ export interface NotificationItem {
 export const notificationBuckets = ["needsYou", "yours", "ci", "security", "watching"] as const
 export type NotificationBucket = (typeof notificationBuckets)[number]
 
+export const MARK_ALL_READ_CONFIRM_MS = 4000
+
+export const markAllReadConfirmNotice = (count: number): string => `Press shift-a again to mark ${count} ${count === 1 ? "notification" : "notifications"} read.`
+
 export const notificationBucketLabels: Record<NotificationBucket, string> = {
 	needsYou: "NEEDS YOU",
 	yours: "YOUR THREADS",

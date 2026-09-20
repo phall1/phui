@@ -23,7 +23,7 @@ import { computeHeaderDerivations, groupIndexAt } from "../workspace/headerDeriv
 import { useWorkspacePreferencesPersistence } from "../workspace/useWorkspacePreferencesPersistence.js"
 import { commentsRowCountAtom, orderedCommentsAtom, pullRequestCommentsAtom, pullRequestCommentsLoadedAtom, selectedOrderedCommentAtom } from "../ui/comments/atoms.js"
 import { groupStartsAtom, pullRequestLoadMoreSlotAvailableAtom, visiblePullRequestsAtom } from "../ui/pullRequests/atoms.js"
-import { issueListAtom, issueLoadMoreSlotAvailableAtom } from "../ui/issues/atoms.js"
+import { issueListAtom, issueLoadMoreSlotAvailableAtom, pendingIssueSelectionAtom } from "../ui/issues/atoms.js"
 import { useIssueSurface } from "../surfaces/issue/useIssueSurface.js"
 import { filterDraftAtom, filterModeAtom, filterQueryAtom } from "../ui/filter/atoms.js"
 import { selectedIndexAtom } from "../ui/listSelection/atoms.js"
@@ -86,6 +86,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 	const registry = useContext(RegistryContext)
 
 	const setQueueSelection = useAtomSet(queueSelectionAtom)
+	const setPendingIssueSelection = useAtomSet(pendingIssueSelectionAtom)
 	const [selectedIndex, setSelectedIndex] = useAtom(selectedIndexAtom)
 	const [notice, setNotice] = useAtom(noticeAtom)
 	const [filterQuery, setFilterQuery] = useAtom(filterQueryAtom)
@@ -603,6 +604,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 				if (result._tag === "PullRequestFailed") throw new Error(result.error)
 			},
 			openIssue: (target) => {
+				setPendingIssueSelection({ repository: target.repository, number: target.number })
 				switchViewTo({ _tag: "Repository", repository: target.repository })
 				setActiveWorkspaceSurface("issues")
 			},
@@ -610,7 +612,7 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		}
 		setInboxNavigator(navigator)
 		return () => clearInboxNavigator(navigator)
-	}, [openLaunchTarget, setActiveWorkspaceSurface, switchViewTo])
+	}, [openLaunchTarget, setActiveWorkspaceSurface, setPendingIssueSelection, switchViewTo])
 
 	// Keep list scroll position when toggling between surfaces. Each list's
 	// scrollbox remounts on surface switch; without persistence it starts at
@@ -689,6 +691,9 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		setStartupLoadComplete,
 		selectedPullRequest,
 		loadPullRequestComments,
+		commentsViewActive,
+		detailFullView,
+		isWideLayout,
 	})
 
 	const detailPlaceholderContent = getDetailPlaceholderContent({

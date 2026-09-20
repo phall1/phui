@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { computeLayout, diffFilePanelWidthFor, isTerminalTooSmall } from "../src/workspace/layout.js"
+import { computeLayout, diffFilePanelWidthFor, isTerminalTooSmall, shouldShowNarrowDetailPreview } from "../src/workspace/layout.js"
 
 const noPanel = { showDiffFilePanel: false, diffFilePanelWidth: 0 } as const
 
@@ -65,6 +65,21 @@ describe("computeLayout", () => {
 		const tight = computeLayout({ terminalWidth: 80, terminalHeight: 40, showWorkspaceTabs: false, showDiffFilePanel: true, diffFilePanelWidth: 40 })
 		expect(tight.diffPaneWidth).toBeGreaterThanOrEqual(60)
 		expect(tight.diffFilePanelEffectiveWidth + 1 + tight.diffPaneWidth).toBeLessThanOrEqual(tight.contentWidth)
+	})
+})
+
+describe("shouldShowNarrowDetailPreview", () => {
+	it("hides the stacked preview when the pane would be too short to read", () => {
+		expect(shouldShowNarrowDetailPreview(5)).toBe(false)
+		expect(shouldShowNarrowDetailPreview(7)).toBe(false)
+		expect(shouldShowNarrowDetailPreview(8)).toBe(true)
+	})
+
+	it("hides the stacked preview in a 16-row terminal with tabs", () => {
+		const layout = computeLayout({ terminalWidth: 76, terminalHeight: 18, showWorkspaceTabs: true, ...noPanel })
+		const listHeight = Math.max(1, Math.ceil((layout.wideBodyHeight - 1) / 2))
+		const detailHeight = Math.max(1, layout.wideBodyHeight - listHeight - 1)
+		expect(shouldShowNarrowDetailPreview(detailHeight)).toBe(false)
 	})
 })
 

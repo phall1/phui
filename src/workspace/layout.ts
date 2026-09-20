@@ -39,8 +39,12 @@ const WIDE_BREAKPOINT = 100
 
 export const MIN_TERMINAL_WIDTH = 60
 export const MIN_TERMINAL_HEIGHT = 16
+/** Stacked list+detail on a short terminal needs this many rows for the preview or the panes overwrite each other. */
+export const MIN_NARROW_DETAIL_PREVIEW_HEIGHT = 8
 
 export const isTerminalTooSmall = (terminalWidth: number, terminalHeight: number): boolean => terminalWidth < MIN_TERMINAL_WIDTH || terminalHeight < MIN_TERMINAL_HEIGHT
+
+export const shouldShowNarrowDetailPreview = (detailPaneHeight: number): boolean => detailPaneHeight >= MIN_NARROW_DETAIL_PREVIEW_HEIGHT
 
 // Panel width scales with the terminal so it gets a fair share on wide
 // terminals (more room for long paths) without overwhelming the diff. The

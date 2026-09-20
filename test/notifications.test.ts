@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { parseNotification, subjectHtmlUrl, subjectNumber } from "../src/notifications/github.ts"
 import { clampSelection, notificationsRows, selectedNotification, visibleNotifications } from "../src/notifications/rows.ts"
-import { isOpenableInApp, reasonBucket, unreadCount, type NotificationItem } from "../src/notifications/types.ts"
+import { isOpenableInApp, markAllReadConfirmNotice, reasonBucket, unreadCount, type NotificationItem } from "../src/notifications/types.ts"
 
 const item = (overrides: Partial<NotificationItem> = {}): NotificationItem => ({
 	id: "1",
@@ -158,5 +158,12 @@ describe("clampSelection", () => {
 		expect(clampSelection(5, 3)).toBe(2)
 		expect(clampSelection(-2, 3)).toBe(0)
 		expect(clampSelection(4, 0)).toBe(0)
+	})
+})
+
+describe("markAllReadConfirmNotice", () => {
+	test("asks for a second shift-a before GitHub's irreversible PUT", () => {
+		expect(markAllReadConfirmNotice(1)).toBe("Press shift-a again to mark 1 notification read.")
+		expect(markAllReadConfirmNotice(4)).toBe("Press shift-a again to mark 4 notifications read.")
 	})
 })
