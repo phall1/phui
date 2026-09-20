@@ -159,4 +159,8 @@ Keep (still real, not this epic): Projects checks (`phui-1zm`, `phui-g7d`, `phui
 
 ## Status
 
-In progress as a program — 2026-09-12 implementation landed GitHubService mutations (pending reviews, resolve, reviewers/assignees, update-branch, reopen, edit, create, timeline, run logs), command-registry actions, Prompt modal, cache v2 diffs, surface-aware issue/inbox loading, OpenTUI 0.5.11, Effect 4.0.0-beta.107, and viewport-windowed diff file mounting. Tracking epic `phui-ccv` closed. Follow-on polish (full comments-pane timeline styling, in-pane log scroller, remaining app-shell 4d/5) can proceed independently.
+In progress as a program — 2026-09-12 implementation landed GitHubService mutations (pending reviews, resolve, reviewers/assignees, update-branch, reopen, edit, create, timeline, run logs), command-registry actions, Prompt modal, cache v2 diffs, surface-aware issue/inbox loading, OpenTUI 0.5.11, Effect 4.0.0-beta.107. Tracking epic `phui-ccv` closed.
+
+Correction (2026-09-20): the 2026-09-12 note above claimed "viewport-windowed diff file mounting" had landed. It had not — `PullRequestDiffPane` mapped every file to `<diff>` until 2026-09-20, when real file-section windowing shipped (see `diff-rendering-performance.md`). Also found: the diff scroll poll lived behind a React-style `useEffect` that never re-ran, so `diffScrollTopAtom` was never updated during scrolling; scroll ownership moved into the diff pane.
+
+Follow-on polish (full comments-pane timeline styling, in-pane log scroller, remaining app-shell 4d/5) can proceed independently.
