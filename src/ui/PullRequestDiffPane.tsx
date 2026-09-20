@@ -1,7 +1,8 @@
 import type { DiffRenderable, MouseEvent, ScrollBoxRenderable } from "@opentui/core"
-import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { onCleanup, onMount } from "solid-js"
 import { useMemo, type Ref } from "../solid-hooks.js"
-import { diffCommentAnchorIndexAtom } from "./diff/atoms.js"
+import { diffCommentAnchorIndexAtom, diffFileIndexAtom, diffScrollTopAtom } from "./diff/atoms.js"
 import type { DiffCommentSide, PullRequestItem, PullRequestReviewComment } from "../domain.js"
 import { colors, lineNumberTextColor, type ThemeId } from "./colors.js"
 import { CommentBodyLine, commentCountText, commentMetaSegments, CommentSegmentsLine } from "./comments.js"
@@ -14,6 +15,8 @@ import {
 	diffFileStatsText,
 	diffStatText,
 	stackedDiffFileIndexAtLine,
+	stackedFileBlockHeight,
+	visibleStackedFileRange,
 	type DiffFileStats,
 	type DiffView,
 	type DiffWhitespaceMode,
@@ -26,6 +29,9 @@ import { LoadingPane, StatusCard } from "./DetailsPane.js"
 import { DiffStats } from "./diffStats.js"
 import { Divider, fitCell, PaddedRow, PlainLine, TextLine } from "./primitives.js"
 import { shortRepoName } from "./pullRequests.js"
+
+/** How often the diff pane samples its scrollbox position (OpenTUI has no scroll event). */
+const DIFF_SCROLL_SYNC_MS = 50
 
 const DiffPaneHeader = ({ pullRequest, paneWidth, loadingIndicator }: { pullRequest: PullRequestItem; paneWidth: number; loadingIndicator: string }) => {
 	const stats = diffStatText(pullRequest, loadingIndicator)
@@ -80,7 +86,6 @@ export const PullRequestDiffPane = (props: {
 	pullRequest: PullRequestItem | null
 	diffState: PullRequestDiffState | undefined
 	stackedFiles: readonly StackedDiffFilePatch[]
-	scrollTop: number
 	view: DiffView
 	whitespaceMode: DiffWhitespaceMode
 	wrapMode: DiffWrapMode
@@ -101,7 +106,6 @@ export const PullRequestDiffPane = (props: {
 		pullRequest,
 		diffState,
 		stackedFiles,
-		scrollTop,
 		view,
 		whitespaceMode,
 		wrapMode,
@@ -117,6 +121,35 @@ export const PullRequestDiffPane = (props: {
 		showScrollbar,
 	} = props
 	const commentAnchorIndex = useAtomValueSolid(() => diffCommentAnchorIndexAtom)
+	// Read the live scroll position from the atom rather than the `scrollTop`
+	// prop: the prop travels through the app-shell's one-shot snapshot, so it
+	// is frozen at the value captured when the shell first ran.
+	const liveScrollTop = useAtomValueSolid(() => diffScrollTopAtom)
+	const setDiffScrollTop = useAtomSetSolid(() => diffScrollTopAtom)
+	const setDiffFileIndex = useAtomSetSolid(() => diffFileIndexAtom)
+	// OpenTUI's ScrollBox exposes no scroll event, so track its position on a
+	// short interval while the pane is mounted. This is the single owner of
+	// diff scroll state: windowing, the sticky header, the file panel, and
+	// comment navigation all read the atoms it writes. It lives here (rather
+	// than in a shell hook) because the pane is only mounted while the diff
+	// scrollbox exists, and because the previous shell-side poll sat behind a
+	// React-style `useEffect` that never re-ran.
+	onMount(() => {
+		const readScrollTop = (): number | undefined => {
+			const ref: unknown = scrollRef
+			if (ref && typeof ref === "object" && "current" in ref) return (ref as { current: ScrollBoxRenderable | null }).current?.scrollTop
+			if (ref && typeof ref === "object" && "scrollTop" in ref) return (ref as ScrollBoxRenderable).scrollTop
+			return undefined
+		}
+		const interval = globalThis.setInterval(() => {
+			const top = readScrollTop()
+			if (typeof top !== "number") return
+			setDiffScrollTop((current) => (current === top ? current : top))
+			const nextIndex = Math.max(0, stackedDiffFileIndexAtLine(props.stackedFiles, top))
+			setDiffFileIndex((current) => (current === nextIndex ? current : nextIndex))
+		}, DIFF_SCROLL_SYNC_MS)
+		onCleanup(() => globalThis.clearInterval(interval))
+	})
 	const readyFiles = diffState?._tag === "Ready" ? diffState.files : []
 	const syntaxStyle = useMemo(() => createDiffSyntaxStyle(), [themeId, themeGeneration])
 
@@ -178,7 +211,11 @@ export const PullRequestDiffPane = (props: {
 				})
 			: []
 	}
-	const stickyScrollTop = Math.max(0, Math.floor(scrollTop))
+	const stickyScrollTop = Math.max(0, Math.floor(liveScrollTop()))
+	// Mount only the file blocks near the viewport; paint exact-height spacers for
+	// the rest so total scroll height and anchor geometry are unchanged. Overscan
+	// is one viewport on each side, which comfortably covers the scroll poll's lag.
+	const fileWindow = visibleStackedFileRange(stackedFiles, stickyScrollTop, height, Math.max(12, height))
 	const stickyArrayIndex = stackedDiffFileIndexAtLine(stackedFiles, stickyScrollTop)
 	const stickyFile = stickyArrayIndex >= 0 ? stackedFiles[stickyArrayIndex] : stackedFiles[0]
 	const incomingStickyFile = stickyArrayIndex >= 0 ? stackedFiles[stickyArrayIndex + 1] : undefined
@@ -220,39 +257,43 @@ export const PullRequestDiffPane = (props: {
 				{...(showScrollbar ? {} : { verticalScrollbarOptions: { visible: false } })}
 				onMouseDown={handleDiffMouseDown}
 			>
-				{stackedFiles.map((stackedFile) => (
-					<box key={`${pullRequest.url}-${stackedFile.index}-${view}-${wrapMode}`} flexDirection="column" flexShrink={0}>
-						{stackedFile.index > 0 ? <Divider width={paneWidth} /> : null}
-						<PaddedRow>
-							<FileHeader file={stackedFile.file} index={stackedFile.index} count={readyFiles.length} width={paneWidth} />
-						</PaddedRow>
-						<Divider width={paneWidth} />
-						<diff
-							ref={(diff: DiffRenderable | null) => setDiffRef(stackedFile.index, diff)}
-							diff={stackedFile.file.patch}
-							view={view}
-							syncScroll
-							filetype={stackedFile.file.filetype ?? "text"}
-							syntaxStyle={syntaxStyle}
-							fg={colors.text}
-							showLineNumbers
-							wrapMode={wrapMode}
-							addedBg={colors.diff.addedBg}
-							removedBg={colors.diff.removedBg}
-							contextBg={colors.diff.contextBg}
-							addedSignColor={colors.status.passing}
-							removedSignColor={colors.status.failing}
-							lineNumberFg={diffLineNumberFg}
-							lineNumberBg={colors.diff.lineNumberBg}
-							addedLineNumberBg={colors.diff.addedLineNumberBg}
-							removedLineNumberBg={colors.diff.removedLineNumberBg}
-							selectionBg={colors.selectedBg}
-							selectionFg={colors.selectedText}
-							height={stackedFile.diffHeight}
-							style={{ flexShrink: 0 }}
-						/>
-					</box>
-				))}
+				{stackedFiles.map((stackedFile) =>
+					stackedFile.index < fileWindow.start || stackedFile.index > fileWindow.end ? (
+						<box key={`${pullRequest.url}-${stackedFile.index}-spacer`} height={stackedFileBlockHeight(stackedFile)} flexShrink={0} />
+					) : (
+						<box key={`${pullRequest.url}-${stackedFile.index}-${view}-${wrapMode}`} flexDirection="column" flexShrink={0}>
+							{stackedFile.index > 0 ? <Divider width={paneWidth} /> : null}
+							<PaddedRow>
+								<FileHeader file={stackedFile.file} index={stackedFile.index} count={readyFiles.length} width={paneWidth} />
+							</PaddedRow>
+							<Divider width={paneWidth} />
+							<diff
+								ref={(diff: DiffRenderable | null) => setDiffRef(stackedFile.index, diff)}
+								diff={stackedFile.file.patch}
+								view={view}
+								syncScroll
+								filetype={stackedFile.file.filetype ?? "text"}
+								syntaxStyle={syntaxStyle}
+								fg={colors.text}
+								showLineNumbers
+								wrapMode={wrapMode}
+								addedBg={colors.diff.addedBg}
+								removedBg={colors.diff.removedBg}
+								contextBg={colors.diff.contextBg}
+								addedSignColor={colors.status.passing}
+								removedSignColor={colors.status.failing}
+								lineNumberFg={diffLineNumberFg}
+								lineNumberBg={colors.diff.lineNumberBg}
+								addedLineNumberBg={colors.diff.addedLineNumberBg}
+								removedLineNumberBg={colors.diff.removedLineNumberBg}
+								selectionBg={colors.selectedBg}
+								selectionFg={colors.selectedText}
+								height={stackedFile.diffHeight}
+								style={{ flexShrink: 0 }}
+							/>
+						</box>
+					),
+				)}
 			</scrollbox>
 			{stickyFile ? (
 				<box position="absolute" top={2} left={0} width={paneWidth} height={2} zIndex={10} flexDirection="column" backgroundColor={colors.background}>

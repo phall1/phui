@@ -44,4 +44,6 @@ We looked at hunk, which solves a similar terminal diff problem elegantly. The u
 
 ## Status
 
-Not started. Prior-art exploration complete; implementation should start with the semantic row model and file-section geometry, then use that foundation for viewport windowing and syntax-plus-word-diff highlighting.
+In progress. Shipped viewport file-section windowing: `PullRequestDiffPane` mounts only the stacked files whose blocks intersect the viewport (plus one viewport of overscan) and paints exact-height spacer boxes for the rest, so total scroll height and comment-anchor geometry are preserved (`visibleStackedFileRange`, `stackedFileBlockTop`, `stackedFileBlockHeight` in `src/ui/diff.ts`). Diff scroll state is now owned by the pane — the only place the scrollbox exists — via a 50ms sample, replacing the shell-side 80ms poll that sat behind a React-style `useEffect` that never re-ran and therefore never started. Still pending: the semantic row model, syntax + word-diff highlighting, and the highlight cache.
+
+Note (2026-09-20): `daily-driver.md` had listed "viewport-windowed diff file mounting" as shipped. It was not; the pane mapped every file until this change.

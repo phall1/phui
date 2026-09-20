@@ -1,4 +1,4 @@
-import { useContext, useEffect, type MutableRefObject } from "../solid-hooks.js"
+import { useContext, type MutableRefObject } from "../solid-hooks.js"
 import { RegistryContext } from "../atom-solid.js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { diffCommentAnchorIndexAtom, diffPreferredSideAtom, diffRenderViewAtom, diffWrapModeAtom, readyDiffFilesAtom } from "../ui/diff/atoms.js"
@@ -22,7 +22,6 @@ const DIFF_STICKY_HEADER_LINES = 2
 import type { ChangedFilesModalState, CommentModalState } from "../ui/modals/types.js"
 
 export interface DiffCommentNavigatorInput {
-	readonly diffFullView: boolean
 	readonly diffFileIndex: number
 	readonly setDiffFileIndex: (next: number | ((current: number) => number)) => void
 	readonly setDiffScrollTop: (next: number | ((current: number) => number)) => void
@@ -85,7 +84,6 @@ export interface DiffCommentNavigator {
 export const useDiffCommentNavigator = (input: DiffCommentNavigatorInput): DiffCommentNavigator => {
 	const registry = useContext(RegistryContext)
 	const {
-		diffFullView,
 		diffFileIndex,
 		setDiffFileIndex,
 		setDiffScrollTop,
@@ -144,13 +142,8 @@ export const useDiffCommentNavigator = (input: DiffCommentNavigatorInput): DiffC
 		}
 	}
 
-	useEffect(() => {
-		if (!diffFullView) return
-		const interval = globalThis.setInterval(syncDiffScrollState, 80)
-		return () => globalThis.clearInterval(interval)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [diffFullView, stackedDiffFiles])
-
+	// Scroll state is owned by the diff pane, the only place the scrollbox
+	// exists; this hook consumes the atoms the pane writes.
 	const scrollToDiffFile = (index: number) => {
 		const stackedFile = stackedDiffFiles[index]
 		diffScrollRef.current?.scrollTo({ x: 0, y: stackedFile?.headerLine ?? 0 })

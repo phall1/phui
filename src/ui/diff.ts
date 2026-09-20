@@ -363,6 +363,64 @@ export const stackedDiffFileIndexAtLine = (stackedFiles: readonly StackedDiffFil
 
 export const stackedDiffFileAtLine = (stackedFiles: readonly StackedDiffFilePatch[], line: number) => stackedFiles[stackedDiffFileIndexAtLine(stackedFiles, line)]
 
+/** Row where a stacked file's block begins: its separator (if any), header, divider, then body. */
+export const stackedFileBlockTop = (file: StackedDiffFilePatch): number => file.headerLine - (file.index === 0 ? 0 : 1)
+
+/** Rows a stacked file's block occupies, including its separator, header, and divider. */
+export const stackedFileBlockHeight = (file: StackedDiffFilePatch): number => (file.index === 0 ? 0 : 1) + 2 + file.diffHeight
+
+export interface VisibleStackedFileRange {
+	/** First file whose block intersects the expanded viewport. */
+	readonly start: number
+	/** Last file whose block intersects the expanded viewport (inclusive), or -1 when none do. */
+	readonly end: number
+}
+
+/**
+ * Index range of stacked files whose blocks intersect `[scrollTop, scrollTop + viewportHeight)`
+ * grown by `overscan` rows on each side. Block tops are monotonic, so this is two binary
+ * searches — cheap enough to run on every scroll tick.
+ *
+ * The diff pane mounts only this range and paints exact-height spacer boxes for the rest,
+ * so a 500-file patch builds a handful of `<diff>` renderables instead of all of them while
+ * preserving total scroll height and the geometry comment navigation depends on.
+ */
+export const visibleStackedFileRange = (files: readonly StackedDiffFilePatch[], scrollTop: number, viewportHeight: number, overscan = 0): VisibleStackedFileRange => {
+	if (files.length === 0) return { start: 0, end: -1 }
+	const top = Math.max(0, scrollTop - Math.max(0, overscan))
+	const bottom = scrollTop + Math.max(1, viewportHeight) + Math.max(0, overscan)
+
+	let low = 0
+	let high = files.length - 1
+	let start = files.length
+	while (low <= high) {
+		const mid = (low + high) >>> 1
+		const file = files[mid]!
+		if (stackedFileBlockTop(file) + stackedFileBlockHeight(file) > top) {
+			start = mid
+			high = mid - 1
+		} else {
+			low = mid + 1
+		}
+	}
+
+	low = 0
+	high = files.length - 1
+	let end = -1
+	while (low <= high) {
+		const mid = (low + high) >>> 1
+		if (stackedFileBlockTop(files[mid]!) < bottom) {
+			end = mid
+			low = mid + 1
+		} else {
+			high = mid - 1
+		}
+	}
+
+	if (start > end) return { start: 0, end: -1 }
+	return { start, end }
+}
+
 export const diffStatText = (pullRequest: PullRequestItem, loadingIndicator: string) => {
 	if (!pullRequest.detailLoaded) return `${loadingIndicator} Loading details`
 	const files = pullRequest.changedFiles === 1 ? "1 file" : `${pullRequest.changedFiles} files`

@@ -3,7 +3,7 @@ import { createMemo, type JSX } from "solid-js"
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import type { ComponentProps, MutableRefObject } from "../solid-hooks.js"
 import { runsFullViewAtom } from "../ui/runs/atoms.js"
-import { diffCommentAnchorIndexAtom, readyDiffFilesAtom, selectedDiffStateAtom } from "../ui/diff/atoms.js"
+import { diffCommentAnchorIndexAtom, diffScrollTopAtom, readyDiffFilesAtom, selectedDiffStateAtom } from "../ui/diff/atoms.js"
 import type { DiffCommentSide, IssueItem, PullRequestComment, PullRequestItem, PullRequestReviewComment } from "../domain.js"
 import {
 	buildStackedDiffFiles,
@@ -196,11 +196,13 @@ const DiffSurface = (props: PullRequestSurfaceProps) => {
 		props.diffFilePanel.visible ? props.diffFilePanel.diffPaneWidth : props.contentWidth,
 	)
 	const commentAnchorIndex = useAtomValueSolid(() => diffCommentAnchorIndexAtom)
+	// Live scroll position; the prop would be a frozen shell snapshot. Used for
+	// the file-panel rail junctions, which must track the scrollbox.
+	const diffScrollTop = useAtomValueSolid(() => diffScrollTopAtom)
 	const {
 		showScrollbars,
 		contentWidth,
 		wideBodyHeight,
-		diffScrollTop,
 		effectiveDiffRenderView,
 		diffWhitespaceMode,
 		diffWrapMode,
@@ -220,7 +222,6 @@ const DiffSurface = (props: PullRequestSurfaceProps) => {
 			pullRequest={props.selectedPullRequest}
 			diffState={displayedDiffState}
 			stackedFiles={stackedDiffFiles}
-			scrollTop={diffScrollTop}
 			view={effectiveDiffRenderView}
 			whitespaceMode={diffWhitespaceMode}
 			wrapMode={diffWrapMode}
@@ -253,7 +254,7 @@ const DiffSurface = (props: PullRequestSurfaceProps) => {
 	// Two chrome rows above the scrollbox: header + divider. Content line 0
 	// of the scrollbox sits at viewport row 2.
 	const diffChromeOffset = 2
-	const scrollLine = Math.floor(diffScrollTop)
+	const scrollLine = Math.floor(diffScrollTop())
 	const fileDividerRailRows: number[] = []
 	for (const file of stackedDiffFiles) {
 		// Separator above the file header (only for files after the first).

@@ -786,7 +786,6 @@ export const useAppShell = ({ systemThemeGeneration, launchIntent }: UseAppShell
 		})
 
 	const diffNav = useDiffCommentNavigator({
-		diffFullView,
 		diffFileIndex,
 		setDiffFileIndex,
 		setDiffScrollTop,

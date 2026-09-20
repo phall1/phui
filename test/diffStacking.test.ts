@@ -11,7 +11,10 @@ import {
 	patchRenderableLineCount,
 	scrollTopForVisibleLine,
 	splitPatchFiles,
+	stackedFileBlockHeight,
+	stackedFileBlockTop,
 	verticalDiffAnchor,
+	visibleStackedFileRange,
 } from "../src/ui/diff.ts"
 
 const patch = `diff --git a/one.ts b/one.ts
@@ -261,5 +264,81 @@ ${additions}`)
 
 		expect(left).toMatchObject({ side: "LEFT", kind: "deletion", text: "const oldValue = 1" })
 		expect(diffAnchorOnSide(anchors, unchanged, "LEFT")).toBeNull()
+	})
+})
+
+describe("diff viewport windowing", () => {
+	const manyFilePatch = (count: number, linesPerFile: number): string =>
+		Array.from({ length: count }, (_, index) => {
+			const body = Array.from({ length: linesPerFile }, (_, line) => ` const f${index}line${line} = ${line}`).join("\n")
+			return `diff --git a/f${index}.ts b/f${index}.ts\n--- a/f${index}.ts\n+++ b/f${index}.ts\n@@ -1,${linesPerFile} +1,${linesPerFile} @@\n${body}`
+		}).join("\n")
+
+	const stackedFor = (count: number, linesPerFile: number) => buildStackedDiffFiles(splitPatchFiles(manyFilePatch(count, linesPerFile)), "unified", "none", 120)
+
+	test("block geometry tiles without gaps or overlap", () => {
+		const stacked = stackedFor(5, 12)
+		for (const file of stacked) {
+			expect(stackedFileBlockTop(file) + stackedFileBlockHeight(file)).toBe(file.headerLine + 2 + file.diffHeight)
+		}
+		for (let index = 1; index < stacked.length; index++) {
+			const previous = stacked[index - 1]!
+			expect(stackedFileBlockTop(stacked[index]!)).toBe(stackedFileBlockTop(previous) + stackedFileBlockHeight(previous))
+		}
+	})
+
+	test("returns an empty range for an empty stack", () => {
+		expect(visibleStackedFileRange([], 0, 20)).toEqual({ start: 0, end: -1 })
+	})
+
+	test("mounts only the files near the top of the viewport", () => {
+		const stacked = stackedFor(40, 20)
+		const range = visibleStackedFileRange(stacked, 0, 5, 0)
+
+		expect(range.start).toBe(0)
+		expect(range.end).toBe(0)
+	})
+
+	test("mounts the file under the viewport when scrolled into the middle", () => {
+		const stacked = stackedFor(40, 20)
+		const target = stacked[12]!
+		const range = visibleStackedFileRange(stacked, target.headerLine, 5, 0)
+
+		expect(range.start).toBeGreaterThan(0)
+		expect(range.start).toBeLessThanOrEqual(12)
+		expect(range.end).toBeGreaterThanOrEqual(12)
+		expect(range.end).toBeLessThan(stacked.length - 1)
+	})
+
+	test("overscan grows the mounted window on both sides", () => {
+		const stacked = stackedFor(40, 20)
+		const target = stacked[20]!
+		const tight = visibleStackedFileRange(stacked, target.headerLine, 5, 0)
+		const loose = visibleStackedFileRange(stacked, target.headerLine, 5, 1000)
+
+		expect(loose.start).toBeLessThan(tight.start)
+		expect(loose.end).toBeGreaterThan(tight.end)
+		expect(loose).toEqual({ start: 0, end: stacked.length - 1 })
+	})
+
+	test("always includes the file that owns a body line", () => {
+		const stacked = stackedFor(30, 9)
+		for (const file of stacked) {
+			const probes = [file.diffStartLine, file.diffStartLine + Math.floor(file.diffHeight / 2), file.diffStartLine + file.diffHeight - 1]
+			for (const probe of probes) {
+				const range = visibleStackedFileRange(stacked, probe, 6, 0)
+				expect(range.start).toBeLessThanOrEqual(file.index)
+				expect(range.end).toBeGreaterThanOrEqual(file.index)
+			}
+		}
+	})
+
+	test("mounts far fewer blocks than the whole patch", () => {
+		const stacked = stackedFor(200, 24)
+		const range = visibleStackedFileRange(stacked, stacked[100]!.headerLine, 30, 30)
+		const mounted = range.end - range.start + 1
+
+		expect(mounted).toBeLessThan(12)
+		expect(mounted).toBeGreaterThan(0)
 	})
 })
