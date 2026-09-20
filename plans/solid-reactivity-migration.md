@@ -131,6 +131,17 @@ swapping the shim for raw registry reads.
 
 ## Status
 
-In progress. Step 1 shipped 2026-09-20. Steps 2–7 not started. The shim is still
-load-bearing and still non-reactive; the app's live updates continue to come
-from the hand-maintained `App.tsx` overrides.
+In progress. Step 1 shipped 2026-09-20. Steps 2–7 not started on this branch.
+
+A partial attempt at steps 2–4 lives on branch `wip/solid-migration` (commit
+"wip: accessor conversion for view/diff/loading/derivation hooks"). It converts
+`useViewModeState`, `useDiffViewState`, `useSelectionDerivations`,
+`useDiffCommentDerivations`, `useLoadingStatus`, and `useSpinnerFrame` to return
+Solid accessors. It does **not** typecheck yet (110 errors): `useAppShell` and
+`App.tsx` still consume those hooks as values. The next edit is to make
+`useAppShell` return a memo of accessors and update `App.tsx`, then continue with
+the surface hooks and the leaf `useEffect`s. Use it as a starting point, not as a
+mergeable state.
+
+The shim is still load-bearing and still non-reactive; the app's live updates
+continue to come from the hand-maintained `App.tsx` overrides.
