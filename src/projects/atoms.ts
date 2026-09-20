@@ -3,6 +3,7 @@ import * as Atom from "effect/unstable/reactivity/Atom"
 import { CacheService } from "../services/CacheService.js"
 import { GitHubService } from "../services/GitHubService.js"
 import { githubRuntime } from "../services/runtime.js"
+import { workspaceSurfaceAtom } from "../workspace/atoms.js"
 import { runCheckIds, runChecks } from "./checks/index.js"
 import { checkContext, hasConfiguredRoots, loadProjectsConfig, type ProjectsConfig } from "./config.js"
 import { fetchProjectGitHubSnapshots } from "./github.js"
@@ -52,6 +53,13 @@ export const projectsReportAtom = githubRuntime
 			get(projectsRescanAtom)
 			const scannedAt = new Date()
 			const config = yield* loadProjectsConfig
+			// Compiling without the Solid transform (and some Switch/Match
+			// builds) still constructs inactive surfaces. A Projects scan
+			// fans out `gh` per local repo and freezes boot. Do not fetch
+			// until this tab is actually selected.
+			if (get(workspaceSurfaceAtom) !== "projects") {
+				return { config, report: emptyProjectsReport(scannedAt, config.warnings) } satisfies ProjectsSurfaceState
+			}
 			if (!hasConfiguredRoots(config)) return { config, report: emptyProjectsReport(scannedAt, config.warnings) } satisfies ProjectsSurfaceState
 
 			const scan = yield* scanProjects(config, { scannedAt })

@@ -48,8 +48,8 @@ Commands:
   -h, --help                         Show this help message
 `
 
-const run = (target, args = process.argv.slice(2)) => {
-	const result = childProcess.spawnSync(target, args, { stdio: "inherit" })
+const run = (target, args = process.argv.slice(2), options = {}) => {
+	const result = childProcess.spawnSync(target, args, { stdio: "inherit", ...options })
 	if (result.error) {
 		console.error(result.error.message)
 		process.exit(1)
@@ -59,12 +59,23 @@ const run = (target, args = process.argv.slice(2)) => {
 
 const scriptPath = fs.realpathSync(__filename)
 const scriptDir = path.dirname(scriptPath)
+const packageRoot = path.join(scriptDir, "..")
+const SOLID_PRELOAD = "@opentui/solid/preload"
 
 const resolveScriptEntry = () => {
 	if (process.env.PHUI_BIN_PATH) return null
-	const sourceEntry = path.join(scriptDir, "..", "src", "standalone.ts")
+	const sourceEntry = path.join(packageRoot, "src", "standalone.ts")
 	if (fs.existsSync(sourceEntry)) return sourceEntry
 	return null
+}
+
+const runFromSource = (args = process.argv.slice(2)) => {
+	const sourceEntry = resolveScriptEntry()
+	if (!sourceEntry) return false
+	// Same preload `bun run start` uses. Without it, bun does not run the
+	// Solid JSX transform and the TUI paints the splash then never updates.
+	run("bun", ["--preload", SOLID_PRELOAD, sourceEntry, ...args], { cwd: packageRoot })
+	return true
 }
 
 const resolveBinary = () => {
@@ -95,20 +106,15 @@ if (process.argv[2] === "-v" || process.argv[2] === "--version" || process.argv[
 }
 
 if (process.argv[2] === "upgrade") {
-	const sourceEntry = resolveScriptEntry()
-	const binaryPath = resolveBinary()
-
-	if (sourceEntry) {
-		run("bun", [sourceEntry, "upgrade"])
+	if (!runFromSource(["upgrade"])) {
+		const binaryPath = resolveBinary()
+		if (binaryPath && fs.existsSync(binaryPath)) {
+			run(binaryPath, ["upgrade"])
+		}
+		console.error("Could not find a phui binary to upgrade.")
+		console.error(`  npm install -g ${packageJson.name}@latest`)
+		process.exit(1)
 	}
-
-	if (binaryPath && fs.existsSync(binaryPath)) {
-		run(binaryPath, ["upgrade"])
-	}
-
-	console.error("Could not find a phui binary to upgrade.")
-	console.error(`  npm install -g ${packageJson.name}@latest`)
-	process.exit(1)
 }
 
 const isMusl = () => {
@@ -141,15 +147,12 @@ if (platform === "linux" && isMusl()) {
 const binaryPath = resolveBinary()
 
 if (!binaryPath || !fs.existsSync(binaryPath)) {
-	const sourceEntry = resolveScriptEntry()
-	if (sourceEntry) {
-		run("bun", [sourceEntry, ...process.argv.slice(2)])
+	if (!runFromSource()) {
+		const fallbackName = `${packageJson.name}-${platform}-${arch}`
+		console.error(`Could not find the ${fallbackName} binary package for this platform.`)
+		console.error(`Try reinstalling ${packageJson.name}, or install ${fallbackName} manually.`)
+		process.exit(1)
 	}
-
-	const fallbackName = `${packageJson.name}-${platform}-${arch}`
-	console.error(`Could not find the ${fallbackName} binary package for this platform.`)
-	console.error(`Try reinstalling ${packageJson.name}, or install ${fallbackName} manually.`)
-	process.exit(1)
 }
 
 run(binaryPath)
