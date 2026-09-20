@@ -1,5 +1,12 @@
 # phui
 
+## [0.18.1](https://github.com/phall1/phui/compare/v0.18.0...v0.18.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **release:** PTY boot smoke and retry platform binary install ([#25](https://github.com/phall1/phui/issues/25)) ([ee60066](https://github.com/phall1/phui/commit/ee60066ce307eef27a22b4e0dd51b629c02ae167))
+
 ## [0.18.0](https://github.com/phall1/phui/compare/v0.17.4...v0.18.0) (2026-09-20)
 
 
