@@ -10,7 +10,7 @@
 
 Terminal UI for keeping up with GitHub pull requests, issues, diffs, and Actions across repositories.
 
-`phui` gives you one keyboard-driven place to triage your GitHub notifications, browse your starred repositories, review PR details, inspect diffs, monitor and control Actions, leave diff comments, manage labels, toggle draft state, merge, open PRs in GitHub, and copy PR metadata without leaving the terminal.
+`phui` gives you one keyboard-driven place to triage your GitHub notifications, review PR details, inspect diffs, monitor and control Actions, leave diff comments, manage labels, toggle draft state, merge, open PRs in GitHub, and copy PR metadata without leaving the terminal.
 
 <img width="1420" height="856" alt="image" src="https://github.com/user-attachments/assets/5e560a4a-5887-4baa-a6d4-e1f4f0410c70" />
 
@@ -277,19 +277,6 @@ requested without you opening github.com to find out. Reading notifications
 needs a `gh` token with the `notifications` scope — `gh auth login` grants it by
 default, and the surface says so plainly if yours does not have it.
 
-### Stars
-
-Press `5` (or `g s`) to browse everything you have starred, with star count,
-language, description, and last-push age.
-
-- `/` filters as you type across name, description, language, and topics.
-- `s` cycles the sort: recently starred, recently pushed, most stars, name.
-- `enter` scopes phui to the repository, so its pull requests, issues, and
-  Actions are one keystroke away.
-- `o` opens it in a browser, `shift-u` unstars it, `r` refreshes.
-
-phui reads the first 500 stars and tells you when it stopped there.
-
 ### Workflow runs
 
 Open a repository and select its **Actions** tab to monitor recent workflow runs
@@ -312,8 +299,8 @@ Requires the GitHub CLI (`gh`) the same as the rest of phui; nothing extra to co
 - `gg` / `G`: jump to first or last pull request
 - `ctrl-u` / `ctrl-d`: page up or down
 - `tab` / `shift-tab`: switch PR queue
-- `1`–`6`: jump straight to a workspace surface
-- `g h` / `g p` / `g i` / `g n` / `g s`: go to repos, pull requests, issues, inbox, stars
+- `1`–`5`: jump straight to a workspace surface
+- `g h` / `g p` / `g i` / `g n`: go to repos, pull requests, issues, inbox
 - `ctrl-p` / `cmd-k`: open the command palette
 - `/`: filter
 - `enter`: expand details; normal PR actions still work while details are expanded
@@ -332,7 +319,7 @@ Requires the GitHub CLI (`gh`) the same as the rest of phui; nothing extra to co
 - `s`: toggle draft or ready-for-review state
 - `m`: merge
 - `x`: close with confirmation
-- `t`: choose a fixed theme, including `System` to match your terminal colors; press `m` in the theme picker to follow the OS light/dark appearance with separate theme choices
+- `t`: choose a theme (`System` matches your terminal colors; also PHUI, One Dark, One Light); press `m` in the theme picker to follow the OS light/dark appearance with separate theme choices
 - `l`: manage labels
 - `o`: open PR in browser
 - `e`: open PR in your editor (configurable; see `editorCommand` / `repoPaths`)
@@ -361,7 +348,7 @@ layer on top of that work, and the credit for the tool belongs to him.
 
 What this fork adds:
 
-- A repository **Actions** dashboard, and **Inbox**, **Stars**, and **Projects**
+- A repository **Actions** dashboard, and **Inbox** and **Projects**
   surfaces (the last a portfolio linter over local repos)
 - Handoff into [phux](https://github.com/phall1/phux) — open a PR directly in a
   phux worktree session with `w`, plus agent cockpit handoff

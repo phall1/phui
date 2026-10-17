@@ -2,7 +2,7 @@
 
 ## Why
 
-`plans/sqlite-cache.md` has shipped a v1 foundation: SQLite-backed queue snapshots and hydrated PR rows, opportunistic prune, `PHUI_CACHE_PATH=off` escape hatch, best-effort writes. That covers the highest-leverage caching but leaves real gaps:
+The SQLite cache (see git history for `plans/sqlite-cache.md`) has shipped a v1 foundation: SQLite-backed queue snapshots and hydrated PR rows, opportunistic prune, `PHUI_CACHE_PATH=off` escape hatch, best-effort writes. That covers the highest-leverage caching but leaves real gaps:
 
 - The biggest perceived latency (opening a PR diff) still hits the network every time.
 - Per-repo metadata (labels, allowed merge methods) is fetched from cold every cold start.
@@ -56,7 +56,7 @@ Safety/lifecycle gaps still open:
 
 ### v2.2 — comments cache (only if latency becomes annoying)
 
-Deferred. Would mirror `sqlite-cache.md`'s v1.1 plan: issue comments by PR, review comments by `(pr_key, head_ref_oid)`. Always revalidate on selection. Skip until usage shows it matters.
+Deferred. Would mirror the v1 cache plan's v1.1 follow-up: issue comments by PR, review comments by `(pr_key, head_ref_oid)`. Always revalidate on selection. Skip until usage shows it matters.
 
 ## API / architecture mapping
 
@@ -129,4 +129,4 @@ Foreign-key cascade isn't necessary; pruning by `pr_key NOT IN (SELECT pr_key FR
 
 ## Status
 
-Not started. v1 foundation (`sqlite-cache.md`) is shipped; let it bake on the maintainer's machine for 1–2 weeks before starting v2.0. Bake means: real PR review sessions, occasional offline use, occasional refresh-after-deploy. If the cache file grows in a way that surprises us or pruning misbehaves, fix that *before* adding more tables.
+Not started. v1 foundation is shipped; let it bake on the maintainer's machine for 1–2 weeks before starting v2.0. Bake means: real PR review sessions, occasional offline use, occasional refresh-after-deploy. If the cache file grows in a way that surprises us or pruning misbehaves, fix that *before* adding more tables.

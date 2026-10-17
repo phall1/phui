@@ -135,7 +135,6 @@ export const appKeymap = App(
 	// strip differs between user scope and repository scope.
 	{ id: "workspace.fourth", title: "Fourth surface", keys: ["4"], when: (s) => inListMode(s), run: (s) => goToWorkspaceSurfaceAt(s, 3) },
 	{ id: "workspace.fifth", title: "Fifth surface", keys: ["5"], when: (s) => inListMode(s), run: (s) => goToWorkspaceSurfaceAt(s, 4) },
-	{ id: "workspace.sixth", title: "Sixth surface", keys: ["6"], when: (s) => inListMode(s), run: (s) => goToWorkspaceSurfaceAt(s, 5) },
 	{ id: "workspace.inbox", title: "Go to inbox", keys: ["g n"], when: (s) => inListMode(s), run: (s) => s.listNav.switchWorkspaceSurface("notifications") },
 
 	// Modal layers

@@ -50,7 +50,7 @@ Second ring (still daily, slightly less blocking):
 
 8. **Create a PR from a branch** — Projects already suggests `gh pr create`; there is no in-app flow (title/body/base/draft/reviewers).
 9. **Closed / merged history** — lists are `is:open` only. Merged PRs vanish after refresh.
-10. **Inbox → the comment that caused it** — [`notification-inbox.md`](./notification-inbox.md) follow-ups (`phui-4r4`, `phui-bkv`).
+10. **Inbox → the comment that caused it** — Inbox follow-ups (`phui-4r4`, `phui-bkv`).
 11. **Apply suggestion blocks** — out of scope for queued-reviews v1; needed before github.com is optional for "accept this hunk".
 12. **Merge queue** — zero code. If a repo uses merge queue, merge-now/auto-merge is the wrong model.
 
