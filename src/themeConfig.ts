@@ -12,7 +12,7 @@ export interface StoredThemeConfigInput {
 }
 
 const defaultDarkThemeId = "phui" satisfies ThemeId
-const defaultLightThemeId = "catppuccin-latte" satisfies ThemeId
+const defaultLightThemeId = "one-light" satisfies ThemeId
 
 export const defaultThemeConfig: ThemeConfig = { mode: "fixed", theme: defaultDarkThemeId }
 

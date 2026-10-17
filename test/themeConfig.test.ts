@@ -7,7 +7,7 @@ describe("resolveStoredThemeId", () => {
 	})
 
 	test("keeps a current theme id", () => {
-		expect(resolveStoredThemeId("catppuccin")).toBe("catppuccin")
+		expect(resolveStoredThemeId("one-dark")).toBe("one-dark")
 	})
 
 	test("falls back when the value is unknown", () => {
@@ -21,50 +21,50 @@ describe("normalizeThemeConfig", () => {
 	})
 
 	test("keeps existing fixed theme config as the default", () => {
-		expect(normalizeThemeConfig({ theme: "catppuccin" })).toEqual({ mode: "fixed", theme: "catppuccin" })
+		expect(normalizeThemeConfig({ theme: "one-dark" })).toEqual({ mode: "fixed", theme: "one-dark" })
 	})
 
 	test("builds follow-system config with dark and light themes", () => {
-		expect(normalizeThemeConfig({ themeMode: "system", darkTheme: "catppuccin", lightTheme: "catppuccin-latte" })).toEqual({
+		expect(normalizeThemeConfig({ themeMode: "system", darkTheme: "one-dark", lightTheme: "one-light" })).toEqual({
 			mode: "system",
-			darkTheme: "catppuccin",
-			lightTheme: "catppuccin-latte",
+			darkTheme: "one-dark",
+			lightTheme: "one-light",
 		})
 	})
 
 	test("falls back to paired themes for invalid system entries", () => {
-		expect(normalizeThemeConfig({ themeMode: "system", theme: "solarized-dark", darkTheme: "solarized-light", lightTheme: "missing" })).toEqual({
+		expect(normalizeThemeConfig({ themeMode: "system", theme: "one-dark", darkTheme: "one-light", lightTheme: "missing" })).toEqual({
 			mode: "system",
-			darkTheme: "solarized-dark",
-			lightTheme: "solarized-light",
+			darkTheme: "one-dark",
+			lightTheme: "one-light",
 		})
 	})
 })
 
 describe("resolveThemeId", () => {
 	test("resolves fixed theme irrespective of appearance", () => {
-		const config = { mode: "fixed", theme: "rose-pine" } as const
-		expect(resolveThemeId(config, "dark")).toBe("rose-pine")
-		expect(resolveThemeId(config, "light")).toBe("rose-pine")
+		const config = { mode: "fixed", theme: "one-dark" } as const
+		expect(resolveThemeId(config, "dark")).toBe("one-dark")
+		expect(resolveThemeId(config, "light")).toBe("one-dark")
 	})
 
 	test("resolves system theme by appearance", () => {
-		const config = { mode: "system", darkTheme: "rose-pine", lightTheme: "rose-pine-dawn" } as const
-		expect(resolveThemeId(config, "dark")).toBe("rose-pine")
-		expect(resolveThemeId(config, "light")).toBe("rose-pine-dawn")
+		const config = { mode: "system", darkTheme: "one-dark", lightTheme: "one-light" } as const
+		expect(resolveThemeId(config, "dark")).toBe("one-dark")
+		expect(resolveThemeId(config, "light")).toBe("one-light")
 	})
 })
 
 describe("themeConfigWithSelection", () => {
 	test("updates the selected system tone only", () => {
-		expect(themeConfigWithSelection({ mode: "system", darkTheme: "phui", lightTheme: "catppuccin-latte" }, "rose-pine-dawn", "light")).toEqual({
+		expect(themeConfigWithSelection({ mode: "system", darkTheme: "phui", lightTheme: "one-light" }, "one-light", "light")).toEqual({
 			mode: "system",
 			darkTheme: "phui",
-			lightTheme: "rose-pine-dawn",
+			lightTheme: "one-light",
 		})
 	})
 
 	test("creates a paired system config from one fixed theme", () => {
-		expect(systemThemeConfigForTheme("gruvbox")).toEqual({ mode: "system", darkTheme: "gruvbox", lightTheme: "gruvbox-light" })
+		expect(systemThemeConfigForTheme("one-dark")).toEqual({ mode: "system", darkTheme: "one-dark", lightTheme: "one-light" })
 	})
 })

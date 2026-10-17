@@ -262,7 +262,7 @@ export const initialThemeModalState: ThemeModalState = {
 	tone: "dark",
 	fixedTheme: "phui",
 	darkTheme: "phui",
-	lightTheme: "catppuccin-latte",
+	lightTheme: "one-light",
 	initialThemeConfig: { mode: "fixed", theme: "phui" },
 }
 

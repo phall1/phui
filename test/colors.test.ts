@@ -1,68 +1,36 @@
 import { describe, expect, test } from "bun:test"
-import { filterThemeDefinitions, pairedThemeId, themeToneForThemeId } from "../src/ui/colors.js"
+import { filterThemeDefinitions, isThemeId, pairedThemeId, themeToneForThemeId } from "../src/ui/colors.js"
 
 describe("filterThemeDefinitions", () => {
 	test("keeps dark and light themes in separate lists", () => {
-		expect(filterThemeDefinitions("", "dark").map((theme) => theme.id)).toContain("phui")
-		expect(filterThemeDefinitions("", "dark").map((theme) => theme.id)).not.toContain("catppuccin-latte")
-		expect(filterThemeDefinitions("", "light").map((theme) => theme.id)).toEqual([
-			"catppuccin-latte",
-			"rose-pine-dawn",
-			"gruvbox-light",
-			"one-light",
-			"solarized-light",
-			"ayu-light",
-		])
+		expect(filterThemeDefinitions("", "dark").map((theme) => theme.id)).toEqual(["system", "phui", "one-dark"])
+		expect(filterThemeDefinitions("", "light").map((theme) => theme.id)).toEqual(["one-light"])
 	})
 
 	test("filters only within the selected tone", () => {
-		expect(filterThemeDefinitions("catppuccin", "dark").map((theme) => theme.id)).toEqual(["catppuccin"])
-		expect(filterThemeDefinitions("catppuccin", "light").map((theme) => theme.id)).toEqual(["catppuccin-latte"])
-	})
-
-	test("includes new ayu themes in correct tone lists", () => {
-		expect(filterThemeDefinitions("", "dark").map((theme) => theme.id)).toContain("ayu")
-		expect(filterThemeDefinitions("", "dark").map((theme) => theme.id)).toContain("ayu-mirage")
-		expect(filterThemeDefinitions("", "light").map((theme) => theme.id)).toContain("ayu-light")
-	})
-
-	test("includes new themes in filtered results", () => {
-		expect(filterThemeDefinitions("ayu", "dark").map((theme) => theme.id)).toEqual(["ayu", "ayu-mirage"])
-		expect(filterThemeDefinitions("github", "dark").map((theme) => theme.id)).toContain("github-dark-dimmed")
-		expect(filterThemeDefinitions("palenight", "dark").map((theme) => theme.id)).toEqual(["palenight"])
+		expect(filterThemeDefinitions("one", "dark").map((theme) => theme.id)).toEqual(["one-dark"])
+		expect(filterThemeDefinitions("one", "light").map((theme) => theme.id)).toEqual(["one-light"])
 	})
 })
 
 describe("themeToneForThemeId", () => {
 	test("identifies light theme variants", () => {
-		expect(themeToneForThemeId("solarized-light")).toBe("light")
-		expect(themeToneForThemeId("solarized-dark")).toBe("dark")
+		expect(themeToneForThemeId("one-light")).toBe("light")
+		expect(themeToneForThemeId("one-dark")).toBe("dark")
 	})
+})
 
-	test("identifies new theme tones correctly", () => {
-		expect(themeToneForThemeId("ayu")).toBe("dark")
-		expect(themeToneForThemeId("ayu-mirage")).toBe("dark")
-		expect(themeToneForThemeId("ayu-light")).toBe("light")
-		expect(themeToneForThemeId("github-dark-dimmed")).toBe("dark")
-		expect(themeToneForThemeId("palenight")).toBe("dark")
+describe("isThemeId", () => {
+	test("rejects removed theme ids so stored config falls back", () => {
+		expect(isThemeId("catppuccin")).toBe(false)
+		expect(isThemeId("phui")).toBe(true)
 	})
 })
 
 describe("pairedThemeId", () => {
 	test("returns the matching light or dark variant when one exists", () => {
-		expect(pairedThemeId("catppuccin", "light")).toBe("catppuccin-latte")
-		expect(pairedThemeId("catppuccin-latte", "dark")).toBe("catppuccin")
+		expect(pairedThemeId("one-dark", "light")).toBe("one-light")
+		expect(pairedThemeId("one-light", "dark")).toBe("one-dark")
 		expect(pairedThemeId("phui", "light")).toBeNull()
-	})
-
-	test("pairs ayu themes correctly", () => {
-		expect(pairedThemeId("ayu", "light")).toBe("ayu-light")
-		expect(pairedThemeId("ayu-mirage", "light")).toBe("ayu-light")
-		expect(pairedThemeId("ayu-light", "dark")).toBe("ayu")
-	})
-
-	test("returns null for unpaired dark themes", () => {
-		expect(pairedThemeId("github-dark-dimmed", "light")).toBeNull()
-		expect(pairedThemeId("palenight", "light")).toBeNull()
 	})
 })
