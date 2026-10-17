@@ -8,7 +8,7 @@ Captured 2026-09-12 against `@phall/phui` 0.15.0 on `main`.
 
 ## Why
 
-phui already covers the _read-and-drive-by_ loop: queues, details, diffs, line comments, approve/request-changes, labels, draft/ready, merge/auto-merge, close, Actions job lists, inbox, stars. The remaining GitHub.com visits are not polish. They are the actual review workflow (pending comments + one submit), thread resolution, reviewer/assignee management, updating a stale branch, editing the PR, and reading why CI failed.
+phui already covers the _read-and-drive-by_ loop: queues, details, diffs, line comments, approve/request-changes, labels, draft/ready, merge/auto-merge, close, Actions job lists, inbox. The remaining GitHub.com visits are not polish. They are the actual review workflow (pending comments + one submit), thread resolution, reviewer/assignee management, updating a stale branch, editing the PR, and reading why CI failed.
 
 At the same time the app is not yet a daily driver on large PRs: every file mounts an OpenTUI `<diff>`, diffs are not SQLite-cached, hidden surfaces still fetch at boot, and `useAppShell` is still a 1,400-LOC orchestration bag. Library pins have drifted (OpenTUI 0.5.1 vs 0.5.11, Effect 4 beta.90 vs beta.107 / rc.115).
 
@@ -26,7 +26,7 @@ Enough to live in phui today if the loop is triage → read → drive-by comment
 - Merge: squash / merge-commit / rebase, auto-merge on/off, admin bypass, always delete-branch
 - Close PR/issue, toggle draft, add/remove existing labels
 - PR + repo Actions: list, jobs/steps, rerun, rerun-failed, cancel
-- Inbox, Stars, Projects linter, launch targets, editor/worktree handoff, command palette
+- Inbox, Projects linter, launch targets, editor/worktree handoff, command palette
 
 Escape hatches that should stay: `o` browser, `e` editor, `w` phux worktree. Conflict resolution belongs there.
 
@@ -75,37 +75,22 @@ Nice-to-have, not the bar:
 
 ### Track D — libraries and toolchain
 
-Do not jump to Effect 3 (`effect@3.22.2`) or `@effect/sql-sqlite-bun@0.53.0`. Stay on the Effect 4 line.
+Done 2026-10-17: the stack is current and on stable lines — Bun 1.4.3 (pinned in `.bun-version` and CI), Effect 4.0.5 stable (`effect/reactivity/*`, `effect/sql/*`; the `unstable/` prefix is gone), `@effect/atom-solid` 4.0.5, OpenTUI Solid 0.6.6, Solid 1.9.17, TypeScript 7.0.2 (native `tsc`), oxlint 1.88 / oxfmt 0.73. Solid 2.0 is still RC; revisit when it is stable.
 
-| Package                                                    | Now                     | Next                                     | Risk                                                       |
-| ---------------------------------------------------------- | ----------------------- | ---------------------------------------- | ---------------------------------------------------------- |
-| `@opentui/core` + `@opentui/react`                         | 0.5.1                   | **0.5.11**                               | Medium; visual/keyboard/diff regression pass               |
-| `effect` + `@effect/atom-react` + `@effect/sql-sqlite-bun` | 4.0.0-beta.90           | **4.0.0-beta.107**, then rc.115          | High on RC (`effect/unstable/*` Atom/SQL/OTLP)             |
-| `oxlint` / `oxfmt`                                         | 1.71.0 / 0.56.0         | 1.82.0 / 0.67.0                          | Low; format churn                                          |
-| `@effect/language-service`                                 | 0.86.2                  | 0.87.2                                   | Low                                                        |
-| `react` + `@types/react`                                   | 19.2.7 / 19.2.17        | 19.3.0                                   | Low–medium; after OpenTUI/Effect                           |
-| `scheduler`                                                | 0.27.0                  | stay                                     | atom-react peers `<0.28.0`                                 |
-| `typescript`                                               | 6.0.3                   | stay                                     | npm latest is TS 7 (native). `typecheck` is `tsc --noEmit` |
-| Bun                                                        | unpinned (types 1.3.14) | pin in CI, then 1.4 + `@types/bun` 1.4.2 | Policy choice                                              |
-
-Also: pin `oven-sh/setup-bun` bun-version; optional `googleapis/release-please-action@v5`.
-
-Keep existing OpenTUI workarounds (alternate screen, first-frame repaint, focus CSI, option→meta, `focusable={false}` scrollboxes) until 0.5.11 proves them redundant.
+Keep the OpenTUI workarounds (alternate screen, first-frame repaint, focus CSI, option→meta, `focusable={false}` scrollboxes) until a release proves them redundant.
 
 ## Suggested sequence
 
 Smallest reversible slices, highest leverage first. New PR-action features land in the PR surface, not in `useAppShell`.
 
-1. **OpenTUI 0.5.11** + oxc + language-service. Immediate renderer wins, cheap CI.
-2. **Surface-aware loading.** Boot stops paying for Issues + Inbox you are not looking at.
-3. **Queued reviews.** The GitHub-replacement feature.
-4. **Cache v2 diffs** in parallel with (3) if two writers can keep files disjoint (`CacheService` / `useDiffLoader` vs review API + comment modal).
-5. **App-shell 4c** before adding resolve-threads / reviewers UI, so those screens have a home.
-6. **Resolve threads, reviewers/assignees, update branch, reopen, edit title/body.** The rest of the GitHub PR sidebar and Conversation actions.
-7. **Diff windowing.** After OpenTUI 0.5.11; may be smaller than the current plan if bound rendering is enough — measure first.
-8. **CI logs**, then timeline, then create-PR.
-9. **Effect beta.107** whenever convenient after (1); **rc.115** only after beta.107 is green.
-10. Workspace hub/filters, comments-pane redesign, merge queue, suggestions — second ring.
+1. **Surface-aware loading.** Boot stops paying for Issues + Inbox you are not looking at.
+2. **Queued reviews.** The GitHub-replacement feature.
+3. **Cache v2 diffs** in parallel with (2) if two writers can keep files disjoint (`CacheService` / `useDiffLoader` vs review API + comment modal).
+4. **App-shell 4c** before adding resolve-threads / reviewers UI, so those screens have a home.
+5. **Resolve threads, reviewers/assignees, update branch, reopen, edit title/body.** The rest of the GitHub PR sidebar and Conversation actions.
+6. **Diff semantic rows + highlighting.** File-section windowing shipped; measure before building the rest.
+7. **CI logs**, then timeline, then create-PR.
+8. Workspace hub/filters, comments-pane redesign, merge queue, suggestions — second ring.
 
 ## API / architecture mapping (new work only)
 
@@ -129,12 +114,8 @@ Domain additions: `isResolved` on threads, requested reviewers/teams, assignees,
 
 ## Open questions
 
-- After OpenTUI 0.5.11, is file-level windowing still required, or is bound large-diff rendering enough for the PRs we actually open? Measure before implementing `diff-rendering-performance.md` in full.
 - Queue-by-default vs post-by-default for inline comments: already an open question in `queued-reviews.md`. Lean remains `enter` posts, `shift+enter` queues.
 - Merge queue: skip until we hit a repo that uses it, or probe `mergeStateStatus` now so merge-now does not lie.
-- Effect rc.115 vs staying on beta until 4.0.0 stable. App is deep in `effect/unstable/reactivity/Atom` and `effect/unstable/sql`.
-- Bun 1.3 vs 1.4 as the supported runtime. CI currently unpins setup-bun.
-- TypeScript 7: out of scope until `tsc --noEmit` is a supported path for this repo.
 
 ## Out of scope (keep the browser / editor)
 
@@ -155,7 +136,7 @@ Verify and close rather than rebuilding:
 - `phui-0ee` — npm `@phall` scope 404. v0.14.1 / v0.15.0 published as `@phall/phui`.
 - `phui-6f8` — trusted publishing. AGENTS.md now documents it as the preferred path against `release-please.yml`.
 
-Keep (still real, not this epic): Projects checks (`phui-1zm`, `phui-g7d`, `phui-m41`), Inbox follow-ups (`phui-bkv`, `phui-bvi`, `phui-4r4`), Stars paging (`phui-5nm`), theme id `ghui` (`phui-p8l`), phux-site / cockpit leftovers (`phui-vy2`, `phui-00i`).
+Keep (still real, not this epic): Projects checks (`phui-1zm`, `phui-g7d`, `phui-m41`), Inbox follow-ups (`phui-bkv`, `phui-bvi`, `phui-4r4`), theme id `ghui` (`phui-p8l`), phux-site / cockpit leftovers (`phui-vy2`, `phui-00i`).
 
 ## Status
 
