@@ -2,7 +2,7 @@ import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from
 import { createEffect, createMemo, type Accessor } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { Cause } from "effect"
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
+import * as AsyncResult from "effect/reactivity/AsyncResult"
 import type { MutableRefObject } from "../../solid-utils.js"
 import type { IssueItem, LoadStatus } from "../../domain.js"
 import { errorMessage } from "../../errors.js"

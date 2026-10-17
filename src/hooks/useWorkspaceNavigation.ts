@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "../solid-utils.js"
-import type * as Atom from "effect/unstable/reactivity/Atom"
+import type * as Atom from "effect/reactivity/Atom"
 import { useAtomSet as useAtomSetSolid } from "@effect/atom-solid"
 import { devLog } from "../devLog.js"
 import type { PullRequestItem } from "../domain.js"

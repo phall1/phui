@@ -1,4 +1,4 @@
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 
 // "Transitional" runtime snapshot — App.tsx mirrors these computed values
 // into this atom on every render via a useEffect. Command derivation atoms

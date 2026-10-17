@@ -1,4 +1,4 @@
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 
 // The filter modal exposes these as the two choices; the actual state lives in
 // the view atoms (mode + repository). This module owns text-filter state only.

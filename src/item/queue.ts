@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 import type { ItemPage } from "../item.js"
 import type { ItemLoad } from "./load.js"
 

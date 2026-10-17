@@ -2,14 +2,14 @@ import { describe, expect, test } from "bun:test"
 import packageJson from "../package.json" with { type: "json" }
 
 describe("daily-driver package pins", () => {
-	test("OpenTUI Solid 0.5.11 and Effect 4.0.0-rc.115 are pinned", () => {
+	test("OpenTUI Solid 0.6.6 and Effect 4.0.5 are pinned", () => {
 		const dependencies = packageJson.dependencies
-		expect(dependencies["@opentui/core"]).toBe("0.5.11")
-		expect(dependencies["@opentui/solid"]).toBe("0.5.11")
-		expect(dependencies["solid-js"]).toBe("1.9.12")
-		expect(dependencies.effect).toBe("4.0.0-rc.115")
-		expect(dependencies["@effect/atom-solid"]).toBe("4.0.0-rc.115")
-		expect(dependencies["@effect/sql-sqlite-bun"]).toBe("4.0.0-rc.115")
+		expect(dependencies["@opentui/core"]).toBe("0.6.6")
+		expect(dependencies["@opentui/solid"]).toBe("0.6.6")
+		expect(dependencies["solid-js"]).toBe("1.9.17")
+		expect(dependencies.effect).toBe("4.0.5")
+		expect(dependencies["@effect/atom-solid"]).toBe("4.0.5")
+		expect(dependencies["@effect/sql-sqlite-bun"]).toBe("4.0.5")
 		expect(dependencies).not.toHaveProperty("@opentui/react")
 		expect(dependencies).not.toHaveProperty("@effect/atom-react")
 		expect(dependencies).not.toHaveProperty("react")
@@ -23,7 +23,7 @@ describe("daily-driver package pins", () => {
 
 	test("GitHub Actions install the Bun version in .bun-version", async () => {
 		const bunVersion = (await Bun.file(".bun-version").text()).trim()
-		expect(bunVersion).toBe("1.3.14")
+		expect(bunVersion).toBe("1.4.3")
 		expect(packageJson.devDependencies["@types/bun"]).toBe(bunVersion)
 
 		for (const name of ["ci.yml", "fork-publish.yml"]) {

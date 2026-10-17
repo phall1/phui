@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
-import * as Atom from "effect/unstable/reactivity/Atom"
-import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+import * as Atom from "effect/reactivity/Atom"
+import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 import { freshItemLoad, trimItemLoadCache, type ItemLoad } from "../src/item/load.ts"
 import { loadItemQueue, type ItemLoadCache, type ItemQueueAdapter } from "../src/item/queue.ts"
 

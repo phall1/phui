@@ -1,6 +1,6 @@
 import { RegistryContext } from "@effect/atom-solid"
 import { Effect } from "effect"
-import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 import { createEffect, createSignal, onCleanup, type Accessor } from "solid-js"
 import { type MutableRefObject, useContext, useRef } from "../../solid-utils.js"
 import type { LoadStatus, PullRequestItem } from "../../domain.js"

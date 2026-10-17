@@ -1,6 +1,6 @@
 import { Config, Effect, Layer } from "effect"
-import { FetchHttpClient } from "effect/unstable/http"
-import { OtlpLogger, OtlpSerialization, OtlpTracer } from "effect/unstable/observability"
+import { FetchHttpClient } from "effect/http"
+import { OtlpLogger, OtlpSerialization, OtlpTracer } from "effect/observability"
 
 const observabilityConfig = Config.all({
 	endpoint: Config.String("PHUI_OTLP_ENDPOINT").pipe(

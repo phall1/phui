@@ -1,5 +1,5 @@
 import type { ItemPage } from "../item.js"
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
+import * as AsyncResult from "effect/reactivity/AsyncResult"
 
 export interface ItemLoad<View, Item> {
 	readonly view: View

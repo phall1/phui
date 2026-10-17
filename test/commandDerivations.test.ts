@@ -6,7 +6,7 @@ describe("PR command derivations", () => {
 		// Application atoms bind their runtime at import time; run this graph in
 		// isolation so terminal-render tests can select their mock runtime later.
 		const probe = `
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { noOpenPullRequestReasonAtom } from "./src/commands/derivations.ts"
 			import { activeViewAtom, queueLoadCacheAtom } from "./src/ui/pullRequests/atoms.ts"
 			import { workspaceSurfaceAtom } from "./src/workspace/atoms.ts"
@@ -26,7 +26,7 @@ describe("PR command derivations", () => {
 describe("Issue command derivations", () => {
 	test("disables closing an already closed issue", async () => {
 		const probe = `
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { noOpenIssueReasonAtom } from "./src/commands/derivations.ts"
 			import { activeIssueViewAtom, issueQueueLoadCacheAtom } from "./src/ui/issues/atoms.ts"
 			import { workspaceSurfaceAtom } from "./src/workspace/atoms.ts"

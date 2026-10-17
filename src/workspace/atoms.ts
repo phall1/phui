@@ -1,4 +1,4 @@
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 import { CacheService, type RepoRollupRow } from "../services/CacheService.js"
 import { githubRuntime, initialRecentRepositories } from "../services/runtime.js"
 import type { ViewerId, WorkspacePreferences } from "../workspacePreferences.js"

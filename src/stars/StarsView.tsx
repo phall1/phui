@@ -1,7 +1,7 @@
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
 import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { createEffect, createMemo, onCleanup } from "solid-js"
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
+import * as AsyncResult from "effect/reactivity/AsyncResult"
 import { useRef } from "../solid-utils.js"
 import { inboxNavigator } from "../notifications/navigation.js"
 import { openUrlAtom } from "../services/systemAtoms.js"

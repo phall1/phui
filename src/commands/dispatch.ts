@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 import { githubRuntime } from "../services/runtime.js"
 import { commandsById } from "./index.js"
 

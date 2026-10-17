@@ -1,4 +1,4 @@
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 import type { PullRequestUserQueueMode } from "../domain.js"
 import { type PullRequestView, viewEquals, viewLabel } from "../pullRequestViews.js"
 import { commentsViewActiveAtom, selectedCommentSubjectAtom } from "../ui/comments/atoms.js"

@@ -1,4 +1,4 @@
-import { parseColor, pathToFiletype, SyntaxStyle } from "@opentui/core"
+import { parseColor, pathToFiletype, SyntaxStyle, type NativeResourceOwner } from "@opentui/core"
 import { Data, Schema } from "effect"
 import type { DiffCommentSide, PullRequestItem, PullRequestReviewComment } from "../domain.js"
 import { colors } from "./colors.js"
@@ -57,26 +57,29 @@ export type PullRequestDiffState = Data.TaggedEnum<{
 
 export const PullRequestDiffState = Data.taggedEnum<PullRequestDiffState>()
 
-export const createDiffSyntaxStyle = () =>
-	SyntaxStyle.fromStyles({
-		keyword: { fg: parseColor(colors.accent), bold: true },
-		"keyword.import": { fg: parseColor(colors.accent), bold: true },
-		string: { fg: parseColor(colors.inlineCode) },
-		comment: { fg: parseColor(colors.muted), italic: true },
-		number: { fg: parseColor(colors.status.review) },
-		boolean: { fg: parseColor(colors.status.review) },
-		constant: { fg: parseColor(colors.status.review) },
-		function: { fg: parseColor(colors.status.passing) },
-		"function.call": { fg: parseColor(colors.status.passing) },
-		constructor: { fg: parseColor(colors.status.draft) },
-		type: { fg: parseColor(colors.status.draft) },
-		operator: { fg: parseColor(colors.status.failing) },
-		variable: { fg: parseColor(colors.text) },
-		property: { fg: parseColor(colors.status.review) },
-		bracket: { fg: parseColor(colors.text) },
-		punctuation: { fg: parseColor(colors.text) },
-		default: { fg: parseColor(colors.text) },
-	})
+export const createDiffSyntaxStyle = (owner: NativeResourceOwner) =>
+	SyntaxStyle.fromStyles(
+		{
+			keyword: { fg: parseColor(colors.accent), bold: true },
+			"keyword.import": { fg: parseColor(colors.accent), bold: true },
+			string: { fg: parseColor(colors.inlineCode) },
+			comment: { fg: parseColor(colors.muted), italic: true },
+			number: { fg: parseColor(colors.status.review) },
+			boolean: { fg: parseColor(colors.status.review) },
+			constant: { fg: parseColor(colors.status.review) },
+			function: { fg: parseColor(colors.status.passing) },
+			"function.call": { fg: parseColor(colors.status.passing) },
+			constructor: { fg: parseColor(colors.status.draft) },
+			type: { fg: parseColor(colors.status.draft) },
+			operator: { fg: parseColor(colors.status.failing) },
+			variable: { fg: parseColor(colors.text) },
+			property: { fg: parseColor(colors.status.review) },
+			bracket: { fg: parseColor(colors.text) },
+			punctuation: { fg: parseColor(colors.text) },
+			default: { fg: parseColor(colors.text) },
+		},
+		owner,
+	)
 
 const unquoteDiffPath = (path: string) => path.replace(/^"|"$/g, "").replace(/^a\//, "").replace(/^b\//, "")
 

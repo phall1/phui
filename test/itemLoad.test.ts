@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
+import * as AsyncResult from "effect/reactivity/AsyncResult"
 import { itemQueryCacheKeyHasRepository } from "../src/item.ts"
 import { appendItemPage, freshItemLoad, nextItemLoadAfterPage, resolveItemLoad, trimItemLoadCache, type ItemLoad } from "../src/item/load.ts"
 
