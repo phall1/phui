@@ -64,16 +64,20 @@ Requirements:
 
 - GitHub CLI installed and authenticated with `gh auth login`
 
-Run it from anywhere:
+Run it from anywhere. Inside a GitHub clone, phui opens that repository's
+pull requests, issues, and Actions; elsewhere (or with `--home`) it opens your
+user-wide workspace:
 
 ```bash
-phui
+phui            # this repo, or your workspace outside a clone
+phui 123        # PR #123 of this repo (also #123)
+phui --home     # user-wide workspace even inside a clone
 ```
 
 ## Target a repository or pull request
 
 Ordinary `phui` startup still needs only the authenticated `gh` CLI. You can
-also open an exact repository or pull request at startup:
+also open an exact repository or pull request from anywhere:
 
 ```bash
 phui owner/repo
