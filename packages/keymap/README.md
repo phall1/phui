@@ -53,7 +53,7 @@ Dispatch is a **pure function** of `(keymap, state, stroke, ctx, now)` returning
 
 That means:
 
-- **Testable without React or fake timers** for the dispatch logic itself.
+- **Testable without a UI framework or fake timers** for the dispatch logic itself.
 - **State is observable**: `dispatcher.getState()`, `dispatcher.onStateChange(...)`.
 - **Replay, time-travel, snapshot** all become possible because runtime state is just data.
 
@@ -112,13 +112,11 @@ const { state, decision } = pureDispatch(km, initialDispatchState, parseKey("g")
 | `pureDispatch(km, state, stroke, ctx, now)` | Pure core; for tests/replay/SSR. |
 | `pureTick(km, state, ctx, now)` | Process timeouts purely. |
 
-### React
+### Solid
 
 | | |
 |---|---|
-| `useKeymap(km, ctx, subscribe)` | Mounts; re-creates dispatcher on `km` change. |
-| `useDispatchState(dispatcher)` | Reactive `{ pending, timeoutAt }`. |
-| `usePendingSequence(dispatcher)` | Convenience: just pending. |
+| `useKeymap(km, ctx, subscribe)` | Mounts a dispatcher; `ctx` may be an accessor. |
 
 ## Sequences and disambiguation
 

@@ -42,7 +42,6 @@
 		"dev:mock": "PHUI_FORCE_FULL_REPAINT_ON_START=1 PHUI_MOCK_PR_COUNT=200 PHUI_MOCK_REPO_COUNT=4 bun --preload @opentui/solid/preload --watch src/index.tsx",
 		"link:fork": "bun run dev/link-fork.ts",
 		"start": "bun --preload @opentui/solid/preload src/index.tsx",
-		"sync:upstream": "bun run dev/sync-upstream.ts",
 		"test": "bun test test",
 		"test:keymap": "bun run --cwd=packages/keymap test",
 		"typecheck": "tsc --noEmit",
