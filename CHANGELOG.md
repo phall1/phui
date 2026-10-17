@@ -1,5 +1,24 @@
 # phui
 
+## [0.19.0](https://github.com/phall1/phui/compare/v0.18.3...v0.19.0) (2026-10-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove phui upgrade; Homebrew and npm own upgrades
+* drop the Stars surface and trim themes to System, PHUI, One Dark, and One Light
+
+### Features
+
+* drop the Stars surface and trim themes to System, PHUI, One Dark, and One Light ([c944887](https://github.com/phall1/phui/commit/c944887f0f1f08699a2a58884cf649b26c6c5fd0))
+* open the current clone's repository on launch, accept 123 / [#123](https://github.com/phall1/phui/issues/123) for its pull requests, and add --home ([c944887](https://github.com/phall1/phui/commit/c944887f0f1f08699a2a58884cf649b26c6c5fd0))
+* remove phui upgrade; Homebrew and npm own upgrades ([c944887](https://github.com/phall1/phui/commit/c944887f0f1f08699a2a58884cf649b26c6c5fd0))
+
+
+### Bug Fixes
+
+* move to Bun 1.4.3, Effect 4.0.5 stable, OpenTUI 0.6.6, and Solid 1.9.17 ([c944887](https://github.com/phall1/phui/commit/c944887f0f1f08699a2a58884cf649b26c6c5fd0))
+
 ## [0.18.3](https://github.com/phall1/phui/compare/v0.18.2...v0.18.3) (2026-09-20)
 
 
