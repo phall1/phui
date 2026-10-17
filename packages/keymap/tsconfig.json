@@ -8,12 +8,11 @@
 		"noImplicitOverride": true,
 		"exactOptionalPropertyTypes": true,
 		"useUnknownInCatchVariables": true,
-		"jsx": "react-jsx",
 		"allowImportingTsExtensions": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"noEmit": true,
 		"types": ["bun"]
 	},
-	"include": ["src/**/*", "test/**/*", "examples/**/*"]
+	"include": ["src/**/*", "test/**/*"]
 }

@@ -2,9 +2,9 @@ import { mkdir } from "node:fs/promises"
 import { dirname } from "node:path"
 import { SqliteClient, SqliteMigrator } from "@effect/sql-sqlite-bun"
 import { Context, Effect, Layer, Schema } from "effect"
-import * as Migrator from "effect/unstable/sql/Migrator"
-import * as SqlClient from "effect/unstable/sql/SqlClient"
-import type { SqlError } from "effect/unstable/sql/SqlError"
+import * as Migrator from "effect/sql/Migrator"
+import * as SqlClient from "effect/sql/SqlClient"
+import type { SqlError } from "effect/sql/SqlError"
 import {
 	checkConclusions,
 	checkRollupStatuses,

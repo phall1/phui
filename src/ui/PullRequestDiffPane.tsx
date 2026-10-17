@@ -1,5 +1,6 @@
 import type { DiffRenderable, MouseEvent, ScrollBoxRenderable } from "@opentui/core"
 import { useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
+import { useRenderer } from "@opentui/solid"
 import { createMemo, onCleanup, onMount } from "solid-js"
 import { type Ref } from "../solid-utils.js"
 import { diffCommentAnchorIndexAtom, diffFileIndexAtom, diffScrollTopAtom } from "./diff/atoms.js"
@@ -149,10 +150,11 @@ export const PullRequestDiffPane = (props: {
 		onCleanup(() => globalThis.clearInterval(interval))
 	})
 	const readyFiles = diffState?._tag === "Ready" ? diffState.files : []
+	const renderer = useRenderer()
 	const syntaxStyle = createMemo(() => {
 		void props.themeId
 		void props.themeGeneration
-		return createDiffSyntaxStyle()
+		return createDiffSyntaxStyle(renderer.nativeScene)
 	})
 
 	if (!pullRequest) {

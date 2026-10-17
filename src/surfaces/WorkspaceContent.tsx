@@ -19,7 +19,6 @@ import { RepoSurface } from "./RepoSurface.js"
 import { ActionsSurface } from "./ActionsSurface.js"
 import { ProjectsView } from "../projects/ProjectsView.js"
 import { NotificationsView } from "../notifications/NotificationsView.js"
-import { StarsView } from "../stars/StarsView.js"
 
 export interface WorkspaceContentProps {
 	readonly showScrollbars: boolean
@@ -146,15 +145,6 @@ export const WorkspaceContent = (props: WorkspaceContentProps) => (
 		</Match>
 		<Match when={props.activeWorkspaceSurface === "notifications"}>
 			<NotificationsView
-				contentWidth={props.layout.fullscreenContentWidth}
-				height={props.layout.wideBodyHeight}
-				loadingIndicator={props.loadingIndicator}
-				showScrollbar={props.showScrollbars}
-				onNotice={props.showNotice}
-			/>
-		</Match>
-		<Match when={props.activeWorkspaceSurface === "stars"}>
-			<StarsView
 				contentWidth={props.layout.fullscreenContentWidth}
 				height={props.layout.wideBodyHeight}
 				loadingIndicator={props.loadingIndicator}

@@ -1,5 +1,5 @@
 import { Effect, Schedule } from "effect"
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 import { isCommandTimeoutError } from "../services/CommandRunner.js"
 import { isGitHubRateLimitError } from "../services/GitHubService.js"
 import { initialRetryProgress, RetryProgress } from "../ui/FooterHints.js"

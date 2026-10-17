@@ -23,6 +23,12 @@ const REPOSITORY_PATTERN = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/
 const PULL_REQUEST_PATTERN = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)#(-?\d+)$/
 const GITHUB_REPOSITORY_URL_PATTERN = /^https?:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/
 const GITHUB_PULL_REQUEST_URL_PATTERN = /^https?:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/pull\/(-?\d+)\/?$/
+const CURRENT_REPOSITORY_PULL_REQUEST_PATTERN = /^#?(-?\d+)$/
+
+/** Resolves the GitHub repository of the working directory; called only when a launch needs it. */
+export type CurrentRepository = () => string | null
+
+const noCurrentRepository: CurrentRepository = () => null
 
 const isLaunchView = (value: string): value is PhuiLaunchView => value === "details" || value === "diff" || value === "comments" || value === "runs"
 
@@ -37,7 +43,15 @@ const parsePullRequestNumber = (value: string): number => {
 	return number
 }
 
-const parseTarget = (target: string, view: PhuiLaunchView | undefined): PhuiLaunchIntent => {
+const parseTarget = (target: string, view: PhuiLaunchView | undefined, currentRepository: CurrentRepository): PhuiLaunchIntent => {
+	const localPullRequest = target.match(CURRENT_REPOSITORY_PULL_REQUEST_PATTERN)
+	if (localPullRequest) {
+		const number = parsePullRequestNumber(localPullRequest[1]!)
+		const repository = currentRepository()
+		if (repository === null) throw new LaunchIntentError(`Target ${target} needs a GitHub repository; run it inside a clone or pass owner/repo#${number}.`)
+		return { _tag: "PullRequest", repository, number, view: view ?? "details" }
+	}
+
 	const pullRequest = target.match(PULL_REQUEST_PATTERN) ?? target.match(GITHUB_PULL_REQUEST_URL_PATTERN)
 	if (pullRequest) {
 		const owner = pullRequest[1]!
@@ -52,18 +66,26 @@ const parseTarget = (target: string, view: PhuiLaunchView | undefined): PhuiLaun
 		return { _tag: "Repository", repository: `${repository[1]!}/${repository[2]!}` }
 	}
 
-	throw new LaunchIntentError(`Invalid target: ${target || "(empty)"}. Expected owner/repo, owner/repo#123, or a GitHub URL.`)
+	throw new LaunchIntentError(`Invalid target: ${target || "(empty)"}. Expected owner/repo, owner/repo#123, #123, or a GitHub URL.`)
 }
 
-export const parseLaunchIntent = (args: readonly string[]): PhuiLaunchIntent => {
+/**
+ * With no target, a launch inside a GitHub clone opens that repository, so
+ * `phui` in any checkout lands on the code in front of you. `--home` skips that
+ * and opens the user-wide workspace.
+ */
+export const parseLaunchIntent = (args: readonly string[], currentRepository: CurrentRepository = noCurrentRepository): PhuiLaunchIntent => {
 	let target: string | undefined
 	let view: PhuiLaunchView | undefined
+	let home = false
 
 	for (let index = 0; index < args.length; index++) {
 		const argument = args[index]!
 		let viewValue: string | undefined
 
-		if (argument === "--view") {
+		if (argument === "--home") {
+			home = true
+		} else if (argument === "--view") {
 			viewValue = args[index + 1]
 			if (viewValue === undefined) throw new LaunchIntentError("Option --view requires a value.")
 			index++
@@ -88,10 +110,13 @@ export const parseLaunchIntent = (args: readonly string[]): PhuiLaunchIntent => 
 
 	if (target === undefined) {
 		if (view !== undefined) throw new LaunchIntentError("Option --view requires a pull request target.")
-		return { _tag: "Default" }
+		if (home) return { _tag: "Default" }
+		const repository = currentRepository()
+		return repository === null ? { _tag: "Default" } : { _tag: "Repository", repository }
 	}
 
-	return parseTarget(target, view)
+	if (home) throw new LaunchIntentError("Option --home cannot be combined with a launch target.")
+	return parseTarget(target, view, currentRepository)
 }
 
 export const formatLaunchIntentError = (error: LaunchIntentError): string => `phui: ${error.message}\nRun \`phui --help\` for usage.`

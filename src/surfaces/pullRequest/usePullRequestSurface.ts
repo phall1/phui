@@ -2,7 +2,7 @@ import { RegistryContext, useAtomSet as useAtomSetSolid, useAtomRefresh as useAt
 import { useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { createEffect, createMemo, type Accessor } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
+import * as AsyncResult from "effect/reactivity/AsyncResult"
 import { Cause } from "effect"
 import { type MutableRefObject, useContext, useRef } from "../../solid-utils.js"
 import type { LoadStatus, PullRequestItem } from "../../domain.js"

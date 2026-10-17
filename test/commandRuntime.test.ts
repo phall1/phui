@@ -6,7 +6,7 @@ describe("command runtime", () => {
 	test("an actual workspace command resets cross-view state", async () => {
 		const probe = `
 			import { Effect } from "effect"
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { dispatchCommand } from "./src/commands/dispatch.ts"
 			import { commentsViewActiveAtom } from "./src/ui/comments/atoms.ts"
 			import { detailFullViewAtom } from "./src/ui/detail/atoms.ts"
@@ -35,7 +35,7 @@ describe("command runtime", () => {
 	test("review.queue-comment invokes the registered queueDiffComment handoff", async () => {
 		const probe = `
 			import { Effect } from "effect"
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { dispatchCommand } from "./src/commands/dispatch.ts"
 			import { registerHandoff } from "./src/commands/handoffs.ts"
 			const registry = AtomRegistry.make()
@@ -52,7 +52,7 @@ describe("command runtime", () => {
 	test("pull.copy-metadata copies branch, review, and check metadata", async () => {
 		const probe = `
 			import { Effect } from "effect"
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { dispatchCommand } from "./src/commands/dispatch.ts"
 			import { Clipboard } from "./src/services/Clipboard.ts"
 			import { noticeAtom } from "./src/ui/notice/atoms.ts"
@@ -101,7 +101,7 @@ describe("command runtime", () => {
 	test("issue.copy-metadata copies comment count and labels", async () => {
 		const probe = `
 			import { Effect } from "effect"
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { dispatchCommand } from "./src/commands/dispatch.ts"
 			import { Clipboard } from "./src/services/Clipboard.ts"
 			import { selectedIssueAtom } from "./src/ui/issues/atoms.ts"

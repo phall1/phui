@@ -13,7 +13,7 @@ describe("Workspace Scope", () => {
 		// so importing workspace atoms cannot select the live runtime before the
 		// terminal-render suite installs its mock environment.
 		const probe = `
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { activeViewAtom } from "./src/ui/pullRequests/atoms.ts"
 			import { selectedRepositoryAtom, workspaceScopeAtom, workspaceTabSurfacesAtom } from "./src/workspace/atoms.ts"
 			import { workspaceScopeForRepository } from "./src/workspaceScope.ts"
@@ -26,7 +26,7 @@ describe("Workspace Scope", () => {
 		`
 		const stdout = await runIsolatedProbe(probe)
 		expect(JSON.parse(stdout)).toEqual({
-			user: [null, ["repos", "pullRequests", "issues", "notifications", "stars", "projects"]],
+			user: [null, ["repos", "pullRequests", "issues", "notifications", "projects"]],
 			repository: ["kitlangton/ghui", ["pullRequests", "issues", "actions"]],
 		})
 	})

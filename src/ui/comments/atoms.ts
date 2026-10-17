@@ -1,4 +1,4 @@
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 import type { CreatePullRequestCommentInput, IssueItem, PendingReview, PullRequestComment, PullRequestItem, ReviewThread } from "../../domain.js"
 import { GitHubService } from "../../services/GitHubService.js"
 import { githubRuntime } from "../../services/runtime.js"

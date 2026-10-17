@@ -8,6 +8,7 @@ import { Effect } from "effect"
 import { appendFile } from "node:fs/promises"
 import { createSignal } from "solid-js"
 import { formatLaunchIntentError, LaunchIntentError, parseLaunchIntent } from "./launchIntent.js"
+import { detectedRepository } from "./services/runtime.js"
 import { createSystemThemeReloader, type SystemThemeReloadEvent } from "./systemThemeReload.js"
 import { setTuiSuspender } from "./tuiSuspension.js"
 import { loadStoredSystemThemeAutoReload } from "./themeStore.js"
@@ -22,7 +23,7 @@ if (launchArgs.includes("--version") || launchArgs.includes("-v")) {
 
 const launchIntent = (() => {
 	try {
-		return parseLaunchIntent(launchArgs)
+		return parseLaunchIntent(launchArgs, () => detectedRepository)
 	} catch (error) {
 		if (!(error instanceof LaunchIntentError)) throw error
 		process.stderr.write(`${formatLaunchIntentError(error)}\n`)

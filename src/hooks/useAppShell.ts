@@ -1,6 +1,6 @@
 import { RegistryContext, useAtomSet as useAtomSetSolid, useAtomValue as useAtomValueSolid } from "@effect/atom-solid"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
+import * as AsyncResult from "effect/reactivity/AsyncResult"
 import { createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { useContext, useRef } from "../solid-utils.js"
 import type { AppCommand } from "../commands.js"

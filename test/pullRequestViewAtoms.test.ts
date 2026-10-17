@@ -4,8 +4,8 @@ import { runIsolatedProbe } from "./isolatedProbe.ts"
 describe("item view atoms", () => {
 	test("reactive queue atoms publish each settled mock View under its own cache key", async () => {
 		const probe = `
-			import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AsyncResult from "effect/reactivity/AsyncResult"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { activeIssueViewAtom, issuesAtom, issueQueueLoadCacheAtom } from "./src/ui/issues/atoms.ts"
 			import { activeViewAtom, pullRequestsAtom, queueLoadCacheAtom } from "./src/ui/pullRequests/atoms.ts"
 			import { issueViewCacheKey } from "./src/issueViews.ts"
@@ -65,7 +65,7 @@ describe("item view atoms", () => {
 	test("keyed detail atoms isolate concurrent pull request requests", async () => {
 		const probe = `
 			import { Effect } from "effect"
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { pullRequestDetailsForRevision, recentlyCompletedPullRequestsAtom } from "./src/ui/pullRequests/atoms.ts"
 			const registry = AtomRegistry.make()
 			const completedUrl = "https://github.com/owner/repo/pull/1000"
@@ -94,7 +94,7 @@ describe("item view atoms", () => {
 	test("HOME exposes one canonical load-more slot and hides it while filtering", async () => {
 		const probe = `
 			import { Effect } from "effect"
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { filterQueryAtom } from "./src/ui/filter/atoms.ts"
 			import { activeViewAtom, pullRequestLoadMoreSlotAvailableAtom, pullRequestsAtom } from "./src/ui/pullRequests/atoms.ts"
 			const registry = AtomRegistry.make()
@@ -121,7 +121,7 @@ describe("item view atoms", () => {
 		// atom graph in a child process so this test cannot change the mock/live
 		// layer used by terminal-render tests in the same Bun test run.
 		const probe = `
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { activeViewAtom, loadedPullRequestCountAtom, queueLoadCacheAtom, visiblePullRequestsAtom } from "./src/ui/pullRequests/atoms.ts"
 			import { viewCacheKey } from "./src/pullRequestViews.ts"
 			const registry = AtomRegistry.make()
@@ -147,7 +147,7 @@ describe("item view atoms", () => {
 
 	test("issue display atoms follow the active cached view after a repo filter switch", async () => {
 		const probe = `
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { activeIssueViewAtom, issueListAtom, issueQueueLoadCacheAtom, loadedIssueCountAtom } from "./src/ui/issues/atoms.ts"
 			import { issueViewCacheKey } from "./src/issueViews.ts"
 			const registry = AtomRegistry.make()
@@ -173,7 +173,7 @@ describe("item view atoms", () => {
 
 	test("commands and comments target the same filtered issue the surface displays", async () => {
 		const probe = `
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { activeIssueViewAtom, issueListAtom, issueQueueLoadCacheAtom, selectedIssueAtom } from "./src/ui/issues/atoms.ts"
 			import { filterQueryAtom } from "./src/ui/filter/atoms.ts"
 			import { selectedIssueIndexAtom } from "./src/ui/listSelection/atoms.ts"
@@ -197,7 +197,7 @@ describe("item view atoms", () => {
 
 	test("the issue load-more row does not leave the last issue selected", async () => {
 		const probe = `
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { activeIssueViewAtom, issueQueueLoadCacheAtom, selectedIssueAtom } from "./src/ui/issues/atoms.ts"
 			import { selectedIssueIndexAtom } from "./src/ui/listSelection/atoms.ts"
 			import { workspaceSurfaceAtom } from "./src/workspace/atoms.ts"
@@ -217,8 +217,8 @@ describe("item view atoms", () => {
 
 	test("issuesAtom does not fetch until Issues is active", async () => {
 		const probe = `
-			import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AsyncResult from "effect/reactivity/AsyncResult"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { issuesAtom, issueQueueLoadCacheAtom } from "./src/ui/issues/atoms.ts"
 			import { workspaceSurfaceAtom } from "./src/workspace/atoms.ts"
 			const registry = AtomRegistry.make()
@@ -255,7 +255,7 @@ describe("item view atoms", () => {
 
 	test("an authoritative issue refresh removes a closed optimistic override", async () => {
 		const probe = `
-			import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+			import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 			import { activeIssueViewAtom, issueListAtom, issueOverridesAtom, issueQueueLoadCacheAtom } from "./src/ui/issues/atoms.ts"
 			import { issueViewCacheKey } from "./src/issueViews.ts"
 			const registry = AtomRegistry.make()

@@ -115,6 +115,49 @@ describe("parseLaunchIntent", () => {
 	})
 })
 
+describe("parseLaunchIntent inside a clone", () => {
+	const inClone = () => "owner/here"
+
+	test("opens the current repository when no target is supplied", () => {
+		expect(parseLaunchIntent([], inClone)).toEqual({ _tag: "Repository", repository: "owner/here" })
+	})
+
+	test("--home opens the user-wide workspace even inside a clone", () => {
+		expect(parseLaunchIntent(["--home"], inClone)).toEqual({ _tag: "Default" })
+	})
+
+	test("falls back to the user-wide workspace outside a clone", () => {
+		expect(parseLaunchIntent([], () => null)).toEqual({ _tag: "Default" })
+	})
+
+	test.each(["42", "#42"])("resolves %s against the current repository", (target) => {
+		expect(parseLaunchIntent([target, "--view", "diff"], inClone)).toEqual({ _tag: "PullRequest", repository: "owner/here", number: 42, view: "diff" })
+	})
+
+	test("an explicit target never consults the working directory", () => {
+		let consulted = false
+		expect(
+			parseLaunchIntent(["other/repo#3"], () => {
+				consulted = true
+				return "owner/here"
+			}),
+		).toEqual({ _tag: "PullRequest", repository: "other/repo", number: 3, view: "details" })
+		expect(consulted).toBe(false)
+	})
+
+	test("rejects a bare number outside a clone", () => {
+		expect(captureLaunchError(["42"]).message).toContain("needs a GitHub repository")
+	})
+
+	test("rejects a non-positive bare number", () => {
+		expect(captureLaunchError(["#0"]).message).toBe("Pull request number must be a positive integer.")
+	})
+
+	test("rejects --home combined with a target", () => {
+		expect(captureLaunchError(["--home", "owner/repo"]).message).toBe("Option --home cannot be combined with a launch target.")
+	})
+})
+
 describe("formatLaunchIntentError", () => {
 	test("formats a concise pre-TUI error with a help hint", () => {
 		expect(formatLaunchIntentError(new LaunchIntentError("Invalid target: nope."))).toBe("phui: Invalid target: nope.\nRun `phui --help` for usage.")

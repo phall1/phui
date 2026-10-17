@@ -17,7 +17,6 @@ import { openRepositoryModalKeymap, type OpenRepositoryModalCtx } from "./openRe
 import { promptModalKeymap, type PromptModalCtx } from "./promptModal.ts"
 import { buildInboxViewCtx, inboxViewKeymap } from "../notifications/keymap.js"
 import { buildProjectsViewCtx, projectsViewKeymap } from "../projects/keymap.js"
-import { buildStarsViewCtx, starsViewKeymap } from "../stars/keymap.js"
 import type { WorkspaceSurface } from "../workspaceSurfaces.js"
 import { pullRequestStateModalKeymap, type PullRequestStateModalCtx } from "./pullRequestStateModal.ts"
 import { runsViewKeymap, type RunsViewCtx } from "./runsView.ts"
@@ -103,7 +102,7 @@ const inListMode = (a: AppCtx): boolean => !modalActive(a) && !a.filterMode && !
  * it does not recognise, so a fork-owned surface left out of this set would
  * silently drive the wrong selection with j/k.
  */
-const FORK_OWNED_SURFACES: ReadonlySet<WorkspaceSurface> = new Set<WorkspaceSurface>(["projects", "notifications", "stars"])
+const FORK_OWNED_SURFACES: ReadonlySet<WorkspaceSurface> = new Set<WorkspaceSurface>(["projects", "notifications"])
 
 const goToWorkspaceSurfaceAt = (a: AppCtx, index: number) => {
 	const surface = a.listNav.surfaces[index]
@@ -136,9 +135,7 @@ export const appKeymap = App(
 	// strip differs between user scope and repository scope.
 	{ id: "workspace.fourth", title: "Fourth surface", keys: ["4"], when: (s) => inListMode(s), run: (s) => goToWorkspaceSurfaceAt(s, 3) },
 	{ id: "workspace.fifth", title: "Fifth surface", keys: ["5"], when: (s) => inListMode(s), run: (s) => goToWorkspaceSurfaceAt(s, 4) },
-	{ id: "workspace.sixth", title: "Sixth surface", keys: ["6"], when: (s) => inListMode(s), run: (s) => goToWorkspaceSurfaceAt(s, 5) },
 	{ id: "workspace.inbox", title: "Go to inbox", keys: ["g n"], when: (s) => inListMode(s), run: (s) => s.listNav.switchWorkspaceSurface("notifications") },
-	{ id: "workspace.stars", title: "Go to stars", keys: ["g s"], when: (s) => inListMode(s), run: (s) => s.listNav.switchWorkspaceSurface("stars") },
 
 	// Modal layers
 	closeModalKeymap.scope((a) => a.closeModalActive && a.closeModal),
@@ -166,7 +163,6 @@ export const appKeymap = App(
 	// Fork-owned surfaces — see src/projects/keymap.ts and src/notifications/keymap.ts
 	projectsViewKeymap.scope((a) => (modalActive(a) || a.filterMode ? null : buildProjectsViewCtx(a.listNav))),
 	inboxViewKeymap.scope((a) => (modalActive(a) || a.filterMode ? null : buildInboxViewCtx(a.listNav))),
-	starsViewKeymap.scope((a) => (modalActive(a) || a.filterMode ? null : buildStarsViewCtx(a.listNav))),
 
 	// PR list nav
 	listNavKeymap.scope((a) => inListMode(a) && !FORK_OWNED_SURFACES.has(a.listNav.activeSurface) && a.listNav),

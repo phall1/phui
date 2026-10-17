@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 import { githubRuntime, mockPrCount } from "../services/runtime.js"
 import { defaultListOptions, listNotifications, markAllRead, markThreadDone, markThreadRead, unsubscribeThread } from "./github.js"
 import { mockNotificationsReport } from "./mock.js"

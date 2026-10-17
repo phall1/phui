@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import * as Atom from "effect/unstable/reactivity/Atom"
+import * as Atom from "effect/reactivity/Atom"
 import { detectSystemAppearance } from "../../systemAppearance.js"
 import { resolveThemeId, type ThemeConfig } from "../../themeConfig.js"
 import { loadStoredShowScrollbars, loadStoredThemeConfig } from "../../themeStore.js"

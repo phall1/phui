@@ -1,4 +1,4 @@
-import type * as Atom from "effect/unstable/reactivity/Atom"
+import type * as Atom from "effect/reactivity/Atom"
 import type { AppCommand } from "../commands.js"
 import type { DiffCommentSide } from "../domain.js"
 import type { PullRequestComment } from "../domain.js"

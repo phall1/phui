@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
+import * as AtomRegistry from "effect/reactivity/AtomRegistry"
 import type { PullRequestItem, PullRequestReviewComment } from "../domain.js"
 import { errorMessage } from "../errors.js"
 import { capRecord } from "../recordCap.js"
